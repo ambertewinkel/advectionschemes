@@ -12,8 +12,8 @@ def ftbs(init, nt, c):
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : Courant number. c = u*dt/dx where u is the velocity and dx 
-            is the spatial discretisation
+    c       : float or array of floats. Courant number. c = u*dt/dx where u 
+            is the velocity, dt the timestep, and dx the spatial discretisation
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
@@ -22,9 +22,17 @@ def ftbs(init, nt, c):
     # Setup and initial condition
     field = init
 
+    # Ensure c has the right dims for it loop
+    if np.array(c).ndim == 0:
+        c_arr = np.full(len(init), c)
+    elif np.array(c).ndim == 1:
+        c_arr = c
+    else:
+        print('c has an unexpected shape.')
+
     # Time stepping
     for it in range(1, nt):
-        field = field - c*(field - np.roll(field,1))
+        field = field - c_arr*(field - np.roll(field,1))
 
     return field
 
@@ -37,8 +45,8 @@ def ftfs(init, nt, c):
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : Courant number. c = u*dt/dx where u is the velocity and dx 
-            is the spatial discretisation
+    c       : float or array of floats. Courant number. c = u*dt/dx where u 
+            is the velocity, dt the timestep, and dx the spatial discretisation
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
@@ -47,9 +55,17 @@ def ftfs(init, nt, c):
     # Setup and initial condition
     field = init
 
+    # Ensure c has the right dims for it loop
+    if np.array(c).ndim == 0:
+        c_arr = np.full(len(init), c)
+    elif np.array(c).ndim == 1:
+        c_arr = c
+    else:
+        print('c has an unexpected shape.')
+
     # Time stepping
     for it in range(1, nt):
-        field = field - c*(np.roll(field,-1) - field)
+        field = field - c_arr*(np.roll(field,-1) - field)
 
     return field
 
@@ -62,8 +78,8 @@ def ftcs(init, nt, c):
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : Courant number. c = u*dt/dx where u is the velocity and dx 
-            is the spatial discretisation
+    c       : float or array of floats. Courant number. c = u*dt/dx where u 
+            is the velocity, dt the timestep, and dx the spatial discretisation
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
@@ -72,9 +88,17 @@ def ftcs(init, nt, c):
     # Setup and initial condition
     field = init
 
+    # Ensure c has the right dims for it loop
+    if np.array(c).ndim == 0:
+        c_arr = np.full(len(init), c)
+    elif np.array(c).ndim == 1:
+        c_arr = c
+    else:
+        print('c has an unexpected shape.')
+
     # Time stepping
     for it in range(1, nt):
-        field = field - 0.5*c*(np.roll(field,-1) - np.roll(field,1))
+        field = field - 0.5*c_arr*(np.roll(field,-1) - np.roll(field,1))
 
     return field
 
@@ -87,8 +111,8 @@ def ctbs(init, nt, c):
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : Courant number. c = u*dt/dx where u is the velocity and dx 
-            is the spatial discretisation
+    c       : float or array of floats. Courant number. c = u*dt/dx where u 
+            is the velocity, dt the timestep, and dx the spatial discretisation
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
@@ -98,12 +122,20 @@ def ctbs(init, nt, c):
     field = np.zeros(len(init))
     field_old = init
 
+    # Ensure c has the right dims for it loop
+    if np.array(c).ndim == 0:
+        c_arr = np.full(len(init), c)
+    elif np.array(c).ndim == 1:
+        c_arr = c
+    else:
+        print('c has an unexpected shape.')
+
     # First time step is forward in time, backward in space (FTBS)
-    field = field_old - c*(field_old - np.roll(field_old,1))
+    field = field_old - c_arr*(field_old - np.roll(field_old,1))
 
     # Time stepping
     for it in range(1, nt):
-        field_new = field_old - 2*c*(field - np.roll(field,1))
+        field_new = field_old - 2*c_arr*(field - np.roll(field,1))
         field_old = field
         field = field_new
         
@@ -118,8 +150,8 @@ def ctfs(init, nt, c):
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : Courant number. c = u*dt/dx where u is the velocity and dx 
-            is the spatial discretisation
+    c       : float or array of floats. Courant number. c = u*dt/dx where u 
+            is the velocity, dt the timestep, and dx the spatial discretisation
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
@@ -129,12 +161,20 @@ def ctfs(init, nt, c):
     field = np.zeros(len(init))
     field_old = init
 
+    # Ensure c has the right dims for it loop
+    if np.array(c).ndim == 0:
+        c_arr = np.full(len(init), c)
+    elif np.array(c).ndim == 1:
+        c_arr = c
+    else:
+        print('c has an unexpected shape.')
+
     # First time step is forward in time, forward in space (FTFS)
-    field = field_old - c*(np.roll(field_old,-1) - field_old)
+    field = field_old - c_arr*(np.roll(field_old,-1) - field_old)
 
     # Time stepping
     for it in range(1, nt):
-        field_new = field_old - 2*c*(np.roll(field,-1) - field)
+        field_new = field_old - 2*c_arr*(np.roll(field,-1) - field)
         field_old = field
         field = field_new
         
@@ -149,8 +189,8 @@ def ctcs(init, nt, c):
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : Courant number. c = u*dt/dx where u is the velocity and dx 
-            is the spatial discretisation
+    c       : float or array of floats. Courant number. c = u*dt/dx where u 
+            is the velocity, dt the timestep, and dx the spatial discretisation
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
@@ -160,19 +200,61 @@ def ctcs(init, nt, c):
     field = np.zeros(len(init))
     field_old = init
 
+    # Ensure c has the right dims for it loop
+    if np.array(c).ndim == 0:
+        c_arr = np.full(len(init), c)
+    elif np.array(c).ndim == 1:
+        c_arr = c
+    else:
+        print('c has an unexpected shape.')
+
     # First time step is forward in time, centered in space (FTCS)
-    field = field_old - 0.5*c*(np.roll(field_old,-1) - np.roll(field_old,1))
+    field = field_old - 0.5*c_arr*(np.roll(field_old,-1) - np.roll(field_old,1))
 
     # Time stepping
     for it in range(1, nt):
-        field_new = field_old - c*(np.roll(field,-1) - np.roll(field,1))
+        field_new = field_old - c_arr*(np.roll(field,-1) - np.roll(field,1))
         field_old = field
         field = field_new
         
     return field
 
-def upwind():
-    print()
+def upwind(init, nt, c): # FTBS when u >= 0, FTFS when u < 0
+    """
+    This function computes the upwind (FTBS when u>=0, FTFS when u<0)
+    finite difference scheme for an initial field, number of time steps nt
+    with length dt, and a given Courant number. A periodic spatial domain 
+    is assumed. dt and dx are assumed to be positive.
+    --- Input ---
+    init    : array of floats, initial field to advect
+    nt      : integer, total number of time steps to take
+    c       : float or array of floats. Courant number. c = u*dt/dx where u 
+            is the velocity, dt the timestep, and dx the spatial discretisation 
+    --- Output --- 
+    field   : 1D array of floats. Outputs the final timestep after advecting 
+            the initial condition. Dimensions: length of init.
+    """
+
+    # Setup and initial condition
+    field = init
+    
+    # Ensure c has the right dims for it loop
+    if np.array(c).ndim == 0:
+        c_arr = np.full(len(init), c)
+    elif np.array(c).ndim == 1:
+        c_arr = c
+    else:
+        print('c has an unexpected shape.')
+
+    # Time stepping
+    for it in range(1, nt):
+        for i in range(len(init)):
+            if c_arr[i] >= 0.0:
+                field[i] = field[i] - c_arr[i]*(field[i] - np.roll(field,1)[i])
+            else: 
+                field[i] = field[i] - c_arr[i]*(np.roll(field,-1)[i] - field[i])
+
+    return field
 
 def artdiff():
     print()
@@ -202,8 +284,8 @@ def mpdata(init, nt, c, eps=1e-6):
     --- Input ---
     init : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : Courant number. c = u*dt/dx where u is the velocity and dx 
-            is the spatial discretisation
+    c       : float or array of floats. Courant number. c = u*dt/dx where u 
+            is the velocity, dt the timestep, and dx the spatial discretisation
     eps     : float, optional. Small number to avoid division by zero.
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
@@ -217,14 +299,22 @@ def mpdata(init, nt, c, eps=1e-6):
     A = np.zeros(len(init)) # shift index by half as compared to Ref (1)
     V = np.zeros(len(init)) # pseudo-velocity. Same index shift as for A
 
+    # Ensure c has the right dims for it loop
+    if np.array(c).ndim == 0:
+        c_arr = np.full(len(init), c)
+    elif np.array(c).ndim == 1:
+        c_arr = c
+    else:
+        print('c has an unexpected shape.')
+
     # Timestepping
     for it in range(nt):
-        # First pass - any U is here c as velocity is constant    
-        field_FP = field_old - flux(field_old, np.roll(field_old,-1), c) + flux(np.roll(field_old,1), field_old, c)
+        # First pass  
+        field_FP = field_old - flux(field_old, np.roll(field_old,-1), c_arr) + flux(np.roll(field_old,1), field_old, c_arr)
 
         # Second pass
         A = (np.roll(field_FP,-1) - field_FP)/(np.roll(field_FP,-1) + field_FP + eps)
-        V = (abs(c) - c*c)*A
+        V = (abs(c_arr) - c_arr*c_arr)*A
         field = field_FP - flux(field_FP, np.roll(field_FP,-1), V) + flux(np.roll(field_FP,1), field_FP, np.roll(V,1))
         field_old = field
 

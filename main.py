@@ -58,11 +58,11 @@ def main():
     
     # Initial conditions
     a, b = 0.1, 0.5
-    c = 0.4                     # Courant number
     nx = 40                     # number of points in space
-    nt = 100                     # number of time steps
+    nt = 100                    # number of time steps
     x = np.linspace(0, 1, nx+1) # points in space
     dx = x[1] - x[0]            # length of spatial step
+    c = np.full(len(x), 0.4)    # Courant number
     dt = 0.1                    # time step
     u = c*dx/dt                 # velocity
 
@@ -101,6 +101,10 @@ def main():
     # CTCS
     psi1_ctcs = sch.ctcs(psi1_in.copy(), nt, c) 
     psi2_ctcs = sch.ctcs(psi2_in.copy(), nt, c) 
+    
+    # Upwind
+    psi1_upwind = sch.upwind(psi1_in.copy(), nt, c) 
+    psi2_upwind = sch.upwind(psi2_in.copy(), nt, c) 
 
     # MPDATA
     psi1_mpdata = sch.mpdata(psi1_in.copy(), nt, c)
@@ -117,6 +121,7 @@ def main():
     plt.plot(x, psi1_ctbs, label='CTBS')
     plt.plot(x, psi1_ctfs, label='CTFS')
     plt.plot(x, psi1_ctcs, label='CTCS')
+    plt.plot(x, psi1_upwind, label='Upwind')
     plt.ylim(-0.5, 1.5)
     plt.xlabel('x')
     plt.ylabel('$\Psi_1$')
@@ -142,6 +147,7 @@ def main():
     plt.plot(x, psi2_ctbs, label='CTBS')
     plt.plot(x, psi2_ctfs, label='CTFS')
     plt.plot(x, psi2_ctcs, label='CTCS')
+    plt.plot(x, psi2_upwind, label='Upwind')
     plt.ylim(-0.5, 1.5)
     plt.xlabel('x')
     plt.ylabel('$\Psi_2$')
