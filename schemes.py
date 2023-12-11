@@ -23,12 +23,7 @@ def ftbs(init, nt, c):
     field = init
 
     # Ensure c has the right dims for it loop
-    if np.array(c).ndim == 0:
-        c_arr = np.full(len(init), c)
-    elif np.array(c).ndim == 1:
-        c_arr = c
-    else:
-        print('c has an unexpected shape.')
+    c_arr = to_vector(c, len(init))
 
     # Time stepping
     for it in range(1, nt):
@@ -56,12 +51,7 @@ def ftfs(init, nt, c):
     field = init
 
     # Ensure c has the right dims for it loop
-    if np.array(c).ndim == 0:
-        c_arr = np.full(len(init), c)
-    elif np.array(c).ndim == 1:
-        c_arr = c
-    else:
-        print('c has an unexpected shape.')
+    c_arr = to_vector(c, len(init))
 
     # Time stepping
     for it in range(1, nt):
@@ -89,12 +79,7 @@ def ftcs(init, nt, c):
     field = init
 
     # Ensure c has the right dims for it loop
-    if np.array(c).ndim == 0:
-        c_arr = np.full(len(init), c)
-    elif np.array(c).ndim == 1:
-        c_arr = c
-    else:
-        print('c has an unexpected shape.')
+    c_arr = to_vector(c, len(init))
 
     # Time stepping
     for it in range(1, nt):
@@ -123,12 +108,7 @@ def ctbs(init, nt, c):
     field_old = init
 
     # Ensure c has the right dims for it loop
-    if np.array(c).ndim == 0:
-        c_arr = np.full(len(init), c)
-    elif np.array(c).ndim == 1:
-        c_arr = c
-    else:
-        print('c has an unexpected shape.')
+    c_arr = to_vector(c, len(init))
 
     # First time step is forward in time, backward in space (FTBS)
     field = field_old - c_arr*(field_old - np.roll(field_old,1))
@@ -162,12 +142,7 @@ def ctfs(init, nt, c):
     field_old = init
 
     # Ensure c has the right dims for it loop
-    if np.array(c).ndim == 0:
-        c_arr = np.full(len(init), c)
-    elif np.array(c).ndim == 1:
-        c_arr = c
-    else:
-        print('c has an unexpected shape.')
+    c_arr = to_vector(c, len(init))
 
     # First time step is forward in time, forward in space (FTFS)
     field = field_old - c_arr*(np.roll(field_old,-1) - field_old)
@@ -201,12 +176,7 @@ def ctcs(init, nt, c):
     field_old = init
 
     # Ensure c has the right dims for it loop
-    if np.array(c).ndim == 0:
-        c_arr = np.full(len(init), c)
-    elif np.array(c).ndim == 1:
-        c_arr = c
-    else:
-        print('c has an unexpected shape.')
+    c_arr = to_vector(c, len(init))
 
     # First time step is forward in time, centered in space (FTCS)
     field = field_old - 0.5*c_arr*(np.roll(field_old,-1) - np.roll(field_old,1))
@@ -239,12 +209,7 @@ def upwind(init, nt, c): # FTBS when u >= 0, FTFS when u < 0
     field = init
     
     # Ensure c has the right dims for it loop
-    if np.array(c).ndim == 0:
-        c_arr = np.full(len(init), c)
-    elif np.array(c).ndim == 1:
-        c_arr = c
-    else:
-        print('c has an unexpected shape.')
+    c_arr = to_vector(c, len(init))
 
     # Time stepping
     for it in range(1, nt):
@@ -300,12 +265,7 @@ def mpdata(init, nt, c, eps=1e-6):
     V = np.zeros(len(init)) # pseudo-velocity. Same index shift as for A
 
     # Ensure c has the right dims for it loop
-    if np.array(c).ndim == 0:
-        c_arr = np.full(len(init), c)
-    elif np.array(c).ndim == 1:
-        c_arr = c
-    else:
-        print('c has an unexpected shape.')
+    c_arr = to_vector(c, len(init))
 
     # Timestepping
     for it in range(nt):
@@ -342,3 +302,30 @@ def flux(Psi_L, Psi_R, U):
     F = U_p*Psi_L + U_m*Psi_R
 
     return F
+
+def to_vector(array, length):
+    """
+    This function checks whether an array is 0D (scalar) or 1D.
+    If scalar, it outputs a vector of len=length filled with the scalar values.
+    If vector, check whether it has len=length.
+    Note: this assumes array is a numpy array.
+    --- Input --- 
+    array   : np.array of any dimension
+    length  : scalar with length of 1D vector that we want outputted
+    --- Output ---
+    If no ValueError produced, this function outputs
+    res     : 1D np.array of dimension length. If input array was scalar, output array 
+            is filled with these scalar values.
+    """
+
+    if np.isscalar(array):
+        res = np.full(length, array)
+    elif array.ndim == 1:
+        if len(array) != length:
+            raise ValueError('Array input (vector) in scalar2vector does not have the expected length.')
+        else:
+            res = array.copy()
+    else:
+        raise TypeError('Array input in scalar2vector is neither a scalar nor vector.')
+    
+    return res

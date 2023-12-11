@@ -110,6 +110,9 @@ def main():
     psi1_mpdata = sch.mpdata(psi1_in.copy(), nt, c)
     psi2_mpdata = sch.mpdata(psi2_in.copy(), nt, c)
 
+    # Print Courant numbers
+    print('The Courant numbers are:', c)
+    
     ##########################
     #### Plotting schemes ####
     ##########################
@@ -125,7 +128,7 @@ def main():
     plt.ylim(-0.5, 1.5)
     plt.xlabel('x')
     plt.ylabel('$\Psi_1$')
-    plt.title(f'$\Psi_1$ at t={nt*dt} - Basic Schemes - c = {c}')
+    plt.title(f'$\Psi_1$ at t={nt*dt} - Basic Schemes')
     plt.legend()
     plt.savefig('Psi1_bs.jpg')
     plt.show()
@@ -135,7 +138,7 @@ def main():
     plt.ylim(-0.5, 1.5)
     plt.xlabel('x')
     plt.ylabel('$\Psi_1$')
-    plt.title(f'$\Psi_1$ at t={nt*dt} - Alternative Schemes - c = {c}')
+    plt.title(f'$\Psi_1$ at t={nt*dt} - Alternative Schemes')
     plt.legend()
     plt.savefig('Psi1_as.jpg')
     plt.show()
@@ -151,7 +154,7 @@ def main():
     plt.ylim(-0.5, 1.5)
     plt.xlabel('x')
     plt.ylabel('$\Psi_2$')
-    plt.title(f'$\Psi_2$ at t={nt*dt} - Basic Schemes - c = {c}')
+    plt.title(f'$\Psi_2$ at t={nt*dt} - Basic Schemes')
     plt.legend()
     plt.savefig('Psi2_bs.jpg')
     plt.show()
@@ -161,7 +164,7 @@ def main():
     plt.ylim(-0.5, 1.5)
     plt.xlabel('x')
     plt.ylabel('$\Psi_2$')
-    plt.title(f'$\Psi_2$ at t={nt*dt} - Alternative Schemes - c = {c}')
+    plt.title(f'$\Psi_2$ at t={nt*dt} - Alternative Schemes')
     plt.legend()
     plt.savefig('Psi2_as.jpg')
     plt.show()
