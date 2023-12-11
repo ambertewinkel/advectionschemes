@@ -3,7 +3,7 @@
 
 import numpy as np
 
-def ftbs(init, nt, c):
+def FTBS(init, nt, c):
     """
     This function computes the FTBS (forward in time, backward in space)
     finite difference scheme for an initial field, number of time steps nt
@@ -31,7 +31,7 @@ def ftbs(init, nt, c):
 
     return field
 
-def ftfs(init, nt, c):
+def FTFS(init, nt, c):
     """
     This function computes the FTFS (forward in time, forward in space)
     finite difference scheme for an initial field, number of time steps nt
@@ -59,7 +59,7 @@ def ftfs(init, nt, c):
 
     return field
 
-def ftcs(init, nt, c):
+def FTCS(init, nt, c):
     """
     This function computes the FTCS (forward in time, centered in space)
     finite difference scheme for an initial field, number of time steps nt
@@ -87,7 +87,7 @@ def ftcs(init, nt, c):
 
     return field
 
-def ctbs(init, nt, c):
+def CTBS(init, nt, c):
     """
     This function computes the CTBS (centered in time, backward in space)
     finite difference scheme for an initial field, number of time steps nt
@@ -121,7 +121,7 @@ def ctbs(init, nt, c):
         
     return field
 
-def ctfs(init, nt, c):
+def CTFS(init, nt, c):
     """
     This function computes the CTFS (centered in time, forward in space)
     finite difference scheme for an initial field, number of time steps nt
@@ -155,7 +155,7 @@ def ctfs(init, nt, c):
         
     return field
 
-def ctcs(init, nt, c):
+def CTCS(init, nt, c):
     """
     This function computes the CTCS (centered in time, centered in space)
     finite difference scheme for an initial field, number of time steps nt
@@ -189,7 +189,7 @@ def ctcs(init, nt, c):
         
     return field
 
-def upwind(init, nt, c): # FTBS when u >= 0, FTFS when u < 0
+def Upwind(init, nt, c): # FTBS when u >= 0, FTFS when u < 0
     """
     This function computes the upwind (FTBS when u>=0, FTFS when u<0)
     finite difference scheme for an initial field, number of time steps nt
@@ -221,25 +221,25 @@ def upwind(init, nt, c): # FTBS when u >= 0, FTFS when u < 0
 
     return field
 
-def artdiff():
+def ArtDiff():
     print()
 
-def semiLag():
+def SemiLag():
     print()
 
-def btbs(): #implicit
+def BTBS(): #implicit
     print()
 
-def btcs(): #implicit
+def BTCS(): #implicit
     print()
 
-def cnbs(): #implicit
+def CNBS(): #implicit
     print()
 
-def cncs(): #implicit
+def CNCS(): #implicit
     print()
 
-def mpdata(init, nt, c, eps=1e-6):
+def MPDATA(init, nt, c, eps=1e-6):
     """
     This functions implements the MPDATA scheme without a gauge, assuming a 
     constant velocity, i.e., a single local Courant number input, and a 
