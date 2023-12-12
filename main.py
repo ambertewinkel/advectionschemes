@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import schemes as sch
 import experiments as epm
+import utils as ut
 
 def analytic1(x, nt=0., c=0.):
     """
@@ -68,7 +69,8 @@ def main():
     # Initial conditions
     nx = 40                     # number of points in space
     nt = 30                     # number of time steps
-    x = np.linspace(0, 1, nx, endpoint=False) # points in space
+    xmin, xmax = 0.0, 1.0       # physical domain parameters
+    x = np.linspace(xmin, xmax, nx, endpoint=False) # points in space
     dx = x[1] - x[0]            # length of spatial step
     c = np.full(len(x), 0.4)    # Courant number
     dt = 0.1                    # time step
@@ -106,52 +108,33 @@ def main():
     plt.plot(x, psi1_an, label='Analytic', linestyle='-', color='k')
     for s in basicschemes:
         plt.plot(x, locals()[f'psi1_{s}'], label=f'{s}')
-    plt.ylim(-0.5, 1.5)
-    plt.xlabel('x')
-    plt.ylabel('$\Psi_1$')
-    plt.title(f'$\Psi_1$ at t={nt*dt} - Basic Schemes')
-    plt.legend()
-    plt.savefig('Psi1_bs.jpg')
-    plt.show()   
+    ut.design_figure('Psi1_bs.jpg', f'$\Psi_1$ at t={nt*dt} - Basic Schemes', \
+                     'x', '$\Psi_1$', True, -0.5, 1.5)
 
     plt.plot(x, psi1_an, label='Analytic', linestyle='-', color='k')
     for s in advancedschemes:
         plt.plot(x, locals()[f'psi1_{s}'], label=f'{s}')
-    plt.ylim(-0.5, 1.5)
-    plt.xlabel('x')
-    plt.ylabel('$\Psi_1$')
-    plt.title(f'$\Psi_1$ at t={nt*dt} - Advanced Schemes')
-    plt.legend()
-    plt.savefig('Psi1_as.jpg')
-    plt.show()
+    ut.design_figure('Psi1_as.jpg', f'$\Psi_1$ at t={nt*dt} - Advanced Schemes', \
+                     'x', '$\Psi_1$', True, -0.5, 1.5)
 
     plt.plot(x, psi2_an, label='Analytic', linestyle='-', color='k')
     for s in basicschemes:
         plt.plot(x, locals()[f'psi2_{s}'], label=f'{s}')
-    plt.ylim(-0.5, 1.5)
-    plt.xlabel('x')
-    plt.ylabel('$\Psi_2$')
-    plt.title(f'$\Psi_2$ at t={nt*dt} - Basic Schemes')
-    plt.legend()
-    plt.savefig('Psi2_bs.jpg')
-    plt.show()
+    ut.design_figure('Psi2_bs.jpg', f'$\Psi_2$ at t={nt*dt} - Basic Schemes', \
+                     'x', '$\Psi_2$', True, -0.5, 1.5)
     
     plt.plot(x, psi2_an, label='Analytic', linestyle='-', color='k')
     for s in advancedschemes:
         plt.plot(x, locals()[f'psi2_{s}'], label=f'{s}')
-    plt.ylim(-0.5, 1.5)
-    plt.xlabel('x')
-    plt.ylabel('$\Psi_2$')
-    plt.title(f'$\Psi_2$ at t={nt*dt} - Advanced Schemes')
-    plt.legend()
-    plt.savefig('Psi2_as.jpg')
-    plt.show()
+    ut.design_figure('Psi2_as.jpg', f'$\Psi_2$ at t={nt*dt} - Advanced Schemes', \
+                     'x', '$\Psi_2$', True,  -0.5, 1.5)
+    plt.close()
 
     #####################
     #### Experiments ####
     #####################
 
-    # Total variation
+    #### Total variation
     for s in allschemes:
         locals()[f'TV_psi1_{s}'] = epm.totalvariation(locals()[f'psi1_{s}'])
         print(f'1 - Total variation at t={nt*dt} - {s}', locals()[f'TV_psi1_{s}'])
@@ -159,5 +142,28 @@ def main():
     for s in allschemes:
         locals()[f'TV_psi2_{s}'] = epm.totalvariation(locals()[f'psi2_{s}'])
         print(f'2 - Total variation at t={nt*dt} - {s}', locals()[f'TV_psi2_{s}'])
+    
+    #### Error analysis for a single scheme
+    scheme = 'Upwind'
+    fn = getattr(sch, f'{scheme}')
+    nx_arr_fl = np.array([nx*2, nx, nx/2])
+    nx_arr = np.array([nx*2, nx, nx/2], dtype=int)
+    dx_arr = xmax/nx_arr
+    dt_arr = c[0]*dx_arr/u[0]   # This assumes a constant c throughout the domain
+    nt_arr = np.array(nt*dt/dt_arr, dtype=int)  # nt*dt is total time above
+    rmse_arr = np.zeros(len(dx_arr))
 
+    for i in range(len(nx_arr)):
+        c_error = np.full(nx_arr[i], c[0])
+        x_error = np.linspace(xmin, xmax, nx_arr[i], endpoint=False)
+        psi1_in_error = analytic1(x_error)
+        psi1_Upwind_error = fn(psi1_in_error.copy(), nt_arr[i], c_error)
+        psi1_an_error = analytic1(x_error, nt_arr[i], c_error)
+        rmse_arr[i] = epm.rmse(psi1_an_error, psi1_Upwind_error, dx_arr[i])
+
+    # log-log plot of RMSE
+    plt.loglog(dx_arr, rmse_arr, '-x', label=f'{scheme}')
+    plt.loglog(dx_arr, dx_arr, color='green', label='O(dx) accurate')
+    ut.design_figure(f'loglog_{scheme}.jpg', f'RMSE for {scheme} scheme', 'dx', 'RMSE')
+    
 if __name__ == "__main__": main()
