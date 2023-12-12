@@ -207,18 +207,20 @@ def Upwind(init, nt, c): # FTBS when u >= 0, FTFS when u < 0
 
     # Setup and initial condition
     field = init
+    field_new = init.copy()
     
     # Ensure c has the right dims for it loop
-    c_arr = to_vector(c, len(init))
+    c_arr = to_vector(c, len(init)) # !!! to do: make the wind go along perhaps somehow with the field?
 
     # Time stepping
     for it in range(1, nt):
         for i in range(len(init)):
             if c_arr[i] >= 0.0:
-                field[i] = field[i] - c_arr[i]*(field[i] - np.roll(field,1)[i])
+                field_new[i] = field[i] - c_arr[i]*(field[i] - np.roll(field,1)[i])
             else: 
-                field[i] = field[i] - c_arr[i]*(np.roll(field,-1)[i] - field[i])
-
+                field_new[i] = field[i] - c_arr[i]*(np.roll(field,-1)[i] - field[i])
+        field = field_new
+    
     return field
 
 def ArtDiff():
