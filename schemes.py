@@ -219,7 +219,7 @@ def Upwind(init, nt, c): # FTBS when u >= 0, FTFS when u < 0
                 field_new[i] = field[i] - c_arr[i]*(field[i] - np.roll(field,1)[i])
             else: 
                 field_new[i] = field[i] - c_arr[i]*(np.roll(field,-1)[i] - field[i])
-        field = field_new
+        field = field_new.copy()    
     
     return field
 
