@@ -230,10 +230,10 @@ def ArtDiff():
 def SemiLag():
     print()
 
-def BTBS(init, nt, c): #implicit
+def BTBS(init, nt, c):
     """
-    This functions implements the MPDATA scheme without a gauge, assuming a 
-    constant velocity, i.e., a single local Courant number input, and a 
+    This functions implements the BTBS scheme (implicit), assuming a 
+    constant velocity (input through the Courant number) and a 
     periodic spatial domain.
     --- Input ---
     init    : array of floats, initial field to advect
@@ -242,7 +242,7 @@ def BTBS(init, nt, c): #implicit
             is the velocity, dt the timestep, and dx the spatial discretisation
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: (nt+1) x length of init.
+            the initial condition. Dimensions: length of init.
     """
     # Define initial condition
     field = init
@@ -271,7 +271,7 @@ def CNCS(): #implicit
 def MPDATA(init, nt, c, eps=1e-6):
     """
     This functions implements the MPDATA scheme without a gauge, assuming a 
-    constant velocity, i.e., a single local Courant number input, and a 
+    constant velocity (input through the Courant number) and a 
     periodic spatial domain.
     Reference (1): P. Smolarkiewicz and L. Margolin. MPDATA: A finite-difference 
     solver for geophysical flows. J. Comput. Phys., 140:459-480, 1998.
@@ -283,7 +283,7 @@ def MPDATA(init, nt, c, eps=1e-6):
     eps     : float, optional. Small number to avoid division by zero.
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: (nt+1) x length of init.
+            the initial condition. Dimensions: length of init.
     """
 
     # Initialisation
