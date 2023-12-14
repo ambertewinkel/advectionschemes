@@ -15,7 +15,7 @@ def main():
     with 1D periodic space and time. Results are compared to the analytic soln. 
     Two initial conditions are considered: a Gaussian distribution and a step 
     function, both defined on a subdomain. 
-    Schemes included: FTBS, FTFS, FTCS, CTBS, CTFS, CTCS, Upwind, MPDATA
+    Schemes included: FTBS, FTFS, FTCS, CTBS, CTFS, CTCS, Upwind, BTBS, BTCS, MPDATA
     """
     
     # Initial conditions
@@ -41,7 +41,7 @@ def main():
     #################
 
     basicschemes = ['FTBS', 'FTFS', 'FTCS', 'CTBS', 'CTFS', 'CTCS', 'Upwind']
-    advancedschemes = ['BTBS', 'MPDATA']
+    advancedschemes = ['BTBS', 'BTCS', 'MPDATA']
     allschemes = basicschemes + advancedschemes
     
     # Calculate numerical results
