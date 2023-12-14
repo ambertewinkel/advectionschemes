@@ -3,6 +3,7 @@
 
 import numpy as np
 import utils as ut
+import solvers as sv
 
 def FTBS(init, nt, c):
     """
@@ -259,6 +260,64 @@ def BTBS(init, nt, c):
 
     return field
 
+def BTBS_Jacobi(init, nt, c):
+    """
+    This functions implements the BTBS scheme (backward in time, backward in 
+    space, implicit), assuming a constant velocity (input through the Courant 
+    number) and a periodic spatial domain.
+    --- Input ---
+    init    : array of floats, initial field to advect
+    nt      : integer, total number of time steps to take
+    c       : float or array of floats. Courant number. c = u*dt/dx where u 
+            is the velocity, dt the timestep, and dx the spatial discretisation
+    --- Output --- 
+    field   : 1D array of floats. Outputs the final timestep after advecting 
+            the initial condition. Dimensions: length of init.
+    """
+    # Define initial condition
+    field = init
+
+    # Define the matrix to solve
+    M = np.zeros((len(init), len(init)))
+    for i in range(len(init)): 
+        M[i,i] = 1 + c[i] # assume c is @i and not @i-1 and doesn't change over time
+        M[i, i-1] = -c[i]
+
+    # Timestepping
+    for it in range(nt):
+        field = sv.Jacobi(M, field, field, 10)
+
+    return field
+
+def BTBS_GaussSeidel(init, nt, c):
+    """
+    This functions implements the BTBS scheme (backward in time, backward in 
+    space, implicit), assuming a constant velocity (input through the Courant 
+    number) and a periodic spatial domain.
+    --- Input ---
+    init    : array of floats, initial field to advect
+    nt      : integer, total number of time steps to take
+    c       : float or array of floats. Courant number. c = u*dt/dx where u 
+            is the velocity, dt the timestep, and dx the spatial discretisation
+    --- Output --- 
+    field   : 1D array of floats. Outputs the final timestep after advecting 
+            the initial condition. Dimensions: length of init.
+    """
+    # Define initial condition
+    field = init
+
+    # Define the matrix to solve
+    M = np.zeros((len(init), len(init)))
+    for i in range(len(init)): 
+        M[i,i] = 1 + c[i] # assume c is @i and not @i-1 and doesn't change over time
+        M[i, i-1] = -c[i]
+
+    # Timestepping
+    for it in range(nt):
+        field = sv.GaussSeidel(M, field, field, 10)
+
+    return field
+
 def BTCS(init, nt, c):
     """
     This functions implements the BTCS scheme (backward in time, centered in 
@@ -286,6 +345,66 @@ def BTCS(init, nt, c):
     # Timestepping
     for it in range(nt):
         field = np.linalg.solve(M, field)
+
+    return field
+
+def BTCS_Jacobi(init, nt, c):
+    """
+    This functions implements the BTCS scheme (backward in time, centered in 
+    space, implicit), assuming a constant velocity (input through the Courant 
+    number) and a periodic spatial domain.
+    --- Input ---
+    init    : array of floats, initial field to advect
+    nt      : integer, total number of time steps to take
+    c       : float or array of floats. Courant number. c = u*dt/dx where u 
+            is the velocity, dt the timestep, and dx the spatial discretisation
+    --- Output --- 
+    field   : 1D array of floats. Outputs the final timestep after advecting 
+            the initial condition. Dimensions: length of init.
+    """
+    # Define initial condition
+    field = init
+
+    # Define the matrix to solve
+    M = np.zeros((len(init), len(init)))
+    for i in range(len(init)): 
+        M[i,i] = 1  
+        M[i, i-1] = -0.5*c[i] # assume c is @i and doesn't change over time
+        M[i, (i+1)%len(init)] = 0.5*c[i]
+
+    # Timestepping
+    for it in range(nt):
+        field = sv.Jacobi(M, field, field, 10)
+
+    return field
+
+def BTCS_GaussSeidel(init, nt, c):
+    """
+    This functions implements the BTCS scheme (backward in time, centered in 
+    space, implicit), assuming a constant velocity (input through the Courant 
+    number) and a periodic spatial domain.
+    --- Input ---
+    init    : array of floats, initial field to advect
+    nt      : integer, total number of time steps to take
+    c       : float or array of floats. Courant number. c = u*dt/dx where u 
+            is the velocity, dt the timestep, and dx the spatial discretisation
+    --- Output --- 
+    field   : 1D array of floats. Outputs the final timestep after advecting 
+            the initial condition. Dimensions: length of init.
+    """
+    # Define initial condition
+    field = init
+
+    # Define the matrix to solve
+    M = np.zeros((len(init), len(init)))
+    for i in range(len(init)): 
+        M[i,i] = 1  
+        M[i, i-1] = -0.5*c[i] # assume c is @i and doesn't change over time
+        M[i, (i+1)%len(init)] = 0.5*c[i]
+
+    # Timestepping
+    for it in range(nt):
+        field = sv.GaussSeidel(M, field, field, 10)
 
     return field
 

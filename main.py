@@ -41,7 +41,8 @@ def main():
     #################
 
     basicschemes = ['FTBS', 'FTFS', 'FTCS', 'CTBS', 'CTFS', 'CTCS', 'Upwind']
-    advancedschemes = ['BTBS', 'BTCS', 'MPDATA']
+    advancedschemes = ['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTCS', \
+                       'BTCS_Jacobi', 'BTCS_GaussSeidel', 'MPDATA']
     allschemes = basicschemes + advancedschemes
     
     # Calculate numerical results
