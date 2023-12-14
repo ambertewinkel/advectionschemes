@@ -230,8 +230,34 @@ def ArtDiff():
 def SemiLag():
     print()
 
-def BTBS(): #implicit
-    print()
+def BTBS(init, nt, c): #implicit
+    """
+    This functions implements the MPDATA scheme without a gauge, assuming a 
+    constant velocity, i.e., a single local Courant number input, and a 
+    periodic spatial domain.
+    --- Input ---
+    init    : array of floats, initial field to advect
+    nt      : integer, total number of time steps to take
+    c       : float or array of floats. Courant number. c = u*dt/dx where u 
+            is the velocity, dt the timestep, and dx the spatial discretisation
+    --- Output --- 
+    field   : 1D array of floats. Outputs the final timestep after advecting 
+            the initial condition. Dimensions: (nt+1) x length of init.
+    """
+    # Define initial condition
+    field = init
+
+    # Define the matrix to solve
+    M = np.zeros((len(init), len(init)))
+    for i in range(len(init)): 
+        M[i,i] = 1 + c[i] # assume c is @j and not @j-1 and doesn't change over time
+        M[i, i-1] = -c[i]
+
+    # Timestepping
+    for it in range(nt):
+        field = np.linalg.solve(M, field)
+
+    return field
 
 def BTCS(): #implicit
     print()

@@ -7,55 +7,7 @@ import matplotlib.pyplot as plt
 import schemes as sch
 import experiments as epm
 import utils as ut
-
-def analytic1(x, nt=0., c=0.):
-    """
-    This function returns an array from input array x and constants a and b advected 
-    by velocity u for a time t. The initial condition has values from the function 
-    y = 0.5*(1-cos(2pi(x-a)/(b-a))), in the range of the domain enclosed by a and b. 
-    Outside of this region, the array elements are zero.
-    --- Input ---
-    x   : 1D array of floats, points to calculate the result of the function for
-    nt  : integer, number of time steps advected
-    c   : float or 1D array of floats, Courant number for advection (c = u*dt/dx)
-    --- Output ---
-    psi : 1D array of floats, result from function at the points defined in x
-    """
-    a, b = 0.1, 0.5
-    psi = np.zeros(len(x))
-    dx = x[1] - x[0]
-    xmax = x[-1] + dx       # size of domain (assuming periodicity)
-    x0 = (x - c*nt*dx)%xmax # initial x that input x corresponds to after advection (u*t = c*nt*dx)
-    for i in range(len(x)):
-        if x0[i] >= a and x0[i] < b: # define nonzero region
-            psi[i] = 0.5*(1 - np.cos(2*np.pi*(x0[i]-a)/(b-a)))
-
-    return psi
-
-def analytic2(x, nt=0., c=0.):
-    """
-    This function returns an array from input array x and constants a and b advected 
-    by velocity u for a time t. The initial condition has output values 1 in the range
-    of the domain enclosed by a and b and outside of this region, 0. This emulates a 
-    step function. 
-    --- Input ---
-    x   : 1D array of floats, points to calculate the result of the step 
-        function for
-    nt  : integer, number of time steps advected (nt = t/dt)
-    c   : float or 1D array of floats, Courant number for advection (c = u*dt/dx)
-    --- Output ---
-    psi : 1D array of floats, result from function at the points defined in x
-    """    
-    a, b = 0.1, 0.5
-    psi = np.zeros(len(x))
-    dx = x[1] - x[0]
-    xmax = x[-1] + dx       # size of domain (assuming periodicity)
-    x0 = (x - c*nt*dx)%xmax # initial x that input x corresponds to after advection (u*t = c*nt*dx)
-    for i in range(len(x)):
-        if x0[i] >= a + 1.E-6 and x0[i] < b - 1.E-6: # define nonzero region
-            psi[i] = 1.
-
-    return psi
+import analytic as an
 
 def main():
     """
@@ -77,19 +29,19 @@ def main():
     u = c*dx/dt                 # velocity
 
     # Calculate initial functions
-    psi1_in = analytic1(x)
-    psi2_in = analytic2(x)
+    psi1_in = an.analytic1(x)
+    psi2_in = an.analytic2(x)
 
     # Calculate analytic solutions
-    psi1_an = analytic1(x, nt, c)
-    psi2_an = analytic2(x, nt, c)
+    psi1_an = an.analytic1(x, nt, c)
+    psi2_an = an.analytic2(x, nt, c)
 
     #################
     #### Schemes ####
     #################
 
     basicschemes = ['FTBS', 'FTFS', 'FTCS', 'CTBS', 'CTFS', 'CTCS', 'Upwind']
-    advancedschemes = ['MPDATA']
+    advancedschemes = ['BTBS', 'MPDATA']
     allschemes = basicschemes + advancedschemes
     
     # Calculate numerical results
@@ -146,7 +98,6 @@ def main():
     #### Error analysis for a single scheme
     scheme = 'Upwind'
     fn = getattr(sch, f'{scheme}')
-    nx_arr_fl = np.array([nx*2, nx, nx/2])
     nx_arr = np.array([nx*2, nx, nx/2], dtype=int)
     dx_arr = xmax/nx_arr
     dt_arr = c[0]*dx_arr/u[0]   # This assumes a constant c throughout the domain
@@ -156,9 +107,9 @@ def main():
     for i in range(len(nx_arr)):
         c_error = np.full(nx_arr[i], c[0])
         x_error = np.linspace(xmin, xmax, nx_arr[i], endpoint=False)
-        psi1_in_error = analytic1(x_error)
+        psi1_in_error = an.analytic1(x_error)
         psi1_Upwind_error = fn(psi1_in_error.copy(), nt_arr[i], c_error)
-        psi1_an_error = analytic1(x_error, nt_arr[i], c_error)
+        psi1_an_error = an.analytic1(x_error, nt_arr[i], c_error)
         rmse_arr[i] = epm.rmse(psi1_an_error, psi1_Upwind_error, dx_arr[i])
 
     # log-log plot of RMSE
