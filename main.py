@@ -41,8 +41,8 @@ def main():
     #### Schemes ####
     #################
 
-    basicschemes = ['FTBS', 'FTFS', 'FTCS', 'CTBS', 'CTFS', 'CTCS', 'Upwind']
-    advancedschemes = ['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel']
+    basicschemes = []#['FTBS', 'FTFS', 'FTCS', 'CTBS', 'CTFS', 'CTCS', 'Upwind']
+    advancedschemes = ['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel'] #['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTCS', 'BTCS_Jacobi', 'BTCS_GaussSeidel', 'MPDATA']
     markers_as = ['x', '', '']
     linestyle_as = ['-','-','--']
     allschemes = basicschemes + advancedschemes
@@ -99,11 +99,22 @@ def main():
     #### Total variation
     for s in allschemes:
         locals()[f'TV_psi1_{s}'] = epm.totalvariation(locals()[f'psi1_{s}'])
-        print(f'1 - Total variation at t={nt*dt} - {s}', locals()[f'TV_psi1_{s}'])
+        print(f'1 - Total variation at t={nt*dt} - {s} {locals()[f'TV_psi1_{s}']:.2E}')
 
     for s in allschemes:
         locals()[f'TV_psi2_{s}'] = epm.totalvariation(locals()[f'psi2_{s}'])
-        print(f'2 - Total variation at t={nt*dt} - {s}', locals()[f'TV_psi2_{s}'])
+        print(f'2 - Total variation at t={nt*dt} - {s} {locals()[f'TV_psi2_{s}']:.2E}')
+    
+    print()
+
+    #### Conservation
+    for s in allschemes:
+        locals()[f'csv_psi1_{s}'] = epm.conservation(psi1_in, locals()[f'psi1_{s}'], dx)
+        print(f'1 - Total mass gained at t={nt*dt} - {s} {locals()[f'csv_psi1_{s}']:.2E}')
+
+    for s in allschemes:
+        locals()[f'csv_psi2_{s}'] = epm.conservation(psi2_in, locals()[f'psi2_{s}'], dx)
+        print(f'2 - Total mass gained at t={nt*dt} - {s} {locals()[f'csv_psi2_{s}']:.2E}')
     
     #### Error analysis for a single scheme
     scheme = 'Upwind'

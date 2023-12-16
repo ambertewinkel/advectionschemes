@@ -36,3 +36,30 @@ def rmse(field, analytic, dx):
     rmse = np.sqrt((np.sum(dx*(field-analytic)*(field-analytic)))/(np.sum(dx*analytic*analytic)))
 
     return rmse
+
+def totalmass(field, dx):
+    """
+    This function computes the total mass of the input field.
+    --- Input ---
+    field   : 1D array of floats, input field
+    dx      : float, spatial discretisation
+    --- Output ---
+    TM      : float, total mass
+    """
+    TM = np.sum(field*dx)
+
+    return TM
+
+def conservation(init, field, dx):
+    """
+    This function computes the difference between the total mass of an initial field
+    and a field later in time (diff = initial - later).
+    --- Input ---
+    init    : 1D array of floats, initial field
+    field   : 1D array of floats, later field
+    --- Output --- 
+    diff    : float, difference
+    """
+    diff = totalmass(init, dx) - totalmass(field, dx)
+    
+    return diff
