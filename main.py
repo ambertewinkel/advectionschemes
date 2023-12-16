@@ -27,6 +27,7 @@ def main():
     c = np.full(len(x), 0.4)    # Courant number
     dt = 0.1                    # time step
     u = c*dx/dt                 # velocity
+    niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
 
     # Calculate initial functions
     psi1_in = an.analytic1(x)
@@ -41,15 +42,21 @@ def main():
     #################
 
     basicschemes = ['FTBS', 'FTFS', 'FTCS', 'CTBS', 'CTFS', 'CTCS', 'Upwind']
-    advancedschemes = ['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTCS', \
-                       'BTCS_Jacobi', 'BTCS_GaussSeidel', 'MPDATA']
+    advancedschemes = ['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel']
+    markers_as = ['x', '', '']
+    linestyle_as = ['-','-','--']
     allschemes = basicschemes + advancedschemes
     
     # Calculate numerical results
     for s in allschemes:
         fn = getattr(sch, f'{s}')
-        locals()[f'psi1_{s}'] = fn(psi1_in.copy(), nt, c)
-        locals()[f'psi2_{s}'] = fn(psi2_in.copy(), nt, c)
+        if 'Jacobi' in s or 'GaussSeidel' in s:
+            print(s)
+            locals()[f'psi1_{s}'] = fn(psi1_in.copy(), nt, c, niter)
+            locals()[f'psi2_{s}'] = fn(psi2_in.copy(), nt, c, niter)
+        else:
+            locals()[f'psi1_{s}'] = fn(psi1_in.copy(), nt, c)
+            locals()[f'psi2_{s}'] = fn(psi2_in.copy(), nt, c)
     
     # Print Courant numbers
     print('The Courant numbers are:', c)
@@ -66,7 +73,8 @@ def main():
 
     plt.plot(x, psi1_an, label='Analytic', linestyle='-', color='k')
     for s in advancedschemes:
-        plt.plot(x, locals()[f'psi1_{s}'], label=f'{s}')
+        si = advancedschemes.index(s)
+        plt.plot(x, locals()[f'psi1_{s}'], label=f'{s}', marker=markers_as[si], linestyle=linestyle_as[si])
     ut.design_figure('Psi1_as.jpg', f'$\Psi_1$ at t={nt*dt} - Advanced Schemes', \
                      'x', '$\Psi_1$', True, -0.5, 1.5)
 
@@ -78,7 +86,8 @@ def main():
     
     plt.plot(x, psi2_an, label='Analytic', linestyle='-', color='k')
     for s in advancedschemes:
-        plt.plot(x, locals()[f'psi2_{s}'], label=f'{s}')
+        si = advancedschemes.index(s)
+        plt.plot(x, locals()[f'psi2_{s}'], label=f'{s}', marker=markers_as[si], linestyle=linestyle_as[si])
     ut.design_figure('Psi2_as.jpg', f'$\Psi_2$ at t={nt*dt} - Advanced Schemes', \
                      'x', '$\Psi_2$', True,  -0.5, 1.5)
     plt.close()

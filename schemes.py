@@ -260,7 +260,7 @@ def BTBS(init, nt, c):
 
     return field
 
-def BTBS_Jacobi(init, nt, c):
+def BTBS_Jacobi(init, nt, c, niter=1):
     """
     This functions implements the BTBS scheme (backward in time, backward in 
     space, implicit), assuming a constant velocity (input through the Courant 
@@ -270,6 +270,7 @@ def BTBS_Jacobi(init, nt, c):
     nt      : integer, total number of time steps to take
     c       : float or array of floats. Courant number. c = u*dt/dx where u 
             is the velocity, dt the timestep, and dx the spatial discretisation
+    niter   : number of iterations used for the Jacobi iterative method, default=1
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
@@ -285,11 +286,11 @@ def BTBS_Jacobi(init, nt, c):
 
     # Timestepping
     for it in range(nt):
-        field = sv.Jacobi(M, field, field, 10)
+        field = sv.Jacobi(M, field, field, niter)
 
     return field
 
-def BTBS_GaussSeidel(init, nt, c):
+def BTBS_GaussSeidel(init, nt, c, niter=1):
     """
     This functions implements the BTBS scheme (backward in time, backward in 
     space, implicit), assuming a constant velocity (input through the Courant 
@@ -299,6 +300,7 @@ def BTBS_GaussSeidel(init, nt, c):
     nt      : integer, total number of time steps to take
     c       : float or array of floats. Courant number. c = u*dt/dx where u 
             is the velocity, dt the timestep, and dx the spatial discretisation
+    niter   : number of iterations used for the Jacobi iterative method, default=1
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
@@ -314,7 +316,7 @@ def BTBS_GaussSeidel(init, nt, c):
 
     # Timestepping
     for it in range(nt):
-        field = sv.GaussSeidel(M, field, field, 10)
+        field = sv.GaussSeidel(M, field, field, niter)
 
     return field
 
@@ -348,7 +350,7 @@ def BTCS(init, nt, c):
 
     return field
 
-def BTCS_Jacobi(init, nt, c):
+def BTCS_Jacobi(init, nt, c, niter=1):
     """
     This functions implements the BTCS scheme (backward in time, centered in 
     space, implicit), assuming a constant velocity (input through the Courant 
@@ -358,6 +360,7 @@ def BTCS_Jacobi(init, nt, c):
     nt      : integer, total number of time steps to take
     c       : float or array of floats. Courant number. c = u*dt/dx where u 
             is the velocity, dt the timestep, and dx the spatial discretisation
+    niter   : number of iterations used for the Jacobi iterative method, default=1
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
@@ -374,11 +377,11 @@ def BTCS_Jacobi(init, nt, c):
 
     # Timestepping
     for it in range(nt):
-        field = sv.Jacobi(M, field, field, 10)
+        field = sv.Jacobi(M, field, field, niter)
 
     return field
 
-def BTCS_GaussSeidel(init, nt, c):
+def BTCS_GaussSeidel(init, nt, c, niter=1):
     """
     This functions implements the BTCS scheme (backward in time, centered in 
     space, implicit), assuming a constant velocity (input through the Courant 
@@ -388,6 +391,7 @@ def BTCS_GaussSeidel(init, nt, c):
     nt      : integer, total number of time steps to take
     c       : float or array of floats. Courant number. c = u*dt/dx where u 
             is the velocity, dt the timestep, and dx the spatial discretisation
+    niter   : number of iterations used for the Jacobi iterative method, default=1
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
@@ -404,7 +408,7 @@ def BTCS_GaussSeidel(init, nt, c):
 
     # Timestepping
     for it in range(nt):
-        field = sv.GaussSeidel(M, field, field, 10)
+        field = sv.GaussSeidel(M, field, field, niter)
 
     return field
 
