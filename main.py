@@ -108,10 +108,14 @@ def main():
     print()
 
     #### Conservation
+    csv_psi1_analytic = epm.conservation(psi1_in, psi1_an, dx)
+    print(f'1 - Total mass gained at t={nt*dt} - Analytic {csv_psi1_analytic:.2E}')    
     for s in allschemes:
         locals()[f'csv_psi1_{s}'] = epm.conservation(psi1_in, locals()[f'psi1_{s}'], dx)
         print(f'1 - Total mass gained at t={nt*dt} - {s} {locals()[f'csv_psi1_{s}']:.2E}')
 
+    csv_psi2_analytic = epm.conservation(psi2_in, psi2_an, dx)
+    print(f'2 - Total mass gained at t={nt*dt} - Analytic {csv_psi2_analytic:.2E}')   
     for s in allschemes:
         locals()[f'csv_psi2_{s}'] = epm.conservation(psi2_in, locals()[f'psi2_{s}'], dx)
         print(f'2 - Total mass gained at t={nt*dt} - {s} {locals()[f'csv_psi2_{s}']:.2E}')
