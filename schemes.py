@@ -320,6 +320,36 @@ def BTBS_GaussSeidel(init, nt, c, niter=1):
 
     return field
 
+def BTBS_SymmetricGaussSeidel(init, nt, c, niter=1):
+    """
+    This functions implements the BTBS scheme (backward in time, backward in 
+    space, implicit), assuming a constant velocity (input through the Courant 
+    number) and a periodic spatial domain. It uses the symmetric Gauss-Seidel iteration method.
+    --- Input ---
+    init    : array of floats, initial field to advect
+    nt      : integer, total number of time steps to take
+    c       : float or array of floats. Courant number. c = u*dt/dx where u 
+            is the velocity, dt the timestep, and dx the spatial discretisation
+    niter   : number of iterations used for the Jacobi iterative method, default=1
+    --- Output --- 
+    field   : 1D array of floats. Outputs the final timestep after advecting 
+            the initial condition. Dimensions: length of init.
+    """
+    # Define initial condition
+    field = init
+
+    # Define the matrix to solve
+    M = np.zeros((len(init), len(init)))
+    for i in range(len(init)): 
+        M[i,i] = 1 + c[i] # assume c is @i and not @i-1 and doesn't change over time
+        M[i, i-1] = -c[i]
+
+    # Timestepping
+    for it in range(nt):
+        field = sv.SymmetricGaussSeidel(M, field, field, niter)
+
+    return field
+
 def BTFS(init, nt, c):
     """
     This functions implements the BTFS scheme (backward in time, forward in 
@@ -381,7 +411,7 @@ def BTFS_Jacobi(init, nt, c, niter=1):
 
 def BTFS_GaussSeidel(init, nt, c, niter=1):
     """
-    This functions implements the BTBS scheme (backward in time, forward in 
+    This functions implements the BTFS scheme (backward in time, forward in 
     space, implicit), assuming a constant velocity (input through the Courant 
     number) and a periodic spatial domain. It uses the Gauss-Seidel iteration method.
     --- Input ---
@@ -409,6 +439,35 @@ def BTFS_GaussSeidel(init, nt, c, niter=1):
 
     return field
 
+def BTFS_SymmetricGaussSeidel(init, nt, c, niter=1):
+    """
+    This functions implements the BTFS scheme (backward in time, forward in 
+    space, implicit), assuming a constant velocity (input through the Courant 
+    number) and a periodic spatial domain. It uses the symmetric Gauss-Seidel iteration method.
+    --- Input ---
+    init    : array of floats, initial field to advect
+    nt      : integer, total number of time steps to take
+    c       : float or array of floats. Courant number. c = u*dt/dx where u 
+            is the velocity, dt the timestep, and dx the spatial discretisation
+    niter   : number of iterations used for the Jacobi iterative method, default=1
+    --- Output --- 
+    field   : 1D array of floats. Outputs the final timestep after advecting 
+            the initial condition. Dimensions: length of init.
+    """
+    # Define initial condition
+    field = init
+
+    # Define the matrix to solve
+    M = np.zeros((len(init), len(init)))
+    for i in range(len(init)): 
+        M[i,i] = 1 - c[i] # assume c is @i and not @i+1 and doesn't change over time
+        M[i, (i+1)%len(init)] = c[i]
+
+    # Timestepping
+    for it in range(nt):
+        field = sv.SymmetricGaussSeidel(M, field, field, niter)
+
+    return field
 
 def BTCS(init, nt, c):
     """

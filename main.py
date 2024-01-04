@@ -42,9 +42,9 @@ def main():
     #################
 
     basicschemes = []#['FTBS', 'FTFS', 'FTCS', 'CTBS', 'CTFS', 'CTCS', 'Upwind']
-    advancedschemes = ['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTFS', 'BTFS_Jacobi', 'BTFS_GaussSeidel'] #['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTCS', 'BTCS_Jacobi', 'BTCS_GaussSeidel', 'MPDATA']
-    markers_as = ['x', '', '', 'x', '', '']
-    linestyle_as = ['-','-','--', '-', '-', '--']
+    advancedschemes = ['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTBS_SymmetricGaussSeidel'] #['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTFS', 'BTFS_Jacobi', 'BTFS_GaussSeidel'] #['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTCS', 'BTCS_Jacobi', 'BTCS_GaussSeidel', 'MPDATA']
+    markers_as = ['x', '', '', '', '', '']
+    linestyle_as = ['-','-','--', ':', '-', '--']
     allschemes = basicschemes + advancedschemes
     
     # Calculate numerical results
