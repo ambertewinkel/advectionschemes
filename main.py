@@ -15,16 +15,16 @@ def main():
     with 1D periodic space and time. Results are compared to the analytic soln. 
     Two initial conditions are considered: a Gaussian distribution and a step 
     function, both defined on a subdomain. 
-    Schemes included: FTBS, FTFS, FTCS, CTBS, CTFS, CTCS, Upwind, BTBS, BTCS, MPDATA
+    Schemes included: FTBS, FTFS, FTCS, CTBS, CTFS, CTCS, Upwind, BTBS, BTFS, BTCS, MPDATA
     """
     
     # Initial conditions
     nx = 40                     # number of points in space
-    nt = 30                     # number of time steps
+    nt = 1                     # number of time steps
     xmin, xmax = 0.0, 1.0       # physical domain parameters
     x = np.linspace(xmin, xmax, nx, endpoint=False) # points in space
     dx = x[1] - x[0]            # length of spatial step
-    c = np.full(len(x), 0.4)    # Courant number
+    c = np.full(len(x), 2.5)    # Courant number
     dt = 0.1                    # time step
     u = c*dx/dt                 # velocity
     niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
@@ -42,9 +42,9 @@ def main():
     #################
 
     basicschemes = []#['FTBS', 'FTFS', 'FTCS', 'CTBS', 'CTFS', 'CTCS', 'Upwind']
-    advancedschemes = ['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel'] #['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTCS', 'BTCS_Jacobi', 'BTCS_GaussSeidel', 'MPDATA']
-    markers_as = ['x', '', '']
-    linestyle_as = ['-','-','--']
+    advancedschemes = ['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTFS', 'BTFS_Jacobi', 'BTFS_GaussSeidel'] #['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTCS', 'BTCS_Jacobi', 'BTCS_GaussSeidel', 'MPDATA']
+    markers_as = ['x', '', '', 'x', '', '']
+    linestyle_as = ['-','-','--', '-', '-', '--']
     allschemes = basicschemes + advancedschemes
     
     # Calculate numerical results
@@ -65,6 +65,7 @@ def main():
     #### Plotting schemes ####
     ##########################
     
+    colors_as = ['red', 'purple', 'orange', 'green', 'lightblue', 'gray']
     plt.plot(x, psi1_an, label='Analytic', linestyle='-', color='k')
     for s in basicschemes:
         plt.plot(x, locals()[f'psi1_{s}'], label=f'{s}')
@@ -74,8 +75,12 @@ def main():
     plt.plot(x, psi1_an, label='Analytic', linestyle='-', color='k')
     for s in advancedschemes:
         si = advancedschemes.index(s)
-        plt.plot(x, locals()[f'psi1_{s}'], label=f'{s}', marker=markers_as[si], linestyle=linestyle_as[si])
-    ut.design_figure('Psi1_as.jpg', f'$\Psi_1$ at t={nt*dt} - Advanced Schemes', \
+        if 'Jacobi' in s or 'GaussSeidel' in s:
+            slabel = f'{s}, it={niter}'
+        else: 
+            slabel = s
+        plt.plot(x, locals()[f'psi1_{s}'], label=f'{slabel}', marker=markers_as[si], linestyle=linestyle_as[si], color=colors_as[si])
+    ut.design_figure('Psi1_as.jpg', f'$\Psi_1$ at t={nt*dt}', \
                      'x', '$\Psi_1$', True, -0.5, 1.5)
 
     plt.plot(x, psi2_an, label='Analytic', linestyle='-', color='k')
@@ -87,8 +92,12 @@ def main():
     plt.plot(x, psi2_an, label='Analytic', linestyle='-', color='k')
     for s in advancedschemes:
         si = advancedschemes.index(s)
-        plt.plot(x, locals()[f'psi2_{s}'], label=f'{s}', marker=markers_as[si], linestyle=linestyle_as[si])
-    ut.design_figure('Psi2_as.jpg', f'$\Psi_2$ at t={nt*dt} - Advanced Schemes', \
+        if 'Jacobi' in s or 'GaussSeidel' in s:
+            slabel = f'{s}, it={niter}'
+        else: 
+            slabel = s
+        plt.plot(x, locals()[f'psi2_{s}'], label=f'{slabel}', marker=markers_as[si], linestyle=linestyle_as[si], color=colors_as[si])
+    ut.design_figure('Psi2_as.jpg', f'$\Psi_2$ at t={nt*dt}', \
                      'x', '$\Psi_2$', True,  -0.5, 1.5)
     plt.close()
 
