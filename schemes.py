@@ -254,7 +254,7 @@ def BTBS(init, nt, c):
         M[i,i] = 1 + c[i] # assume c is @i and not @i-1 and doesn't change over time
         M[i, i-1] = -c[i]
 
-    # Timestepping
+    # Time stepping
     for it in range(nt):
         field = np.linalg.solve(M, field)
 
@@ -284,7 +284,7 @@ def BTBS_Jacobi(init, nt, c, niter=1):
         M[i,i] = 1 + c[i] # assume c is @i and not @i-1 and doesn't change over time
         M[i, i-1] = -c[i]
 
-    # Timestepping
+    # Time stepping
     for it in range(nt):
         field = sv.Jacobi(M, field, field, niter)
 
@@ -314,7 +314,7 @@ def BTBS_GaussSeidel(init, nt, c, niter=1):
         M[i,i] = 1 + c[i] # assume c is @i and not @i-1 and doesn't change over time
         M[i, i-1] = -c[i]
 
-    # Timestepping
+    # Time stepping
     for it in range(nt):
         field = sv.GaussSeidel(M, field, field, niter)
 
@@ -344,7 +344,7 @@ def BTBS_SymmetricGaussSeidel(init, nt, c, niter=1):
         M[i,i] = 1 + c[i] # assume c is @i and not @i-1 and doesn't change over time
         M[i, i-1] = -c[i]
 
-    # Timestepping
+    # Time stepping
     for it in range(nt):
         field = sv.SymmetricGaussSeidel(M, field, field, niter)
 
@@ -373,7 +373,7 @@ def BTFS(init, nt, c):
         M[i,i] = 1 - c[i] # assume c is @i and not @i+1 and doesn't change over time
         M[i, (i+1)%len(init)] = c[i]
 
-    # Timestepping
+    # Time stepping
     for it in range(nt):
         field = np.linalg.solve(M, field)
     
@@ -403,7 +403,7 @@ def BTFS_Jacobi(init, nt, c, niter=1):
         M[i,i] = 1 - c[i] # assume c is @i and not @i+1 and doesn't change over time
         M[i, (i+1)%len(init)] = c[i]
 
-    # Timestepping
+    # Time stepping
     for it in range(nt):
         field = sv.Jacobi(M, field, field, niter)
 
@@ -433,7 +433,7 @@ def BTFS_GaussSeidel(init, nt, c, niter=1):
         M[i,i] = 1 - c[i] # assume c is @i and not @i+1 and doesn't change over time
         M[i, (i+1)%len(init)] = c[i]
 
-    # Timestepping
+    # Time stepping
     for it in range(nt):
         field = sv.BackwardGaussSeidel(M, field, field, niter)
 
@@ -463,7 +463,7 @@ def BTFS_SymmetricGaussSeidel(init, nt, c, niter=1):
         M[i,i] = 1 - c[i] # assume c is @i and not @i+1 and doesn't change over time
         M[i, (i+1)%len(init)] = c[i]
 
-    # Timestepping
+    # Time stepping
     for it in range(nt):
         field = sv.SymmetricGaussSeidel(M, field, field, niter)
 
@@ -493,7 +493,7 @@ def BTCS(init, nt, c):
         M[i, i-1] = -0.5*c[i] # assume c is @i and doesn't change over time
         M[i, (i+1)%len(init)] = 0.5*c[i]
 
-    # Timestepping
+    # Time stepping
     for it in range(nt):
         field = np.linalg.solve(M, field)
 
@@ -524,7 +524,7 @@ def BTCS_Jacobi(init, nt, c, niter=1):
         M[i, i-1] = -0.5*c[i] # assume c is @i and doesn't change over time
         M[i, (i+1)%len(init)] = 0.5*c[i]
 
-    # Timestepping
+    # Time stepping
     for it in range(nt):
         field = sv.Jacobi(M, field, field, niter)
 
@@ -555,17 +555,72 @@ def BTCS_GaussSeidel(init, nt, c, niter=1):
         M[i, i-1] = -0.5*c[i] # assume c is @i and doesn't change over time
         M[i, (i+1)%len(init)] = 0.5*c[i]
 
-    # Timestepping
+    # Time stepping
     for it in range(nt):
         field = sv.GaussSeidel(M, field, field, niter)
 
     return field
 
-def CNBS(): #implicit
-    print()
+def CNBS(init, nt, c): # Crank-Nicolson (implicit)
+    """
+    This functions implements the CNBS scheme (Crank-Nicolson in i.e. trapezoidal implicit, backward in 
+    space), assuming a constant velocity (input through the Courant 
+    number) and a periodic spatial domain.
+    --- Input ---
+    init    : array of floats, initial field to advect
+    nt      : integer, total number of time steps to take
+    c       : float or array of floats. Courant number. c = u*dt/dx where u 
+            is the velocity, dt the timestep, and dx the spatial discretisation
+    --- Output --- 
+    field   : 1D array of floats. Outputs the final timestep after advecting 
+            the initial condition. Dimensions: length of init.
+    """
+    # Define initial condition
+    field = init
 
-def CNCS(): #implicit
-    print()
+    # Define the matrix to solve
+    M = np.zeros((len(init), len(init)))
+    for i in range(len(init)): 
+        M[i,i] = 1 + 0.5*c[i] # assume c is @i and not @i-1 and doesn't change over time
+        M[i, i-1] = -0.5*c[i]
+
+    # Time stepping
+    for it in range(nt):
+        rhs = (1 - 0.5*c)*field + 0.5*c*np.roll(field,1)
+        field = np.linalg.solve(M, rhs)
+
+    return field
+
+def CNCS(init, nt, c): # Crank-Nicolson (implicit)
+    """
+    This functions implements the CNCS scheme (Crank-Nicolson in i.e. trapezoidal implicit, centered in 
+    space), assuming a constant velocity (input through the Courant 
+    number) and a periodic spatial domain.
+    --- Input ---
+    init    : array of floats, initial field to advect
+    nt      : integer, total number of time steps to take
+    c       : float or array of floats. Courant number. c = u*dt/dx where u 
+            is the velocity, dt the timestep, and dx the spatial discretisation
+    --- Output --- 
+    field   : 1D array of floats. Outputs the final timestep after advecting 
+            the initial condition. Dimensions: length of init.
+    """
+    # Define initial condition
+    field = init
+
+    # Define the matrix to solve
+    M = np.zeros((len(init), len(init)))
+    for i in range(len(init)): 
+        M[i,i] = 1  
+        M[i, i-1] = -0.25*c[i] # assume c is @i and doesn't change over time
+        M[i, (i+1)%len(init)] = 0.25*c[i]
+
+    # Time stepping
+    for it in range(nt):
+        rhs = field - 0.25*c*np.roll(field,-1) + 0.25*c*np.roll(field,1)
+        field = np.linalg.solve(M, rhs)
+
+    return field
 
 def MPDATA(init, nt, c, eps=1e-6):
     """
@@ -595,7 +650,7 @@ def MPDATA(init, nt, c, eps=1e-6):
     # Ensure c has the right dims for it loop
     c_arr = ut.to_vector(c, len(init))
 
-    # Timestepping
+    # Time stepping
     for it in range(nt):
         # First pass  
         field_FP = field_old - flux(field_old, np.roll(field_old,-1), c_arr) + flux(np.roll(field_old,1), field_old, c_arr)
