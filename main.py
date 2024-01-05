@@ -117,16 +117,16 @@ def main():
     print()
 
     #### Conservation
-    csv_psi1_analytic = epm.conservation(psi1_in, psi1_an, dx)
+    csv_psi1_analytic = epm.check_conservation(psi1_in, psi1_an, dx)
     print(f'1 - Total mass gained at t={nt*dt} - Analytic {csv_psi1_analytic:.2E}')    
     for s in allschemes:
-        locals()[f'csv_psi1_{s}'] = epm.conservation(psi1_in, locals()[f'psi1_{s}'], dx)
+        locals()[f'csv_psi1_{s}'] = epm.check_conservation(psi1_in, locals()[f'psi1_{s}'], dx)
         print(f'1 - Total mass gained at t={nt*dt} - {s} {locals()[f'csv_psi1_{s}']:.2E}')
 
-    csv_psi2_analytic = epm.conservation(psi2_in, psi2_an, dx)
+    csv_psi2_analytic = epm.check_conservation(psi2_in, psi2_an, dx)
     print(f'2 - Total mass gained at t={nt*dt} - Analytic {csv_psi2_analytic:.2E}')   
     for s in allschemes:
-        locals()[f'csv_psi2_{s}'] = epm.conservation(psi2_in, locals()[f'psi2_{s}'], dx)
+        locals()[f'csv_psi2_{s}'] = epm.check_conservation(psi2_in, locals()[f'psi2_{s}'], dx)
         print(f'2 - Total mass gained at t={nt*dt} - {s} {locals()[f'csv_psi2_{s}']:.2E}')
     
     """
@@ -152,5 +152,20 @@ def main():
     plt.loglog(dx_arr, dx_arr, color='green', label='O(dx) accurate')
     ut.design_figure(f'loglog_{scheme}.jpg', f'RMSE for {scheme} scheme', 'dx', 'RMSE')
     """
-    
+
+    print()
+
+    #### Boundedness
+    bdn_psi1_analytic = epm.check_boundedness(psi1_in, psi1_an)
+    print(f'1 - Boundedness at t={nt*dt} - Analytic: {bdn_psi1_analytic}')    
+    for s in allschemes:
+        locals()[f'bdn_psi1_{s}'] = epm.check_boundedness(psi1_in, locals()[f'psi1_{s}'])
+        print(f'1 - Boundedness at t={nt*dt} - {s}: {locals()[f'bdn_psi1_{s}']}')
+
+    bdn_psi2_analytic = epm.check_boundedness(psi2_in, psi2_an)
+    print(f'2 - Boundedness at t={nt*dt} - Analytic: {bdn_psi2_analytic}')   
+    for s in allschemes:
+        locals()[f'bdn_psi2_{s}'] = epm.check_boundedness(psi2_in, locals()[f'psi2_{s}'])
+        print(f'2 - Boundedness at t={nt*dt} - {s}: {locals()[f'bdn_psi2_{s}']}')
+
 if __name__ == "__main__": main()

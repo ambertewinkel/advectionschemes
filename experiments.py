@@ -50,7 +50,7 @@ def totalmass(field, dx):
 
     return TM
 
-def conservation(init, field, dx):
+def check_conservation(init, field, dx):
     """
     This function computes the difference between the total mass of an initial field
     and a field later in time (diff = initial - later).
@@ -63,3 +63,26 @@ def conservation(init, field, dx):
     diff = totalmass(init, dx) - totalmass(field, dx)
     
     return diff
+
+def check_boundedness(init, field):
+    """
+    This function checks boundedness for a field as compared to its initial condition. It returns a boolean,
+    'True' if bounded, 'False' if unbounded. If unbounded, it also prints the bounds and the min/max value 
+    that exceed these bounds.
+    --- Input ---
+    init    : 1D array of floats, initial condition that field has been time stepped from
+    field   : 1D array of floats, solution field at a later point in time
+    --- Output --- 
+    bounded : boolean, True if field is bounded, False if unbounded
+    """
+    bounded = False
+    minbound, maxbound = np.min(init), np.max(init)
+    minfield, maxfield = np.min(field), np.max(field)
+    if minfield < minbound or maxfield > maxbound:
+        print('The below field is unbounded.')
+        print(f'The (init) bounds are {minbound:.3f}, {maxbound:.3f}')
+        print(f'The field has bounds: {minfield:.3f}, {maxfield:.3f}')
+    else:
+        bounded = True
+
+    return bounded
