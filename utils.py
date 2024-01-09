@@ -11,6 +11,7 @@ def design_figure(filename, title, xlabel, ylabel, bool_ylim = False, ylim1=0.0,
     plt.ylabel(ylabel)
     plt.title(title)
     plt.legend()
+    plt.tight_layout()
     plt.savefig(filename)
     plt.clf()
 
