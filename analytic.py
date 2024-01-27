@@ -5,7 +5,7 @@
 
 import numpy as np
 
-def analytic1(x, nt=0., c=0.):
+def analytic1(x, xmax, u=0., t=0.): # nt=0., c=0.):
     """
     This function returns an array from input array x and constants a and b advected 
     by velocity u for a time t. The initial condition has values from the function 
@@ -20,16 +20,14 @@ def analytic1(x, nt=0., c=0.):
     """
     a, b = 0.1, 0.5
     psi = np.zeros(len(x))
-    dx = x[1] - x[0]
-    xmax = x[-1] + dx       # size of domain (assuming periodicity)
-    x0 = (x - c*nt*dx)%xmax # initial x that input x corresponds to after advection (u*t = c*nt*dx)
+    x0 = (x - u*t)%xmax
     for i in range(len(x)):
         if x0[i] >= a and x0[i] < b: # define nonzero region
             psi[i] = 0.5*(1 - np.cos(2*np.pi*(x0[i]-a)/(b-a)))
 
     return psi
 
-def analytic2(x, nt=0., c=0.):
+def analytic2(x, xmax, u=0., t=0.): #nt=0., c=0.):
     """
     This function returns an array from input array x and constants a and b advected 
     by velocity u for a time t. The initial condition has output values 1 in the range
@@ -45,9 +43,7 @@ def analytic2(x, nt=0., c=0.):
     """    
     a, b = 0.1, 0.5
     psi = np.zeros(len(x))
-    dx = x[1] - x[0]
-    xmax = x[-1] + dx       # size of domain (assuming periodicity)
-    x0 = (x - c*nt*dx)%xmax # initial x that input x corresponds to after advection (u*t = c*nt*dx)
+    x0 = (x - u*t)%xmax
     for i in range(len(x)):
         if x0[i] >= a + 1.E-6 and x0[i] < b - 1.E-6: # define nonzero region
             psi[i] = 1.

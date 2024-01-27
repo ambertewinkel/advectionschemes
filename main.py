@@ -20,35 +20,34 @@ def main():
     
     # Initial conditions
     nx = 40                     # number of points in space
-    nt = 1                     # number of time steps
-    xmin, xmax = 0.0, 2.0       # physical domain parameters
-    x = np.linspace(xmin, xmax, nx, endpoint=False) # points in space
-    dx = x[1] - x[0]            # length of spatial step
-    c = np.full(len(x), 2.5)    # Courant number
+    xmax = 2.0                  # physical domain parameters
+    x, dx = coords_centralstretching(xmax, nx) # points in space, length of spatial step
+    u = np.full(nx, 2.)         # velocity (assume constant)
     dt = 0.1                    # time step
-    u = c*dx/dt                 # velocity
+    nt = 1                      # number of time steps
+    c = u*dt/dx                 # Courant number (defined at cell edge: c[i] is between cells i and i+1)
     niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
 
-    xtest, dxtest = coords_centralstretching(xmax, nx)
-    plot_grid(xtest, dxtest)
+    plot_Courant(x, c)
+    plot_grid(x, dx)
 
     # Calculate initial functions
-    psi1_in = an.analytic1(x)
-    psi2_in = an.analytic2(x)
+    psi1_in = an.analytic1(x, xmax)
+    psi2_in = an.analytic2(x, xmax)
 
     # Calculate analytic solutions
-    psi1_an = an.analytic1(x, nt, c)
-    psi2_an = an.analytic2(x, nt, c)
+    psi1_an = an.analytic1(x, xmax, u, nt*dt)
+    psi2_an = an.analytic2(x, xmax, u, nt*dt)
 
     #################
     #### Schemes ####
     #################
 
     basicschemes = []#['FTBS', 'FTFS', 'FTCS', 'CTBS', 'CTFS', 'CTCS', 'Upwind']
-    advancedschemes = ['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTBS_SymmetricGaussSeidel']#'CNBS', 'CNCS'] #['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTFS', 'BTFS_Jacobi', 'BTFS_GaussSeidel'] #['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTCS', 'BTCS_Jacobi', 'BTCS_GaussSeidel', 'MPDATA']
-    markers_as = ['o', '', 'x', '', '', '']
+    advancedschemes = ['BTBS', 'BTBS_Jacobi']#, 'BTBS_GaussSeidel', 'BTBS_SymmetricGaussSeidel']#'CNBS', 'CNCS'] #['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTFS', 'BTFS_Jacobi', 'BTFS_GaussSeidel'] #['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTCS', 'BTCS_Jacobi', 'BTCS_GaussSeidel', 'MPDATA']
+    markers_as = ['x', '', 'o', '', '', '']
     linestyle_as = ['-','-','-', '--', '-', '--']
-    colors_as = ['black', 'blue', 'lightgreen', 'red', 'lightblue', 'gray']
+    colors_as = ['red', 'blue', 'lightgreen', 'red', 'lightblue', 'gray']
     allschemes = basicschemes + advancedschemes
     
     # Calculate numerical results
@@ -69,12 +68,15 @@ def main():
     #### Plotting schemes ####
     ##########################
     
+    """
     plt.plot(x, psi1_an, label='Analytic', linestyle='-', color='k')
     for s in basicschemes:
         plt.plot(x, locals()[f'psi1_{s}'], label=f'{s}')
-    ut.design_figure('Psi1_bs.jpg', f'$\\Psi_1$ at t={nt*dt} with c={c[0]} - Basic Schemes', \
+    ut.design_figure('Psi1_bs.jpg', f'$\\Psi_1$ at t={nt*dt} - Basic Schemes', \
                      'x', '$\\Psi_1$', True, -0.1, 1.1)
+    """
 
+    plt.plot(x, psi1_in, label='Initial', linestyle='-', color='grey')
     plt.plot(x, psi1_an, label='Analytic', linestyle='-', color='k')
     for s in advancedschemes:
         si = advancedschemes.index(s)
@@ -85,15 +87,18 @@ def main():
         else: 
             slabel = s
         plt.plot(x, locals()[f'psi1_{s}'], label=f'{slabel}', marker=markers_as[si], linestyle=linestyle_as[si], color=colors_as[si])
-    ut.design_figure('Psi1_as.jpg', f'$\\Psi_1$ at t={nt*dt} with c={c[0]}', \
+    ut.design_figure('Psi1_as.jpg', f'$\\Psi_1$ at t={nt*dt}', \
                      'x', '$\\Psi_1$', True, -0.1, 1.1)
 
+    """
     plt.plot(x, psi2_an, label='Analytic', linestyle='-', color='k')
     for s in basicschemes:
         plt.plot(x, locals()[f'psi2_{s}'], label=f'{s}')
-    ut.design_figure('Psi2_bs.jpg', f'$\\Psi_2$ at t={nt*dt} with c={c[0]} - Basic Schemes', \
+    ut.design_figure('Psi2_bs.jpg', f'$\\Psi_2$ at t={nt*dt} - Basic Schemes', \
                      'x', '$\\Psi_2$', True, -0.1, 1.1)
+    """
     
+    plt.plot(x, psi2_in, label='Initial', linestyle='-', color='grey')
     plt.plot(x, psi2_an, label='Analytic', linestyle='-', color='k')
     for s in advancedschemes:
         si = advancedschemes.index(s)
@@ -102,7 +107,7 @@ def main():
         else: 
             slabel = s
         plt.plot(x, locals()[f'psi2_{s}'], label=f'{slabel}', marker=markers_as[si], linestyle=linestyle_as[si], color=colors_as[si])
-    ut.design_figure('Psi2_as.jpg', f'$\\Psi_2$ at t={nt*dt} with c={c[0]}', \
+    ut.design_figure('Psi2_as.jpg', f'$\\Psi_2$ at t={nt*dt}', \
                      'x', '$\\Psi_2$', True,  -0.1, 1.1)
     plt.close()
 
@@ -179,7 +184,7 @@ def coords_centralstretching(xmax, imax):
     This function implements a varying grid spacing, with stretching in the center: dx_center = 10*dx_boundary.
     We use a cosine function to define the grid spacing: dx[i] = dx0(6-5cos(2pi*i/imax)) for i ranging from 0 to imax.
     From integration we know that dx0 = xmax/(6*imax).
-    We assume a periodic domain.
+    We assume a periodic domain that ranges from 0 to xmax in size.
     --- Input:
     xmax    : float, domain size
     imax    : int, number of grid points
@@ -194,15 +199,24 @@ def coords_centralstretching(xmax, imax):
         if i != imax-1: x[i+1] = x[i] + dx[i]
     return x, dx
 
-def plot_grid(xtest, dxtest):
-    plt.plot(xtest)
+def plot_Courant(x, c):
+    plt.plot(x, c)
+    plt.title('Courant number')
+    plt.xlabel('x')
+    plt.ylabel('C')
+    plt.tight_layout()
+    plt.savefig('Courant.jpg')
+    plt.clf()
+
+def plot_grid(x, dx):
+    plt.plot(x)
     plt.title('Stretching: x against i')
     plt.xlabel('i')
     plt.ylabel('x')
     plt.tight_layout()
     plt.savefig('gridpoints.jpg')
     plt.clf()
-    plt.plot(dxtest)
+    plt.plot(dx)
     plt.xlabel('i')
     plt.ylabel('dx')
     plt.title('Stretching: dx against i')
