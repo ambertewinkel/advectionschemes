@@ -21,13 +21,16 @@ def main():
     # Initial conditions
     nx = 40                     # number of points in space
     nt = 1                     # number of time steps
-    xmin, xmax = 0.0, 1.0       # physical domain parameters
+    xmin, xmax = 0.0, 2.0       # physical domain parameters
     x = np.linspace(xmin, xmax, nx, endpoint=False) # points in space
     dx = x[1] - x[0]            # length of spatial step
     c = np.full(len(x), 2.5)    # Courant number
     dt = 0.1                    # time step
     u = c*dx/dt                 # velocity
     niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
+
+    xtest, dxtest = coords_centralstretching(xmax, nx)
+    plot_grid(xtest, dxtest)
 
     # Calculate initial functions
     psi1_in = an.analytic1(x)
@@ -69,8 +72,8 @@ def main():
     plt.plot(x, psi1_an, label='Analytic', linestyle='-', color='k')
     for s in basicschemes:
         plt.plot(x, locals()[f'psi1_{s}'], label=f'{s}')
-    ut.design_figure('Psi1_bs.jpg', f'$\Psi_1$ at t={nt*dt} with c={c[0]} - Basic Schemes', \
-                     'x', '$\Psi_1$', True, -0.1, 1.1)
+    ut.design_figure('Psi1_bs.jpg', f'$\\Psi_1$ at t={nt*dt} with c={c[0]} - Basic Schemes', \
+                     'x', '$\\Psi_1$', True, -0.1, 1.1)
 
     plt.plot(x, psi1_an, label='Analytic', linestyle='-', color='k')
     for s in advancedschemes:
@@ -82,14 +85,14 @@ def main():
         else: 
             slabel = s
         plt.plot(x, locals()[f'psi1_{s}'], label=f'{slabel}', marker=markers_as[si], linestyle=linestyle_as[si], color=colors_as[si])
-    ut.design_figure('Psi1_as.jpg', f'$\Psi_1$ at t={nt*dt} with c={c[0]}', \
-                     'x', '$\Psi_1$', True, -0.1, 1.1)
+    ut.design_figure('Psi1_as.jpg', f'$\\Psi_1$ at t={nt*dt} with c={c[0]}', \
+                     'x', '$\\Psi_1$', True, -0.1, 1.1)
 
     plt.plot(x, psi2_an, label='Analytic', linestyle='-', color='k')
     for s in basicschemes:
         plt.plot(x, locals()[f'psi2_{s}'], label=f'{s}')
-    ut.design_figure('Psi2_bs.jpg', f'$\Psi_2$ at t={nt*dt} with c={c[0]} - Basic Schemes', \
-                     'x', '$\Psi_2$', True, -0.1, 1.1)
+    ut.design_figure('Psi2_bs.jpg', f'$\\Psi_2$ at t={nt*dt} with c={c[0]} - Basic Schemes', \
+                     'x', '$\\Psi_2$', True, -0.1, 1.1)
     
     plt.plot(x, psi2_an, label='Analytic', linestyle='-', color='k')
     for s in advancedschemes:
@@ -99,8 +102,8 @@ def main():
         else: 
             slabel = s
         plt.plot(x, locals()[f'psi2_{s}'], label=f'{slabel}', marker=markers_as[si], linestyle=linestyle_as[si], color=colors_as[si])
-    ut.design_figure('Psi2_as.jpg', f'$\Psi_2$ at t={nt*dt} with c={c[0]}', \
-                     'x', '$\Psi_2$', True,  -0.1, 1.1)
+    ut.design_figure('Psi2_as.jpg', f'$\\Psi_2$ at t={nt*dt} with c={c[0]}', \
+                     'x', '$\\Psi_2$', True,  -0.1, 1.1)
     plt.close()
 
     #####################
@@ -169,5 +172,42 @@ def main():
     for s in allschemes:
         locals()[f'bdn_psi2_{s}'] = epm.check_boundedness(psi2_in, locals()[f'psi2_{s}'])
         print(f'2 - Boundedness at t={nt*dt} - {s}: {locals()[f'bdn_psi2_{s}']}')
+
+
+def coords_centralstretching(xmax, imax):
+    """
+    This function implements a varying grid spacing, with stretching in the center: dx_center = 10*dx_boundary.
+    We use a cosine function to define the grid spacing: dx[i] = dx0(6-5cos(2pi*i/imax)) for i ranging from 0 to imax.
+    From integration we know that dx0 = xmax/(6*imax).
+    We assume a periodic domain.
+    --- Input:
+    xmax    : float, domain size
+    imax    : int, number of grid points
+    --- Output:
+    x       : array of floats, spatial points
+    dx      : array of floats, grid spacing (dx[i] = x[i+1] - x[i])
+    """
+    dx0 = xmax/(6*imax)
+    x, dx = np.zeros(imax), np.zeros(imax)
+    for i in range(imax):
+        dx[i] = dx0*(6 - 5*np.cos(2*np.pi*i/imax))
+        if i != imax-1: x[i+1] = x[i] + dx[i]
+    return x, dx
+
+def plot_grid(xtest, dxtest):
+    plt.plot(xtest)
+    plt.title('Stretching: x against i')
+    plt.xlabel('i')
+    plt.ylabel('x')
+    plt.tight_layout()
+    plt.savefig('gridpoints.jpg')
+    plt.clf()
+    plt.plot(dxtest)
+    plt.xlabel('i')
+    plt.ylabel('dx')
+    plt.title('Stretching: dx against i')
+    plt.tight_layout()
+    plt.savefig('gridspacing.jpg')
+    plt.clf()
 
 if __name__ == "__main__": main()
