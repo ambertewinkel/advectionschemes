@@ -23,7 +23,7 @@ def main():
     xmax = 2.0                  # physical domain parameters
     x, dx = coords_centralstretching(xmax, nx) # points in space, length of spatial step
     u = np.full(nx, 2.)         # velocity (assume constant)
-    dt = 0.1                    # time step
+    dt = 0.1#0.1                    # time step
     nt = 1                      # number of time steps
     c = u*dt/dx                 # Courant number (defined at cell edge: c[i] is between cells i and i+1)
     niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
@@ -45,7 +45,7 @@ def main():
 
     basicschemes = []#['FTBS', 'FTFS', 'FTCS', 'CTBS', 'CTFS', 'CTCS', 'Upwind']
     advancedschemes = ['BTBS', 'BTBS_Jacobi']#, 'BTBS_GaussSeidel', 'BTBS_SymmetricGaussSeidel']#'CNBS', 'CNCS'] #['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTFS', 'BTFS_Jacobi', 'BTFS_GaussSeidel'] #['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTCS', 'BTCS_Jacobi', 'BTCS_GaussSeidel', 'MPDATA']
-    markers_as = ['x', '', 'o', '', '', '']
+    markers_as = ['x', 'x', 'o', '', '', '']
     linestyle_as = ['-','-','-', '--', '-', '--']
     colors_as = ['red', 'blue', 'lightgreen', 'red', 'lightblue', 'gray']
     allschemes = basicschemes + advancedschemes
@@ -201,6 +201,7 @@ def coords_centralstretching(xmax, imax):
 
 def plot_Courant(x, c):
     plt.plot(x, c)
+    plt.axhline(1.0, color='grey', linestyle=':')
     plt.title('Courant number')
     plt.xlabel('x')
     plt.ylabel('C')

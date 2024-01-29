@@ -18,13 +18,16 @@ def analytic1(x, xmax, u=0., t=0.): # nt=0., c=0.):
     --- Output ---
     psi : 1D array of floats, result from function at the points defined in x
     """
-    a, b = 0.1, 0.5
+    a, b = 1.9, 0.3 #0.1, 0.5 # a = left boundary of wave, b = right boundary of wave
     psi = np.zeros(len(x))
     x0 = (x - u*t)%xmax
     for i in range(len(x)):
-        if x0[i] >= a and x0[i] < b: # define nonzero region
-            psi[i] = 0.5*(1 - np.cos(2*np.pi*(x0[i]-a)/(b-a)))
-
+        if a < b:
+            if x0[i] >= a and x0[i] < b: # define nonzero region
+                psi[i] = 0.5*(1 - np.cos(2*np.pi*(x0[i]-a)/(b-a)))
+        else:
+            if x0[i] >= a or x0[i] < b:
+                psi[i] = 0.5*(1 - np.cos(2*np.pi*(x0[i]-a+xmax)/(b-a+xmax)))
     return psi
 
 def analytic2(x, xmax, u=0., t=0.): #nt=0., c=0.):
@@ -41,11 +44,14 @@ def analytic2(x, xmax, u=0., t=0.): #nt=0., c=0.):
     --- Output ---
     psi : 1D array of floats, result from function at the points defined in x
     """    
-    a, b = 0.1, 0.5
+    a, b = 1.9, 0.3 #0.1, 0.5 # a = left boundary of wave, b = right boundary of wave
     psi = np.zeros(len(x))
     x0 = (x - u*t)%xmax
     for i in range(len(x)):
-        if x0[i] >= a + 1.E-6 and x0[i] < b - 1.E-6: # define nonzero region
-            psi[i] = 1.
-
+        if a < b:
+            if x0[i] >= a + 1.E-6 and x0[i] < b - 1.E-6: # define nonzero region
+                psi[i] = 1.
+        else:
+            if x0[i] >= a + 1.E-6 or x0[i] < b - 1.E-6: # define nonzero region
+                psi[i] = 1.
     return psi
