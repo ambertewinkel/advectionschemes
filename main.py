@@ -21,13 +21,16 @@ def main():
     # Initial conditions
     nx = 40                     # number of points in space
     xmax = 2.0                  # physical domain parameters
-    x, dx = coords_centralstretching(xmax, nx) # points in space, length of spatial step
-    u = np.full(nx, 2.)         # velocity (assume constant)
-    dt = 0.1#0.1                    # time step
+    x, dx = coords_centralstretching(xmax, nx, nx/2) # points in space, length of spatial step
+    print(nx/2)
+    u = np.full(nx, 0.2)         # velocity (assume constant)
+    dt = 0.1                    # time step
     nt = 1                      # number of time steps
     c = u*dt/dx                 # Courant number (defined at cell edge: c[i] is between cells i and i+1)
     niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
-
+    
+    for i in range(nx):
+        print(i, x[i])
     plot_Courant(x, c)
     plot_grid(x, dx)
 
@@ -72,7 +75,7 @@ def main():
     plt.plot(x, psi1_an, label='Analytic', linestyle='-', color='k')
     for s in basicschemes:
         plt.plot(x, locals()[f'psi1_{s}'], label=f'{s}')
-    ut.design_figure('Psi1_bs.jpg', f'$\\Psi_1$ at t={nt*dt} - Basic Schemes', \
+    ut.design_figure('Psi1_bs.pdf', f'$\\Psi_1$ at t={nt*dt} - Basic Schemes', \
                      'x', '$\\Psi_1$', True, -0.1, 1.1)
     """
 
@@ -87,14 +90,14 @@ def main():
         else: 
             slabel = s
         plt.plot(x, locals()[f'psi1_{s}'], label=f'{slabel}', marker=markers_as[si], linestyle=linestyle_as[si], color=colors_as[si])
-    ut.design_figure('Psi1_as.jpg', f'$\\Psi_1$ at t={nt*dt}', \
+    ut.design_figure('Psi1_as.pdf', f'$\\Psi_1$ at t={nt*dt}', \
                      'x', '$\\Psi_1$', True, -0.1, 1.1)
 
     """
     plt.plot(x, psi2_an, label='Analytic', linestyle='-', color='k')
     for s in basicschemes:
         plt.plot(x, locals()[f'psi2_{s}'], label=f'{s}')
-    ut.design_figure('Psi2_bs.jpg', f'$\\Psi_2$ at t={nt*dt} - Basic Schemes', \
+    ut.design_figure('Psi2_bs.pdf', f'$\\Psi_2$ at t={nt*dt} - Basic Schemes', \
                      'x', '$\\Psi_2$', True, -0.1, 1.1)
     """
     
@@ -107,7 +110,7 @@ def main():
         else: 
             slabel = s
         plt.plot(x, locals()[f'psi2_{s}'], label=f'{slabel}', marker=markers_as[si], linestyle=linestyle_as[si], color=colors_as[si])
-    ut.design_figure('Psi2_as.jpg', f'$\\Psi_2$ at t={nt*dt}', \
+    ut.design_figure('Psi2_as.pdf', f'$\\Psi_2$ at t={nt*dt}', \
                      'x', '$\\Psi_2$', True,  -0.1, 1.1)
     plt.close()
 
@@ -160,7 +163,7 @@ def main():
     # log-log plot of RMSE
     plt.loglog(dx_arr, rmse_arr, '-x', label=f'{scheme}')
     plt.loglog(dx_arr, dx_arr, color='green', label='O(dx) accurate')
-    ut.design_figure(f'loglog_{scheme}.jpg', f'RMSE for {scheme} scheme', 'dx', 'RMSE')
+    ut.design_figure(f'loglog_{scheme}.pdf', f'RMSE for {scheme} scheme', 'dx', 'RMSE')
     """
 
     print()
@@ -179,15 +182,16 @@ def main():
         print(f'2 - Boundedness at t={nt*dt} - {s}: {locals()[f'bdn_psi2_{s}']}')
 
 
-def coords_centralstretching(xmax, imax):
+def coords_centralstretching(xmax, imax, i_maxC=0):
     """
     This function implements a varying grid spacing, with stretching in the center: dx_center = 10*dx_boundary.
-    We use a cosine function to define the grid spacing: dx[i] = dx0(6-5cos(2pi*i/imax)) for i ranging from 0 to imax.
+    We use a cosine function to define the grid spacing: dx[i] = dx0(6-5cos(2pi*(i-i_maxC)/imax)) for i ranging from 0 to imax.
     From integration we know that dx0 = xmax/(6*imax).
     We assume a periodic domain that ranges from 0 to xmax in size.
     --- Input:
     xmax    : float, domain size
     imax    : int, number of grid points
+    i_maxC  : int, index where the Courant number is maximised/where dx is minimised for constant u throughout the domain
     --- Output:
     x       : array of floats, spatial points
     dx      : array of floats, grid spacing (dx[i] = x[i+1] - x[i])
@@ -195,18 +199,19 @@ def coords_centralstretching(xmax, imax):
     dx0 = xmax/(6*imax)
     x, dx = np.zeros(imax), np.zeros(imax)
     for i in range(imax):
-        dx[i] = dx0*(6 - 5*np.cos(2*np.pi*i/imax))
+        dx[i] = dx0*(6. - 5.*np.cos(2.*np.pi*(i-i_maxC)/imax))
         if i != imax-1: x[i+1] = x[i] + dx[i]
     return x, dx
 
 def plot_Courant(x, c):
     plt.plot(x, c)
     plt.axhline(1.0, color='grey', linestyle=':')
+    plt.axvline(1.0)
     plt.title('Courant number')
     plt.xlabel('x')
     plt.ylabel('C')
     plt.tight_layout()
-    plt.savefig('Courant.jpg')
+    plt.savefig('Courant.pdf')
     plt.clf()
 
 def plot_grid(x, dx):
@@ -215,14 +220,14 @@ def plot_grid(x, dx):
     plt.xlabel('i')
     plt.ylabel('x')
     plt.tight_layout()
-    plt.savefig('gridpoints.jpg')
+    plt.savefig('gridpoints.pdf')
     plt.clf()
     plt.plot(dx)
     plt.xlabel('i')
     plt.ylabel('dx')
     plt.title('Stretching: dx against i')
     plt.tight_layout()
-    plt.savefig('gridspacing.jpg')
+    plt.savefig('gridspacing.pdf')
     plt.clf()
 
 if __name__ == "__main__": main()
