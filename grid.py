@@ -4,7 +4,7 @@
 
 import numpy as np
 
-def coords_centralstretching(xmax, imax, i_maxC=0): # !!! implement a max C amplitude input
+def coords_centralstretching(xmax, imax, i_maxC=0., dxcmin=0.):
     """
     This function implements a varying grid spacing, with stretching in the center: dx_center = 10*dx_boundary.
     We use a cosine function to define the grid spacing: dx[i] = dx0(6-5cos(2pi*(i-i_maxC)/imax)) for i ranging from 0 to imax.
@@ -14,6 +14,7 @@ def coords_centralstretching(xmax, imax, i_maxC=0): # !!! implement a max C ampl
     xmax    : float, domain size
     imax    : int, number of grid points
     i_maxC  : int, index where the Courant number is maximised/where dx is minimised for constant u throughout the domain
+    dxcmin  : float, minimum dxc (connected to max Courant number allowed in the domain)
     --- Output:
     xf       : array of floats, spatial points of cell faces
     dxc      : array of floats, grid spacing between cell faces (dxc[i] = xf[i+1] - xf[i]), i.e., grid box size
@@ -26,6 +27,7 @@ def coords_centralstretching(xmax, imax, i_maxC=0): # !!! implement a max C ampl
     # Setting grid values # !!! generalize in a separate function/have dxc as input to this function
     dx0 = xmax/(6*imax)
     dxc = [dx0*(6. - 5.*np.cos(2.*np.pi*(i-i_maxC)/imax)) for i in range(imax)] # define the grid spacing
+    dxc = [dxc[i] if dxc[i] > dxcmin else dxcmin for i in range(imax)]
 
     # Calculating other grid quantities
     for i in range(len(dxc)-1):

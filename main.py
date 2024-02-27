@@ -22,14 +22,22 @@ def main():
     """
     
     # Initial conditions
+    dt = 0.1                    # time step
+    nt = 100                    # number of time steps
     nx = 40                     # number of points in space
     xmax = 2.0                  # physical domain parameters
-    xf, dxc, xc, dxf = gr.coords_centralstretching(xmax, nx, nx/2) # points in space, length of spatial step
-    print(nx/2)
     uf = np.full(nx, 0.2)       # velocity at faces (assume constant)
     uc = np.full(nx, 0.2)       # velocity at centers # !!! implement linear interpolation to calculate from uf
-    dt = 0.1                    # time step
-    nt = 100                      # number of time steps
+
+    keep_model_stable = True
+    if keep_model_stable == True:
+        cmax = 1.
+        dxcmin = np.min(0.5*dt*(np.roll(uf,-1) + uf)/cmax)
+    else:
+        dxcmin = 0.
+        
+    xf, dxc, xc, dxf = gr.coords_centralstretching(xmax, nx, nx/2, dxcmin=dxcmin) # points in space, length of spatial step
+    print(nx/2)
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc # Courant number (defined at cell center)
     niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
     
