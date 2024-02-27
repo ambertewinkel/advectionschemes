@@ -1,11 +1,13 @@
 # Module file with various schemes to analyze in main.py
-# Schemes included: FTBS, FTFS, FTCS, CTBS, CTFS, CTCS, MPDATA
+# Schemes included: FTBS, FTFS, CTCS, Upwind, MPDATA, CNBS, and CNCS, and then BTBS, BTFS, BTCS with direct and iterative solvers. Lastly, hybrid scheme with BTBS + 1 Jacobi iteration for implicit and MPDATA for explicit
+# Author:   Amber te Winkel
+# Email:    ambertewinkel@gmail.com
 
 import numpy as np
 import utils as ut
 import solvers as sv
 
-def FTBS(init, nt, c):
+def FTBS(init, nt, dt, uf, dxc):
     """
     This function computes the FTBS (forward in time, backward in space)
     finite difference scheme for an initial field, number of time steps nt
@@ -14,26 +16,24 @@ def FTBS(init, nt, c):
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : float or array of floats. Courant number. c = u*dt/dx where u 
-            is the velocity, dt the timestep, and dx the spatial discretisation
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
     """
 
     # Setup and initial condition
-    field = init
-
-    # Ensure c has the right dims for it loop
-    c_arr = ut.to_vector(c, len(init))
+    field = init.copy()
 
     # Time stepping
     for it in range(nt):
-        field = field - c_arr*(field - np.roll(field,1))
-
+        field = field - dt*(np.roll(uf,-1)*field - uf*np.roll(field,1))/dxc
+ 
     return field
 
-def FTFS(init, nt, c):
+def FTFS(init, nt, dt, uf, dxc):
     """
     This function computes the FTFS (forward in time, forward in space)
     finite difference scheme for an initial field, number of time steps nt
@@ -42,156 +42,56 @@ def FTFS(init, nt, c):
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : float or array of floats. Courant number. c = u*dt/dx where u 
-            is the velocity, dt the timestep, and dx the spatial discretisation
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
     """
 
     # Setup and initial condition
-    field = init
-
-    # Ensure c has the right dims for it loop
-    c_arr = ut.to_vector(c, len(init))
+    field = init.copy()
 
     # Time stepping
     for it in range(nt):
-        field = field - c_arr*(np.roll(field,-1) - field)
+        field = field - dt*(np.roll(uf*field,-1) - uf*field)/dxc
 
     return field
 
-def FTCS(init, nt, c):
-    """
-    This function computes the FTCS (forward in time, centered in space)
-    finite difference scheme for an initial field, number of time steps nt
-    with length dt, and a given Courant number. A periodic spatial domain 
-    is assumed.
-    --- Input ---
-    init    : array of floats, initial field to advect
-    nt      : integer, total number of time steps to take
-    c       : float or array of floats. Courant number. c = u*dt/dx where u 
-            is the velocity, dt the timestep, and dx the spatial discretisation
-    --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
-    """
-
-    # Setup and initial condition
-    field = init
-
-    # Ensure c has the right dims for it loop
-    c_arr = ut.to_vector(c, len(init))
-
-    # Time stepping
-    for it in range(nt):
-        field = field - 0.5*c_arr*(np.roll(field,-1) - np.roll(field,1))
-
-    return field
-
-def CTBS(init, nt, c):
-    """
-    This function computes the CTBS (centered in time, backward in space)
-    finite difference scheme for an initial field, number of time steps nt
-    with length dt, and a given Courant number. A periodic spatial domain 
-    is assumed.
-    --- Input ---
-    init    : array of floats, initial field to advect
-    nt      : integer, total number of time steps to take
-    c       : float or array of floats. Courant number. c = u*dt/dx where u 
-            is the velocity, dt the timestep, and dx the spatial discretisation
-    --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
-    """
-
-    # Setup and initial condition
-    field = np.zeros(len(init))
-    field_old = init
-
-    # Ensure c has the right dims for it loop
-    c_arr = ut.to_vector(c, len(init))
-
-    # First time step is forward in time, backward in space (FTBS)
-    field = field_old - c_arr*(field_old - np.roll(field_old,1))
-
-    # Time stepping
-    for it in range(1, nt):
-        field_new = field_old - 2*c_arr*(field - np.roll(field,1))
-        field_old = field
-        field = field_new
-        
-    return field
-
-def CTFS(init, nt, c):
-    """
-    This function computes the CTFS (centered in time, forward in space)
-    finite difference scheme for an initial field, number of time steps nt
-    with length dt, and a given Courant number. A periodic spatial domain 
-    is assumed.
-    --- Input ---
-    init    : array of floats, initial field to advect
-    nt      : integer, total number of time steps to take
-    c       : float or array of floats. Courant number. c = u*dt/dx where u 
-            is the velocity, dt the timestep, and dx the spatial discretisation
-    --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
-    """
-
-    # Setup and initial condition
-    field = np.zeros(len(init))
-    field_old = init
-
-    # Ensure c has the right dims for it loop
-    c_arr = ut.to_vector(c, len(init))
-
-    # First time step is forward in time, forward in space (FTFS)
-    field = field_old - c_arr*(np.roll(field_old,-1) - field_old)
-
-    # Time stepping
-    for it in range(1, nt):
-        field_new = field_old - 2*c_arr*(np.roll(field,-1) - field)
-        field_old = field
-        field = field_new
-        
-    return field
-
-def CTCS(init, nt, c):
+def CTCS(init, nt, dt, uf, dxc):
     """
     This function computes the CTCS (centered in time, centered in space)
     finite difference scheme for an initial field, number of time steps nt
     with length dt, and a given Courant number. A periodic spatial domain 
     is assumed.
     --- Input ---
-    init    : array of floats, initial field to advect
+    init    : array of floats, initial field to advect, defined at centers
     nt      : integer, total number of time steps to take
-    c       : float or array of floats. Courant number. c = u*dt/dx where u 
-            is the velocity, dt the timestep, and dx the spatial discretisation
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
+            the initial condition. Dimensions: length of init. Defined at centers
     """
 
     # Setup and initial condition
     field = np.zeros(len(init))
-    field_old = init
-
-    # Ensure c has the right dims for it loop
-    c_arr = ut.to_vector(c, len(init))
+    field_old = init.copy()
 
     # First time step is forward in time, centered in space (FTCS)
-    field = field_old - 0.5*c_arr*(np.roll(field_old,-1) - np.roll(field_old,1))
+    field = field_old - 0.5*dt*(np.roll(uf,-1)*(field - np.roll(field,-1)) - uf*(np.roll(field,1) + field))/dxc
 
     # Time stepping
     for it in range(1, nt):
-        field_new = field_old - c_arr*(np.roll(field,-1) - np.roll(field,1))
-        field_old = field
-        field = field_new
+        field_new = field_old - dt*(np.roll(uf,-1)*(field - np.roll(field,-1)) - uf*(np.roll(field,1) + field))/dxc
+        field_old = field.copy()
+        field = field_new.copy()
         
     return field
 
-def Upwind(init, nt, c): # FTBS when u >= 0, FTFS when u < 0
+def Upwind(init, nt, dt, uf, dxc): # FTBS when u >= 0, FTFS when u < 0
     """
     This function computes the upwind (FTBS when u>=0, FTFS when u<0)
     finite difference scheme for an initial field, number of time steps nt
@@ -200,38 +100,32 @@ def Upwind(init, nt, c): # FTBS when u >= 0, FTFS when u < 0
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : float or array of floats. Courant number. c = u*dt/dx where u 
-            is the velocity, dt the timestep, and dx the spatial discretisation 
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
     """
 
     # Setup and initial condition
-    field = init
-    field_new = init.copy()
+    field = init.copy()
+    field_new = np.zeros(len(init))
     
-    # Ensure c has the right dims for it loop
-    c_arr = ut.to_vector(c, len(init)) # !!! to do: make the wind go along perhaps somehow with the field?
+    cc = 0.5*dt*(uf + np.roll(uf,-1))/dxc # sum for cc[i] is over the faces at i-1/2 and i+1/2
 
     # Time stepping
     for it in range(nt):
         for i in range(len(init)):
-            if c_arr[i] >= 0.0:
-                field_new[i] = field[i] - c_arr[i]*(field[i] - np.roll(field,1)[i])
+            if cc[i] >= 0.0:  # FTBS when u >= 0, FTFS when u < 0
+                field_new[i] = field[i] - dt*(np.roll(uf,-1)[i]*field[i] - uf[i]*np.roll(field,1)[i])/dxc[i]
             else: 
-                field_new[i] = field[i] - c_arr[i]*(np.roll(field,-1)[i] - field[i])
+                field_new[i] = field[i] - dt*(np.roll(uf*field,-1)[i] - uf[i]*field[i])/dxc[i]
         field = field_new.copy()    
     
     return field
 
-def ArtDiff():
-    print()
-
-def SemiLag():
-    print()
-
-def BTBS(init, nt, c):
+def BTBS(init, nt, dt, uf, dxc):
     """
     This functions implements the BTBS scheme (backward in time, backward in 
     space, implicit), assuming a constant velocity (input through the Courant 
@@ -239,20 +133,21 @@ def BTBS(init, nt, c):
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : float or array of floats. Courant number. c = u*dt/dx where u 
-            is the velocity, dt the timestep, and dx the spatial discretisation
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
     """
     # Define initial condition
-    field = init
+    field = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
     for i in range(len(init)): 
-        M[i,i] = 1 + c[i] # assume c is @i and not @i-1 and doesn't change over time
-        M[i, i-1] = -c[i]
+        M[i,i] = 1 + dt*np.roll(uf,-1)[i]/dxc[i]
+        M[i, i-1] = -dt*uf[i]/dxc[i]
 
     # Time stepping
     for it in range(nt):
@@ -260,7 +155,7 @@ def BTBS(init, nt, c):
 
     return field
 
-def BTBS_Jacobi(init, nt, c, niter=1):
+def BTBS_Jacobi(init, nt, dt, uf, dxc, niter=1):
     """
     This functions implements the BTBS scheme (backward in time, backward in 
     space, implicit), assuming a constant velocity (input through the Courant 
@@ -268,21 +163,22 @@ def BTBS_Jacobi(init, nt, c, niter=1):
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : float or array of floats. Courant number. c = u*dt/dx where u 
-            is the velocity, dt the timestep, and dx the spatial discretisation
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
     niter   : number of iterations used for the Jacobi iterative method, default=1
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
     """
     # Define initial condition
-    field = init
+    field = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
     for i in range(len(init)): 
-        M[i,i] = 1 + c[i] # assume c is @i and not @i-1 and doesn't change over time
-        M[i, i-1] = -c[i]
+        M[i,i] = 1 + dt*np.roll(uf,-1)[i]/dxc[i]
+        M[i, i-1] = -dt*uf[i]/dxc[i]
 
     # Time stepping
     for it in range(nt):
@@ -290,7 +186,7 @@ def BTBS_Jacobi(init, nt, c, niter=1):
 
     return field
 
-def BTBS_GaussSeidel(init, nt, c, niter=1):
+def BTBS_GaussSeidel(init, nt, dt, uf, dxc, niter=1):
     """
     This functions implements the BTBS scheme (backward in time, backward in 
     space, implicit), assuming a constant velocity (input through the Courant 
@@ -298,21 +194,22 @@ def BTBS_GaussSeidel(init, nt, c, niter=1):
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : float or array of floats. Courant number. c = u*dt/dx where u 
-            is the velocity, dt the timestep, and dx the spatial discretisation
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
     niter   : number of iterations used for the Jacobi iterative method, default=1
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
     """
     # Define initial condition
-    field = init
+    field = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
     for i in range(len(init)): 
-        M[i,i] = 1 + c[i] # assume c is @i and not @i-1 and doesn't change over time
-        M[i, i-1] = -c[i]
+        M[i,i] = 1 + dt*np.roll(uf,-1)[i]/dxc[i]
+        M[i, i-1] = -dt*uf[i]/dxc[i]
 
     # Time stepping
     for it in range(nt):
@@ -320,7 +217,7 @@ def BTBS_GaussSeidel(init, nt, c, niter=1):
 
     return field
 
-def BTBS_SymmetricGaussSeidel(init, nt, c, niter=1):
+def BTBS_SymmetricGaussSeidel(init, nt, dt, uf, dxc, niter=1):
     """
     This functions implements the BTBS scheme (backward in time, backward in 
     space, implicit), assuming a constant velocity (input through the Courant 
@@ -328,21 +225,22 @@ def BTBS_SymmetricGaussSeidel(init, nt, c, niter=1):
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : float or array of floats. Courant number. c = u*dt/dx where u 
-            is the velocity, dt the timestep, and dx the spatial discretisation
-    niter   : number of iterations used for the Jacobi iterative method, default=1
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
+    niter   : number of iterations used for the Jacobi iterative method, desfault=1
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
     """
     # Define initial condition
-    field = init
+    field = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
     for i in range(len(init)): 
-        M[i,i] = 1 + c[i] # assume c is @i and not @i-1 and doesn't change over time
-        M[i, i-1] = -c[i]
+        M[i,i] = 1 + dt*np.roll(uf,-1)[i]/dxc[i]
+        M[i, i-1] = -dt*uf[i]/dxc[i]
 
     # Time stepping
     for it in range(nt):
@@ -350,7 +248,7 @@ def BTBS_SymmetricGaussSeidel(init, nt, c, niter=1):
 
     return field
 
-def BTFS(init, nt, c):
+def BTFS(init, nt, dt, uf, dxc):
     """
     This functions implements the BTFS scheme (backward in time, forward in 
     space, implicit), assuming a constant velocity (input through the Courant 
@@ -358,20 +256,21 @@ def BTFS(init, nt, c):
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : float or array of floats. Courant number. c = u*dt/dx where u 
-            is the velocity, dt the timestep, and dx the spatial discretisation
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
     """
     # Define initial condition
-    field = init
+    field = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
     for i in range(len(init)): 
-        M[i,i] = 1 - c[i] # assume c is @i and not @i+1 and doesn't change over time
-        M[i, (i+1)%len(init)] = c[i]
+        M[i,i] = 1 - dt*uf[i]/dxc[i]
+        M[i, (i+1)%len(init)] = dt*np.roll(uf,-1)[i]/dxc[i]
 
     # Time stepping
     for it in range(nt):
@@ -379,7 +278,7 @@ def BTFS(init, nt, c):
     
     return field
 
-def BTFS_Jacobi(init, nt, c, niter=1):
+def BTFS_Jacobi(init, nt, dt, uf, dxc, niter=1):
     """
     This functions implements the BTFS scheme (backward in time, forward in 
     space, implicit), assuming a constant velocity (input through the Courant 
@@ -387,21 +286,22 @@ def BTFS_Jacobi(init, nt, c, niter=1):
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : float or array of floats. Courant number. c = u*dt/dx where u 
-            is the velocity, dt the timestep, and dx the spatial discretisation
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
     niter   : number of iterations used for the Jacobi iterative method, default=1
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
     """
     # Define initial condition
-    field = init
+    field = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
     for i in range(len(init)): 
-        M[i,i] = 1 - c[i] # assume c is @i and not @i+1 and doesn't change over time
-        M[i, (i+1)%len(init)] = c[i]
+        M[i,i] = 1 - dt*uf[i]/dxc[i]
+        M[i, (i+1)%len(init)] = dt*np.roll(uf,-1)[i]/dxc[i]
 
     # Time stepping
     for it in range(nt):
@@ -409,7 +309,7 @@ def BTFS_Jacobi(init, nt, c, niter=1):
 
     return field
 
-def BTFS_GaussSeidel(init, nt, c, niter=1):
+def BTFS_GaussSeidel(init, nt, dt, uf, dxc, niter=1):
     """
     This functions implements the BTFS scheme (backward in time, forward in 
     space, implicit), assuming a constant velocity (input through the Courant 
@@ -417,21 +317,22 @@ def BTFS_GaussSeidel(init, nt, c, niter=1):
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : float or array of floats. Courant number. c = u*dt/dx where u 
-            is the velocity, dt the timestep, and dx the spatial discretisation
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
     niter   : number of iterations used for the Jacobi iterative method, default=1
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
     """
     # Define initial condition
-    field = init
+    field = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
     for i in range(len(init)): 
-        M[i,i] = 1 - c[i] # assume c is @i and not @i+1 and doesn't change over time
-        M[i, (i+1)%len(init)] = c[i]
+        M[i,i] = 1 - dt*uf[i]/dxc[i]
+        M[i, (i+1)%len(init)] = dt*np.roll(uf,-1)[i]/dxc[i]
 
     # Time stepping
     for it in range(nt):
@@ -439,7 +340,7 @@ def BTFS_GaussSeidel(init, nt, c, niter=1):
 
     return field
 
-def BTFS_SymmetricGaussSeidel(init, nt, c, niter=1):
+def BTFS_SymmetricGaussSeidel(init, nt, dt, uf, dxc, niter=1):
     """
     This functions implements the BTFS scheme (backward in time, forward in 
     space, implicit), assuming a constant velocity (input through the Courant 
@@ -447,21 +348,22 @@ def BTFS_SymmetricGaussSeidel(init, nt, c, niter=1):
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : float or array of floats. Courant number. c = u*dt/dx where u 
-            is the velocity, dt the timestep, and dx the spatial discretisation
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
     niter   : number of iterations used for the Jacobi iterative method, default=1
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
     """
     # Define initial condition
-    field = init
+    field = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
     for i in range(len(init)): 
-        M[i,i] = 1 - c[i] # assume c is @i and not @i+1 and doesn't change over time
-        M[i, (i+1)%len(init)] = c[i]
+        M[i,i] = 1 - dt*uf[i]/dxc[i]
+        M[i, (i+1)%len(init)] = dt*np.roll(uf,-1)[i]/dxc[i]
 
     # Time stepping
     for it in range(nt):
@@ -469,7 +371,7 @@ def BTFS_SymmetricGaussSeidel(init, nt, c, niter=1):
 
     return field
 
-def BTCS(init, nt, c):
+def BTCS(init, nt, dt, uf, dxc):
     """
     This functions implements the BTCS scheme (backward in time, centered in 
     space, implicit), assuming a constant velocity (input through the Courant 
@@ -477,21 +379,22 @@ def BTCS(init, nt, c):
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : float or array of floats. Courant number. c = u*dt/dx where u 
-            is the velocity, dt the timestep, and dx the spatial discretisation
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
     """
     # Define initial condition
-    field = init
+    field = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
     for i in range(len(init)): 
-        M[i,i] = 1  
-        M[i, i-1] = -0.5*c[i] # assume c is @i and doesn't change over time
-        M[i, (i+1)%len(init)] = 0.5*c[i]
+        M[i,i] = 1 + dt*np.roll(uf,-1)[i]/dxc[i] - dt*uf[i]/dxc[i]
+        M[i, i-1] = -dt*uf[i]/dxc[i]
+        M[i, (i+1)%len(init)] = dt*np.roll(uf,-1)[i]/dxc[i]
 
     # Time stepping
     for it in range(nt):
@@ -499,7 +402,7 @@ def BTCS(init, nt, c):
 
     return field
 
-def BTCS_Jacobi(init, nt, c, niter=1):
+def BTCS_Jacobi(init, nt, dt, uf, dxc, niter=1):
     """
     This functions implements the BTCS scheme (backward in time, centered in 
     space, implicit), assuming a constant velocity (input through the Courant 
@@ -507,22 +410,23 @@ def BTCS_Jacobi(init, nt, c, niter=1):
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : float or array of floats. Courant number. c = u*dt/dx where u 
-            is the velocity, dt the timestep, and dx the spatial discretisation
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
     niter   : number of iterations used for the Jacobi iterative method, default=1
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
     """
     # Define initial condition
-    field = init
+    field = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
     for i in range(len(init)): 
-        M[i,i] = 1  
-        M[i, i-1] = -0.5*c[i] # assume c is @i and doesn't change over time
-        M[i, (i+1)%len(init)] = 0.5*c[i]
+        M[i,i] = 1 + dt*np.roll(uf,-1)[i]/dxc[i] - dt*uf[i]/dxc[i]
+        M[i, i-1] = -dt*uf[i]/dxc[i]
+        M[i, (i+1)%len(init)] = dt*np.roll(uf,-1)[i]/dxc[i]
 
     # Time stepping
     for it in range(nt):
@@ -530,7 +434,7 @@ def BTCS_Jacobi(init, nt, c, niter=1):
 
     return field
 
-def BTCS_GaussSeidel(init, nt, c, niter=1):
+def BTCS_GaussSeidel(init, nt, dt, uf, dxc, niter=1):
     """
     This functions implements the BTCS scheme (backward in time, centered in 
     space, implicit), assuming a constant velocity (input through the Courant 
@@ -538,22 +442,23 @@ def BTCS_GaussSeidel(init, nt, c, niter=1):
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : float or array of floats. Courant number. c = u*dt/dx where u 
-            is the velocity, dt the timestep, and dx the spatial discretisation
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
     niter   : number of iterations used for the Jacobi iterative method, default=1
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
     """
     # Define initial condition
-    field = init
+    field = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
     for i in range(len(init)): 
-        M[i,i] = 1  
-        M[i, i-1] = -0.5*c[i] # assume c is @i and doesn't change over time
-        M[i, (i+1)%len(init)] = 0.5*c[i]
+        M[i,i] = 1 + dt*np.roll(uf,-1)[i]/dxc[i] - dt*uf[i]/dxc[i]
+        M[i, i-1] = -dt*uf[i]/dxc[i]
+        M[i, (i+1)%len(init)] = dt*np.roll(uf,-1)[i]/dxc[i]
 
     # Time stepping
     for it in range(nt):
@@ -561,7 +466,7 @@ def BTCS_GaussSeidel(init, nt, c, niter=1):
 
     return field
 
-def CNBS(init, nt, c): # Crank-Nicolson (implicit)
+def CNBS(init, nt, dt, uf, dxc): # Crank-Nicolson (implicit)
     """
     This functions implements the CNBS scheme (Crank-Nicolson in i.e. trapezoidal implicit, backward in 
     space), assuming a constant velocity (input through the Courant 
@@ -569,29 +474,30 @@ def CNBS(init, nt, c): # Crank-Nicolson (implicit)
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : float or array of floats. Courant number. c = u*dt/dx where u 
-            is the velocity, dt the timestep, and dx the spatial discretisation
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
     """
     # Define initial condition
-    field = init
+    field = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
     for i in range(len(init)): 
-        M[i,i] = 1 + 0.5*c[i] # assume c is @i and not @i-1 and doesn't change over time
-        M[i, i-1] = -0.5*c[i]
+        M[i,i] = 1 + 0.5*dt*np.roll(uf,-1)[i]/dxc[i]
+        M[i, i-1] = -0.5*dt*uf[i]/dxc[i]
 
     # Time stepping
     for it in range(nt):
-        rhs = (1 - 0.5*c)*field + 0.5*c*np.roll(field,1)
+        rhs = (1 - 0.5*dt*np.roll(uf,-1)/dxc)*field + 0.5*dt*uf*np.roll(field,1)/dxc
         field = np.linalg.solve(M, rhs)
 
     return field
 
-def CNCS(init, nt, c): # Crank-Nicolson (implicit)
+def CNCS(init, nt, dt, uf, dxc): # Crank-Nicolson (implicit)
     """
     This functions implements the CNCS scheme (Crank-Nicolson in i.e. trapezoidal implicit, centered in 
     space), assuming a constant velocity (input through the Courant 
@@ -599,30 +505,31 @@ def CNCS(init, nt, c): # Crank-Nicolson (implicit)
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : float or array of floats. Courant number. c = u*dt/dx where u 
-            is the velocity, dt the timestep, and dx the spatial discretisation
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
             the initial condition. Dimensions: length of init.
     """
     # Define initial condition
-    field = init
+    field = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
     for i in range(len(init)): 
-        M[i,i] = 1  
-        M[i, i-1] = -0.25*c[i] # assume c is @i and doesn't change over time
-        M[i, (i+1)%len(init)] = 0.25*c[i]
+        M[i,i] = 1 + 0.25*dt*(np.roll(uf,-1)[i] - uf[i])/dxc[i]
+        M[i, i-1] = -0.25*dt*uf[i]/dxc[i]
+        M[i, (i+1)%len(init)] = 0.25*dt*np.roll(uf,-1)[i]/dxc[i]
 
     # Time stepping
     for it in range(nt):
-        rhs = field - 0.25*c*np.roll(field,-1) + 0.25*c*np.roll(field,1)
+        rhs = (1 - 0.25*dt*(np.roll(uf,-1) - uf)/dxc)*field + 0.25*dt*uf*np.roll(field,1)/dxc - 0.25*dt*np.roll(uf,-1)*np.roll(field,-1)/dxc
         field = np.linalg.solve(M, rhs)
 
     return field
 
-def MPDATA(init, nt, c, eps=1e-6):
+def MPDATA(init, nt, dt, uf, dxc, eps=1e-6):
     """
     This functions implements the MPDATA scheme without a gauge, assuming a 
     constant velocity (input through the Courant number) and a 
@@ -632,8 +539,9 @@ def MPDATA(init, nt, c, eps=1e-6):
     --- Input ---
     init : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
-    c       : float or array of floats. Courant number. c = u*dt/dx where u 
-            is the velocity, dt the timestep, and dx the spatial discretisation
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
     eps     : float, optional. Small number to avoid division by zero.
     --- Output --- 
     field   : 1D array of floats. Outputs the final timestep after advecting 
@@ -644,21 +552,20 @@ def MPDATA(init, nt, c, eps=1e-6):
     field = np.zeros(len(init))
     field_old = init
     field_FP = np.zeros(len(init))
-    A = np.zeros(len(init)) # shift index by half as compared to Ref (1)
-    V = np.zeros(len(init)) # pseudo-velocity. Same index shift as for A
+    A = np.zeros(len(init)) # A[i] is A_{i-1/2}
+    V = np.zeros(len(init)) # Same index shift as for A
 
-    # Ensure c has the right dims for it loop
-    c_arr = ut.to_vector(c, len(init))
+    U = uf*dt/np.roll(dxc,1) # U[i] is defined at i-1/2
 
     # Time stepping
     for it in range(nt):
         # First pass  
-        field_FP = field_old - flux(field_old, np.roll(field_old,-1), c_arr) + flux(np.roll(field_old,1), field_old, c_arr)
+        field_FP = field_old - flux(field_old, np.roll(field_old,-1), np.roll(U,-1)) + flux(np.roll(field_old,1), field_old, U)
 
         # Second pass
-        A = (np.roll(field_FP,-1) - field_FP)/(np.roll(field_FP,-1) + field_FP + eps)
-        V = (abs(c_arr) - c_arr*c_arr)*A
-        field = field_FP - flux(field_FP, np.roll(field_FP,-1), V) + flux(np.roll(field_FP,1), field_FP, np.roll(V,1))
+        A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps)
+        V = (abs(U) - U*U)*A
+        field = field_FP - flux(field_FP, np.roll(field_FP,-1), np.roll(V,-1)) + flux(np.roll(field_FP,1), field_FP, V)
         field_old = field
 
     return field
@@ -685,3 +592,58 @@ def flux(Psi_L, Psi_R, U):
     F = U_p*Psi_L + U_m*Psi_R
 
     return F
+
+def hybrid(init, nt, dt, uf, dxc, eps=1e-6):
+    """
+    This functions implements 
+    Explicit: MPDATA scheme (without a gauge, assuming a 
+    constant velocity (input through the Courant number) and a 
+    periodic spatial domain)
+    Implicit: BTBS with 1 Jacobi iteration
+    Reference (1): P. Smolarkiewicz and L. Margolin. MPDATA: A finite-difference 
+    solver for geophysical flows. J. Comput. Phys., 140:459-480, 1998.
+    --- Input ---
+    init : array of floats, initial field to advect
+    nt      : integer, total number of time steps to take
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
+    eps     : float, optional. Small number to avoid division by zero.
+    --- Output --- 
+    field   : 1D array of floats. Outputs the final timestep after advecting 
+            the initial condition. Dimensions: length of init.
+    """
+    # Initialisation
+    field = np.zeros(len(init))
+    field_old = init
+    field_FP = np.zeros(len(init))
+    A = np.zeros(len(init)) # A[i] is A_{i-1/2}
+    V = np.zeros(len(init)) # Same index shift as for A
+    U = uf*dt/np.roll(dxc,1) # U[i] is defined at i-1/2
+
+    # Criterion explicit/implicit
+    cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc # assumes uf is positive when pointed to the right (i.e., direction of increasing x)
+    beta = np.invert((np.roll(cc,1) < 1.)*(cc < 1)) #np.where(np.roll(cc,1) < 1. and cc < 1, np.zeros(len(cc)), np.ones(len(cc))) # beta[i] is defined at i-1/2
+    print('cc', cc)
+    print('beta', beta)
+    # True = 1 , false = 0
+    # beta = 0: explicit, beta = 1: implicit    
+
+    # Time stepping
+    for it in range(nt):
+        for i in range(len(cc)):
+            if beta[i] == False: # MPDATA
+                # First pass  
+                field_FP[i] = field_old[i] - flux(field_old[i], np.roll(field_old,-1)[i], np.roll(U,-1)[i]) + flux(np.roll(field_old,1)[i], field_old[i], U[i])
+
+                # Second pass
+                A[i] = (field_FP[i] - np.roll(field_FP,1)[i])/(field_FP[i] + np.roll(field_FP,1)[i] + eps)
+                V[i] = (abs(U[i]) - U[i]*U[i])*A[i]
+                field[i] = field_FP[i] - flux(field_FP[i], np.roll(field_FP,-1)[i], np.roll(V,-1)[i]) + flux(np.roll(field_FP,1)[i], field_FP[i], V[i])
+        field_temp = field.copy()
+        for i in range(len(cc)):
+            if beta[i] == True: # BTBS with 1 Jacobi iteration 
+                field[i] = (field_temp[i] + dt*uf[i]*dxc[i]*np.roll(field_temp,1)[i])/(1 + np.roll(uf,-1)[i]*dt/dxc[i])
+        field_old = field
+
+    return field

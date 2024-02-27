@@ -1,4 +1,4 @@
-# Code for utilities functions used in main.py, schemes.py and experiments.py
+# Module file for utilities functions used in main.py, schemes.py and experiments.py
 # Author:   Amber te Winkel
 # Email:    ambertewinkel@gmail.com
 
@@ -43,3 +43,30 @@ def to_vector(array, length):
         raise TypeError('Array input in scalar2vector is neither a scalar nor vector.')
     
     return res
+
+def plot_Courant(x, c):
+    plt.plot(x, c)
+    plt.axhline(1.0, color='grey', linestyle=':')
+    plt.axvline(1.0)
+    plt.title('Courant number')
+    plt.xlabel('x')
+    plt.ylabel('C')
+    plt.tight_layout()
+    plt.savefig('Courant.pdf')
+    plt.clf()
+
+def plot_grid(x, dx):
+    plt.plot(x)
+    plt.title('Stretching: x against i')
+    plt.xlabel('i')
+    plt.ylabel('x')
+    plt.tight_layout()
+    plt.savefig('gridpoints.pdf')
+    plt.clf()
+    plt.plot(dx)
+    plt.xlabel('i')
+    plt.ylabel('dx')
+    plt.title('Stretching: dx against i')
+    plt.tight_layout()
+    plt.savefig('gridspacing.pdf')
+    plt.clf()

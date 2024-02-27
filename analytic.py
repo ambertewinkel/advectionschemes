@@ -5,7 +5,7 @@
 
 import numpy as np
 
-def analytic1(x, xmax, u=0., t=0.): # nt=0., c=0.):
+def analytic1(x, xmax, u=0., t=0.):
     """
     This function returns an array from input array x and constants a and b advected 
     by velocity u for a time t. The initial condition has values from the function 
@@ -13,12 +13,13 @@ def analytic1(x, xmax, u=0., t=0.): # nt=0., c=0.):
     Outside of this region, the array elements are zero.
     --- Input ---
     x   : 1D array of floats, points to calculate the result of the function for
-    nt  : integer, number of time steps advected
-    c   : float or 1D array of floats, Courant number for advection (c = u*dt/dx)
+    xmax: float, domain size
+    u   : float or 1D array of floats, velocity
+    t   : float, total time
     --- Output ---
     psi : 1D array of floats, result from function at the points defined in x
     """
-    a, b = 1.9, 0.3 #0.1, 0.5 # a = left boundary of wave, b = right boundary of wave
+    a, b = 0.8, 1.2 # a = left boundary of wave, b = right boundary of wave
     psi = np.zeros(len(x))
     x0 = (x - u*t)%xmax
     for i in range(len(x)):
@@ -30,7 +31,7 @@ def analytic1(x, xmax, u=0., t=0.): # nt=0., c=0.):
                 psi[i] = 0.5*(1 - np.cos(2*np.pi*(x0[i]-a+xmax)/(b-a+xmax)))
     return psi
 
-def analytic2(x, xmax, u=0., t=0.): #nt=0., c=0.):
+def analytic2(x, xmax, u=0., t=0.):
     """
     This function returns an array from input array x and constants a and b advected 
     by velocity u for a time t. The initial condition has output values 1 in the range
@@ -39,12 +40,13 @@ def analytic2(x, xmax, u=0., t=0.): #nt=0., c=0.):
     --- Input ---
     x   : 1D array of floats, points to calculate the result of the step 
         function for
-    nt  : integer, number of time steps advected (nt = t/dt)
-    c   : float or 1D array of floats, Courant number for advection (c = u*dt/dx)
+    xmax: float, domain size
+    u   : float or 1D array of floats, velocity
+    t   : float, total time
     --- Output ---
     psi : 1D array of floats, result from function at the points defined in x
     """    
-    a, b = 1.9, 0.3 #0.1, 0.5 # a = left boundary of wave, b = right boundary of wave
+    a, b = 0.8, 1.2 # a = left boundary of wave, b = right boundary of wave
     psi = np.zeros(len(x))
     x0 = (x - u*t)%xmax
     for i in range(len(x)):

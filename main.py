@@ -8,6 +8,9 @@ import schemes as sch
 import experiments as epm
 import utils as ut
 import analytic as an
+import grid as gr
+
+# !!! future: allow the wind to change over time?
 
 def main():
     """
@@ -21,66 +24,68 @@ def main():
     # Initial conditions
     nx = 40                     # number of points in space
     xmax = 2.0                  # physical domain parameters
-    x, dx = coords_centralstretching(xmax, nx, nx/2) # points in space, length of spatial step
+    xf, dxc, xc, dxf = gr.coords_centralstretching(xmax, nx, nx/2) # points in space, length of spatial step
     print(nx/2)
-    u = np.full(nx, 0.2)         # velocity (assume constant)
+    uf = np.full(nx, 0.2)       # velocity at faces (assume constant)
+    uc = np.full(nx, 0.2)       # velocity at centers # !!! implement linear interpolation to calculate from uf
     dt = 0.1                    # time step
-    nt = 1                      # number of time steps
-    c = u*dt/dx                 # Courant number (defined at cell edge: c[i] is between cells i and i+1)
+    nt = 100                      # number of time steps
+    cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc # Courant number (defined at cell center)
     niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
     
+    # Print and plot grid and Courant number
+    print('The (cell center) points are:')
     for i in range(nx):
-        print(i, x[i])
-    plot_Courant(x, c)
-    plot_grid(x, dx)
+        print(i, xc[i])
+    print('The (cell center) Courant numbers are:', cc)
+    ut.plot_Courant(xc, cc)
+    ut.plot_grid(xc, dxc)
 
     # Calculate initial functions
-    psi1_in = an.analytic1(x, xmax)
-    psi2_in = an.analytic2(x, xmax)
+    psi1_in = an.analytic1(xc, xmax)
+    psi2_in = an.analytic2(xc, xmax)
 
     # Calculate analytic solutions
-    psi1_an = an.analytic1(x, xmax, u, nt*dt)
-    psi2_an = an.analytic2(x, xmax, u, nt*dt)
+    psi1_an = an.analytic1(xc, xmax, uc, nt*dt)
+    psi2_an = an.analytic2(xc, xmax, uc, nt*dt)
 
     #################
     #### Schemes ####
     #################
 
-    basicschemes = []#['FTBS', 'FTFS', 'FTCS', 'CTBS', 'CTFS', 'CTCS', 'Upwind']
-    advancedschemes = ['BTBS', 'BTBS_Jacobi']#, 'BTBS_GaussSeidel', 'BTBS_SymmetricGaussSeidel']#'CNBS', 'CNCS'] #['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTFS', 'BTFS_Jacobi', 'BTFS_GaussSeidel'] #['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTCS', 'BTCS_Jacobi', 'BTCS_GaussSeidel', 'MPDATA']
-    markers_as = ['x', 'x', 'o', '', '', '']
+    do_basicschemes = True
+    basicschemes = ['Upwind']#['FTBS', 'FTFS', 'CTCS', 'Upwind']
+    advancedschemes = ['MPDATA', 'BTBS_Jacobi', 'hybrid']#, 'BTBS_GaussSeidel', 'BTBS_SymmetricGaussSeidel']#'CNBS', 'CNCS'] #['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTFS', 'BTFS_Jacobi', 'BTFS_GaussSeidel'] #['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTCS', 'BTCS_Jacobi', 'BTCS_GaussSeidel', 'MPDATA']
+    markers_as = ['x', 'x', '+', '', '', '']
     linestyle_as = ['-','-','-', '--', '-', '--']
     colors_as = ['red', 'blue', 'lightgreen', 'red', 'lightblue', 'gray']
     allschemes = basicschemes + advancedschemes
-    
+
     # Calculate numerical results
     for s in allschemes:
         fn = getattr(sch, f'{s}')
         if 'Jacobi' in s or 'GaussSeidel' in s:
             print(s)
-            locals()[f'psi1_{s}'] = fn(psi1_in.copy(), nt, c, niter)
-            locals()[f'psi2_{s}'] = fn(psi2_in.copy(), nt, c, niter)
+            locals()[f'psi1_{s}'] = fn(psi1_in.copy(), nt, dt, uf, dxc, niter)
+            locals()[f'psi2_{s}'] = fn(psi2_in.copy(), nt, dt, uf, dxc, niter)
         else:
-            locals()[f'psi1_{s}'] = fn(psi1_in.copy(), nt, c)
-            locals()[f'psi2_{s}'] = fn(psi2_in.copy(), nt, c)
-    
-    # Print Courant numbers
-    print('The Courant numbers are:', c)
+            locals()[f'psi1_{s}'] = fn(psi1_in.copy(), nt, dt, uf, dxc)
+            locals()[f'psi2_{s}'] = fn(psi2_in.copy(), nt, dt, uf, dxc)
     
     ##########################
     #### Plotting schemes ####
     ##########################
     
-    """
-    plt.plot(x, psi1_an, label='Analytic', linestyle='-', color='k')
-    for s in basicschemes:
-        plt.plot(x, locals()[f'psi1_{s}'], label=f'{s}')
-    ut.design_figure('Psi1_bs.pdf', f'$\\Psi_1$ at t={nt*dt} - Basic Schemes', \
-                     'x', '$\\Psi_1$', True, -0.1, 1.1)
-    """
+    if do_basicschemes == True:
+        plt.plot(xc, psi1_an, label='Analytic', linestyle='-', color='k')
+        for s in basicschemes:
+            plt.plot(xc, locals()[f'psi1_{s}'], label=f'{s}')
+        ut.design_figure('Psi1_bs.pdf', f'$\\Psi_1$ at t={nt*dt} - Basic Schemes', \
+                        'x', '$\\Psi_1$', True, -0.1, 1.1)
 
-    plt.plot(x, psi1_in, label='Initial', linestyle='-', color='grey')
-    plt.plot(x, psi1_an, label='Analytic', linestyle='-', color='k')
+
+    plt.plot(xc, psi1_in, label='Initial', linestyle='-', color='grey')
+    plt.plot(xc, psi1_an, label='Analytic', linestyle='-', color='k')
     for s in advancedschemes:
         si = advancedschemes.index(s)
         if 'Jacobi' in s or 'GaussSeidel' in s:
@@ -89,27 +94,27 @@ def main():
             slabel = 'BTBS_numpy'
         else: 
             slabel = s
-        plt.plot(x, locals()[f'psi1_{s}'], label=f'{slabel}', marker=markers_as[si], linestyle=linestyle_as[si], color=colors_as[si])
+        plt.plot(xc, locals()[f'psi1_{s}'], label=f'{slabel}', marker=markers_as[si], linestyle=linestyle_as[si], color=colors_as[si])
     ut.design_figure('Psi1_as.pdf', f'$\\Psi_1$ at t={nt*dt}', \
                      'x', '$\\Psi_1$', True, -0.1, 1.1)
 
-    """
-    plt.plot(x, psi2_an, label='Analytic', linestyle='-', color='k')
-    for s in basicschemes:
-        plt.plot(x, locals()[f'psi2_{s}'], label=f'{s}')
-    ut.design_figure('Psi2_bs.pdf', f'$\\Psi_2$ at t={nt*dt} - Basic Schemes', \
-                     'x', '$\\Psi_2$', True, -0.1, 1.1)
-    """
+    if do_basicschemes == True:
+        plt.plot(xc, psi2_an, label='Analytic', linestyle='-', color='k')
+        for s in basicschemes:
+            plt.plot(xc, locals()[f'psi2_{s}'], label=f'{s}')
+        ut.design_figure('Psi2_bs.pdf', f'$\\Psi_2$ at t={nt*dt} - Basic Schemes', \
+                        'x', '$\\Psi_2$', True, -0.1, 1.1)
     
-    plt.plot(x, psi2_in, label='Initial', linestyle='-', color='grey')
-    plt.plot(x, psi2_an, label='Analytic', linestyle='-', color='k')
+    
+    plt.plot(xc, psi2_in, label='Initial', linestyle='-', color='grey')
+    plt.plot(xc, psi2_an, label='Analytic', linestyle='-', color='k')
     for s in advancedschemes:
         si = advancedschemes.index(s)
         if 'Jacobi' in s or 'GaussSeidel' in s:
             slabel = f'{s}, it={niter}'
         else: 
             slabel = s
-        plt.plot(x, locals()[f'psi2_{s}'], label=f'{slabel}', marker=markers_as[si], linestyle=linestyle_as[si], color=colors_as[si])
+        plt.plot(xc, locals()[f'psi2_{s}'], label=f'{slabel}', marker=markers_as[si], linestyle=linestyle_as[si], color=colors_as[si])
     ut.design_figure('Psi2_as.pdf', f'$\\Psi_2$ at t={nt*dt}', \
                      'x', '$\\Psi_2$', True,  -0.1, 1.1)
     plt.close()
@@ -130,16 +135,16 @@ def main():
     print()
 
     #### Conservation
-    csv_psi1_analytic = epm.check_conservation(psi1_in, psi1_an, dx)
+    csv_psi1_analytic = epm.check_conservation(psi1_in, psi1_an, dxc)
     print(f'1 - Total mass gained at t={nt*dt} - Analytic {csv_psi1_analytic:.2E}')    
     for s in allschemes:
-        locals()[f'csv_psi1_{s}'] = epm.check_conservation(psi1_in, locals()[f'psi1_{s}'], dx)
+        locals()[f'csv_psi1_{s}'] = epm.check_conservation(psi1_in, locals()[f'psi1_{s}'], dxc)
         print(f'1 - Total mass gained at t={nt*dt} - {s} {locals()[f'csv_psi1_{s}']:.2E}')
 
-    csv_psi2_analytic = epm.check_conservation(psi2_in, psi2_an, dx)
+    csv_psi2_analytic = epm.check_conservation(psi2_in, psi2_an, dxc)
     print(f'2 - Total mass gained at t={nt*dt} - Analytic {csv_psi2_analytic:.2E}')   
     for s in allschemes:
-        locals()[f'csv_psi2_{s}'] = epm.check_conservation(psi2_in, locals()[f'psi2_{s}'], dx)
+        locals()[f'csv_psi2_{s}'] = epm.check_conservation(psi2_in, locals()[f'psi2_{s}'], dxc)
         print(f'2 - Total mass gained at t={nt*dt} - {s} {locals()[f'csv_psi2_{s}']:.2E}')
     
     """
@@ -180,54 +185,5 @@ def main():
     for s in allschemes:
         locals()[f'bdn_psi2_{s}'] = epm.check_boundedness(psi2_in, locals()[f'psi2_{s}'])
         print(f'2 - Boundedness at t={nt*dt} - {s}: {locals()[f'bdn_psi2_{s}']}')
-
-
-def coords_centralstretching(xmax, imax, i_maxC=0):
-    """
-    This function implements a varying grid spacing, with stretching in the center: dx_center = 10*dx_boundary.
-    We use a cosine function to define the grid spacing: dx[i] = dx0(6-5cos(2pi*(i-i_maxC)/imax)) for i ranging from 0 to imax.
-    From integration we know that dx0 = xmax/(6*imax).
-    We assume a periodic domain that ranges from 0 to xmax in size.
-    --- Input:
-    xmax    : float, domain size
-    imax    : int, number of grid points
-    i_maxC  : int, index where the Courant number is maximised/where dx is minimised for constant u throughout the domain
-    --- Output:
-    x       : array of floats, spatial points
-    dx      : array of floats, grid spacing (dx[i] = x[i+1] - x[i])
-    """
-    dx0 = xmax/(6*imax)
-    x, dx = np.zeros(imax), np.zeros(imax)
-    for i in range(imax):
-        dx[i] = dx0*(6. - 5.*np.cos(2.*np.pi*(i-i_maxC)/imax))
-        if i != imax-1: x[i+1] = x[i] + dx[i]
-    return x, dx
-
-def plot_Courant(x, c):
-    plt.plot(x, c)
-    plt.axhline(1.0, color='grey', linestyle=':')
-    plt.axvline(1.0)
-    plt.title('Courant number')
-    plt.xlabel('x')
-    plt.ylabel('C')
-    plt.tight_layout()
-    plt.savefig('Courant.pdf')
-    plt.clf()
-
-def plot_grid(x, dx):
-    plt.plot(x)
-    plt.title('Stretching: x against i')
-    plt.xlabel('i')
-    plt.ylabel('x')
-    plt.tight_layout()
-    plt.savefig('gridpoints.pdf')
-    plt.clf()
-    plt.plot(dx)
-    plt.xlabel('i')
-    plt.ylabel('dx')
-    plt.title('Stretching: dx against i')
-    plt.tight_layout()
-    plt.savefig('gridspacing.pdf')
-    plt.clf()
 
 if __name__ == "__main__": main()
