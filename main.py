@@ -23,7 +23,7 @@ def main():
     
     # Initial conditions
     dt = 0.1                    # time step
-    nt = 2                    # number of time steps
+    nt = 100                    # number of time steps
     nx = 40                     # number of points in space
     xmax = 2.0                  # physical domain parameters
     uf = np.full(nx, 0.2)       # velocity at faces (assume constant)
@@ -37,10 +37,11 @@ def main():
         dxcmin = 0.
         
     xf, dxc, xc, dxf = gr.coords_centralstretching(xmax, nx, nx/2, dxcmin=dxcmin) # points in space, length of spatial step
-    print(nx/2)
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc # Courant number (defined at cell center)
     niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
     
+    #ut.make_animation('Upwind', 'Upwind_nt100', nt, dt, uf, dxc, xc, xmax, uc)
+
     # Print and plot grid and Courant number
     print('The (cell center) points and Courant numbers are:')
     for i in range(nx):
