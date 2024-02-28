@@ -83,3 +83,18 @@ def cubLag(x_int, x, f):
         xfrac[i] = np.prod((x_int - xother)/(x[i] - xother))
     f_int = np.dot(f, xfrac)
     return f_int
+
+def linear(x_int, x, f):
+    """
+    Calculate the linear interpolation to a point.
+    Input:
+    x_int  : value of x to interpolate f to
+    x   : array of two points x values
+    f   : array of two points f values
+    Output:
+    f_int   : interpolated value
+    """
+    dfdx = (f[1] - f[0])/(x[1] - x[0])
+    f_int = dfdx*(x_int - x[0]) + f[0]
+
+    return f_int
