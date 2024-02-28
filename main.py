@@ -36,7 +36,8 @@ def main():
     else:
         dxcmin = 0.
         
-    xf, dxc, xc, dxf = gr.coords_centralstretching(xmax, nx, nx/2, dxcmin=dxcmin) # points in space, length of spatial step
+    #xf, dxc, xc, dxf = gr.coords_centralstretching(xmax, nx, nx/2, dxcmin=dxcmin) # points in space, length of spatial step
+    xf, dxc, xc, dxf = gr.coords_uniform(xmax, nx) # points in space, length of spatial step
     print(nx/2)
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc # Courant number (defined at cell center)
     niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)

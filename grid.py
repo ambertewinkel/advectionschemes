@@ -38,6 +38,34 @@ def coords_centralstretching(xmax, imax, i_maxC=0., dxcmin=0.):
    
     return  xf, dxc, xc, dxf
 
+def coords_uniform(xmax, imax):
+    """
+    This function implements a uniform grid spacing.
+    We assume a periodic domain that ranges from 0 to xmax in size. xmax is not included in x-array
+    --- Input:
+    xmax    : float, domain size
+    imax    : int, number of grid points
+    --- Output:
+    xf       : array of floats, spatial points of cell faces
+    dxc      : array of floats, grid spacing between cell faces (dxc[i] = xf[i+1] - xf[i]), i.e., grid box size
+    xc       : array of floats, spatial points of cell centers (xc[i+1] = 0.5*(xf[i+1] + xf[i]))
+    dxf      : array of floats, grid spacing between cell centers (dxf[i] = xc[i+1] - xc[i])
+    """
+    # Initialisation
+    xf, dxc, xc, dxf = np.zeros(imax), np.zeros(imax), np.zeros(imax), np.zeros(imax)
+    
+    # Setting grid values
+    dxc = np.full(imax, float(xmax/imax)) # define the grid spacing
+
+    # Calculating other grid quantities
+    for i in range(len(dxc)-1):
+        xf[i+1] = xf[i] + dxc[i]
+    xc = 0.5*(np.roll(xf,-1) + xf)
+    xc[-1] = 0.5*(xmax + xf[-1]) # periodic
+    dxf = dxc.copy()
+   
+    return  xf, dxc, xc, dxf
+
 def cubLag(x_int, x, f):
     """
     Calculate the cubic Lagrange interpolation to a point.
