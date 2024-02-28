@@ -23,7 +23,7 @@ def main():
     
     # Initial conditions
     dt = 0.1                    # time step
-    nt = 100                    # number of time steps
+    nt = 2                    # number of time steps
     nx = 40                     # number of points in space
     xmax = 2.0                  # physical domain parameters
     uf = np.full(nx, 0.2)       # velocity at faces (assume constant)
@@ -42,10 +42,10 @@ def main():
     niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
     
     # Print and plot grid and Courant number
-    print('The (cell center) points are:')
+    print('The (cell center) points and Courant numbers are:')
     for i in range(nx):
-        print(i, xc[i])
-    print('The (cell center) Courant numbers are:', cc)
+        print(i, "%.2f" %xc[i], "%.2f" %cc[i])
+    print()
     ut.plot_Courant(xc, cc)
     ut.plot_grid(xc, dxc)
 
@@ -62,18 +62,17 @@ def main():
     #################
 
     do_basicschemes = True
-    basicschemes = ['Upwind']#['FTBS', 'FTFS', 'CTCS', 'Upwind']
-    advancedschemes = ['MPDATA', 'BTBS_Jacobi', 'hybrid']#, 'BTBS_GaussSeidel', 'BTBS_SymmetricGaussSeidel']#'CNBS', 'CNCS'] #['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTFS', 'BTFS_Jacobi', 'BTFS_GaussSeidel'] #['BTBS', 'BTBS_Jacobi', 'BTBS_GaussSeidel', 'BTCS', 'BTCS_Jacobi', 'BTCS_GaussSeidel', 'MPDATA']
+    basicschemes = ['Upwind']
+    advancedschemes = ['MPDATA', 'BTBS_Jacobi', 'hybrid']
     markers_as = ['x', 'x', '+', '', '', '']
     linestyle_as = ['-','-','-', '--', '-', '--']
-    colors_as = ['red', 'blue', 'lightgreen', 'red', 'lightblue', 'gray']
+    colors_as = ['red', 'blue', 'orange', 'red', 'lightblue', 'gray']
     allschemes = basicschemes + advancedschemes
 
     # Calculate numerical results
     for s in allschemes:
         fn = getattr(sch, f'{s}')
         if 'Jacobi' in s or 'GaussSeidel' in s:
-            print(s)
             locals()[f'psi1_{s}'] = fn(psi1_in.copy(), nt, dt, uf, dxc, niter)
             locals()[f'psi2_{s}'] = fn(psi2_in.copy(), nt, dt, uf, dxc, niter)
         else:
@@ -85,7 +84,8 @@ def main():
     ##########################
     
     if do_basicschemes == True:
-        plt.plot(xc, psi1_an, label='Analytic', linestyle='-', color='k')
+        plt.plot(xc, psi1_in, label='Initial', linestyle='-', color='grey')
+        plt.plot(xc, psi1_an, label='Analytic', linestyle='-', color='k', marker='x')
         for s in basicschemes:
             plt.plot(xc, locals()[f'psi1_{s}'], label=f'{s}')
         ut.design_figure('Psi1_bs.pdf', f'$\\Psi_1$ at t={nt*dt} - Basic Schemes', \
@@ -107,7 +107,8 @@ def main():
                      'x', '$\\Psi_1$', True, -0.1, 1.1)
 
     if do_basicschemes == True:
-        plt.plot(xc, psi2_an, label='Analytic', linestyle='-', color='k')
+        plt.plot(xc, psi2_in, label='Initial', linestyle='-', color='grey')
+        plt.plot(xc, psi2_an, label='Analytic', linestyle='-', color='k', marker='x')
         for s in basicschemes:
             plt.plot(xc, locals()[f'psi2_{s}'], label=f'{s}')
         ut.design_figure('Psi2_bs.pdf', f'$\\Psi_2$ at t={nt*dt} - Basic Schemes', \

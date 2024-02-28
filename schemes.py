@@ -623,11 +623,7 @@ def hybrid(init, nt, dt, uf, dxc, eps=1e-6):
 
     # Criterion explicit/implicit
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc # assumes uf is positive when pointed to the right (i.e., direction of increasing x)
-    beta = np.invert((np.roll(cc,1) < 1.)*(cc < 1)) #np.where(np.roll(cc,1) < 1. and cc < 1, np.zeros(len(cc)), np.ones(len(cc))) # beta[i] is defined at i-1/2
-    print('cc', cc)
-    print('beta', beta)
-    # True = 1 , false = 0
-    # beta = 0: explicit, beta = 1: implicit    
+    beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1)) # beta[i] is defined at i-1/2 # 0: explicit, 1: implicit  
 
     # Time stepping
     for it in range(nt):
