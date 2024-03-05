@@ -28,15 +28,15 @@ def main():
     xmax = 2.0                  # physical domain parameters
     uf = np.full(nx, 0.2)       # velocity at faces (assume constant)
     
-    keep_model_stable = True
+    keep_model_stable = False
     if keep_model_stable == True:
         cmax = 1.
         dxcmin = np.min(0.5*dt*(np.roll(uf,-1) + uf)/cmax)
     else:
         dxcmin = 0.
         
-    #xf, dxc, xc, dxf = gr.coords_centralstretching(xmax, nx, nx/2, dxcmin=dxcmin) # points in space, length of spatial step
-    xf, dxc, xc, dxf = gr.coords_uniform(xmax, nx) # points in space, length of spatial step
+    xf, dxc, xc, dxf = gr.coords_centralstretching(xmax, nx, nx/2, dxcmin=dxcmin) # points in space, length of spatial step
+    #xf, dxc, xc, dxf = gr.coords_uniform(xmax, nx) # points in space, length of spatial step
     print(nx/2)
     uc = gr.linear(xc, xf, uf)       # velocity at centers
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc # Courant number (defined at cell center)
@@ -64,9 +64,9 @@ def main():
     #### Schemes ####
     #################
 
-    do_basicschemes = True
-    basicschemes = ['Upwind']
-    advancedschemes = ['MPDATA', 'BTBS_Jacobi', 'hybrid']
+    do_basicschemes = False
+    basicschemes = []
+    advancedschemes = ['BTBS_Jacobi', 'hybrid_Upwind_BTBS1J']#['BTBS_Jacobi', 'hybrid']
     markers_as = ['x', 'x', '+', '', '', '']
     linestyle_as = ['-','-','-', '--', '-', '--']
     colors_as = ['red', 'blue', 'orange', 'red', 'lightblue', 'gray']
@@ -92,7 +92,7 @@ def main():
         for s in basicschemes:
             plt.plot(xc, locals()[f'psi1_{s}'], label=f'{s}')
         ut.design_figure('Psi1_bs.pdf', f'$\\Psi_1$ at t={nt*dt} - Basic Schemes', \
-                        'x', '$\\Psi_1$', True, -0.1, 1.1)
+                        'x', '$\\Psi_1$', True, -0.1, 1.5)
 
 
     plt.plot(xc, psi1_in, label='Initial', linestyle='-', color='grey')
@@ -107,7 +107,7 @@ def main():
             slabel = s
         plt.plot(xc, locals()[f'psi1_{s}'], label=f'{slabel}', marker=markers_as[si], linestyle=linestyle_as[si], color=colors_as[si])
     ut.design_figure('Psi1_as.pdf', f'$\\Psi_1$ at t={nt*dt}', \
-                     'x', '$\\Psi_1$', True, -0.1, 1.1)
+                     'x', '$\\Psi_1$', True, -0.1, 1.5)
 
     if do_basicschemes == True:
         plt.plot(xc, psi2_in, label='Initial', linestyle='-', color='grey')
@@ -115,7 +115,7 @@ def main():
         for s in basicschemes:
             plt.plot(xc, locals()[f'psi2_{s}'], label=f'{s}')
         ut.design_figure('Psi2_bs.pdf', f'$\\Psi_2$ at t={nt*dt} - Basic Schemes', \
-                        'x', '$\\Psi_2$', True, -0.1, 1.1)
+                        'x', '$\\Psi_2$', True, -0.1, 1.5)
     
     
     plt.plot(xc, psi2_in, label='Initial', linestyle='-', color='grey')
@@ -128,7 +128,7 @@ def main():
             slabel = s
         plt.plot(xc, locals()[f'psi2_{s}'], label=f'{slabel}', marker=markers_as[si], linestyle=linestyle_as[si], color=colors_as[si])
     ut.design_figure('Psi2_as.pdf', f'$\\Psi_2$ at t={nt*dt}', \
-                     'x', '$\\Psi_2$', True,  -0.1, 1.1)
+                     'x', '$\\Psi_2$', True,  -0.1, 1.5)
     plt.close()
 
     #####################

@@ -86,7 +86,7 @@ def produce_standalone_animation():
     uf = np.full(nx, 0.2)       # velocity at faces (assume constant)
     uc = np.full(nx, 0.2)       # velocity at centers
 
-    keep_model_stable = True
+    keep_model_stable = False
     if keep_model_stable == True:
         cmax = 1.
         dxcmin = np.min(0.5*dt*(np.roll(uf,-1) + uf)/cmax)
@@ -97,6 +97,6 @@ def produce_standalone_animation():
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc # Courant number (defined at cell center)
     niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
     
-    make_animation('Upwind', 'Upwind_nt100', nt, dt, uf, dxc, xc, xmax, uc)
+    make_animation('hybrid_Upwind_BTBS1J', 'hybridUpwindBTBS1J_nt100_notkeptstable_beta01', nt, dt, uf, dxc, xc, xmax, uc)
 
 if __name__ == "__main__": produce_standalone_animation()

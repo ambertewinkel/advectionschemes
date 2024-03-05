@@ -555,16 +555,18 @@ def MPDATA(init, nt, dt, uf, dxc, eps=1e-6):
     A = np.zeros(len(init)) # A[i] is A_{i-1/2}
     V = np.zeros(len(init)) # Same index shift as for A
 
-    U = uf*dt/np.roll(dxc,1) # U[i] is defined at i-1/2
+    U = uf*dt/np.roll(dxc,1) # U[i] is defined at i-1/2 # !!! keep dxc separate form U -- keep the code close to the fundamental equations
 
     # Time stepping
     for it in range(nt):
         # First pass  
+
         field_FP = field_old - flux(field_old, np.roll(field_old,-1), np.roll(U,-1)) + flux(np.roll(field_old,1), field_old, U)
 
         # Second pass
         A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps)
         V = (abs(U) - U*U)*A
+        #fluxtemp = flux()
         field = field_FP - flux(field_FP, np.roll(field_FP,-1), np.roll(V,-1)) + flux(np.roll(field_FP,1), field_FP, V)
         field_old = field
 
@@ -593,11 +595,11 @@ def flux(Psi_L, Psi_R, U):
 
     return F
 
-def hybrid(init, nt, dt, uf, dxc, eps=1e-6):
+def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, eps=1e-6):
     """
     This functions implements 
     Explicit: MPDATA scheme (without a gauge, assuming a 
-    constant velocity (input through the Courant number) and a 
+    constant velocity and a 
     periodic spatial domain)
     Implicit: BTBS with 1 Jacobi iteration
     Reference (1): P. Smolarkiewicz and L. Margolin. MPDATA: A finite-difference 
@@ -639,7 +641,87 @@ def hybrid(init, nt, dt, uf, dxc, eps=1e-6):
         field_temp = field.copy()
         for i in range(len(cc)):
             if beta[i] == True: # BTBS with 1 Jacobi iteration 
-                field[i] = (field_temp[i] + dt*uf[i]*dxc[i]*np.roll(field_temp,1)[i])/(1 + np.roll(uf,-1)[i]*dt/dxc[i])
+                field[i] = (field_temp[i] + dt*uf[i]*np.roll(field_temp,1)[i]/dxc[i])/(1 + np.roll(uf,-1)[i]*dt/dxc[i])
         field_old = field
 
     return field
+
+"""
+# MPDATA
+    # Time stepping
+    for it in range(nt):
+        # First pass  
+        field_FP = field_old - flux(field_old, np.roll(field_old,-1), np.roll(U,-1)) + flux(np.roll(field_old,1), field_old, U)
+
+        # Second pass
+        A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps)
+        V = (abs(U) - U*U)*A
+        field = field_FP - flux(field_FP, np.roll(field_FP,-1), np.roll(V,-1)) + flux(np.roll(field_FP,1), field_FP, V)
+        field_old = field
+
+    return field
+
+
+# BTBS+Jacobi
+        # Define initial condition
+    field = init.copy()
+
+    # Define the matrix to solve
+    M = np.zeros((len(init), len(init)))
+    for i in range(len(init)): 
+        M[i,i] = 1 + dt*np.roll(uf,-1)[i]/dxc[i]
+        M[i, i-1] = -dt*uf[i]/dxc[i]
+
+    # Time stepping
+    for it in range(nt):
+        field = sv.Jacobi(M, field, field, niter)
+
+    return field
+"""
+
+def hybrid_Upwind_BTBS1J(init, nt, dt, uf, dxc):
+    """
+    This functions implements 
+    Explicit: upwind scheme (assuming a 
+    constant velocity and a 
+    periodic spatial domain)
+    Implicit: BTBS with 1 Jacobi iteration
+    Reference (1): P. Smolarkiewicz and L. Margolin. MPDATA: A finite-difference 
+    solver for geophysical flows. J. Comput. Phys., 140:459-480, 1998.
+    --- Input ---
+    init : array of floats, initial field to advect
+    nt      : integer, total number of time steps to take
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
+    --- Output --- 
+    field   : 1D array of floats. Outputs the final timestep after advecting 
+            the initial condition. Dimensions: length of init.
+    """
+    # Initialisation
+    field = np.zeros(len(init))
+    field_old = init.copy()
+    flx = np.zeros(len(init))
+
+    # Criterion explicit/implicit
+    cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc # assumes uf is positive when pointed to the right (i.e., direction of increasing x)
+    beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1)) # beta[i] is defined at i-1/2 # 0: explicit, 1: implicit  
+    #beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is defined at i-1/2 # 0: fully explicit, 1: fully implicit 
+    
+    ufp = 0.5*(uf + abs(uf)) # uf[i] is defined at i-1/2
+    ufm = 0.5*(uf - abs(uf))
+
+    # Time stepping
+    for it in range(nt):
+        flx = ufp*np.roll(field_old,1) + ufm*field_old # flx[i] is defined at i-1/2
+        rhs = field_old - dt*(np.roll((1. - beta)*flx,-1) - (1. - beta)*flx)/dxc
+        for i in range(len(cc)):
+            if beta[i] != 0.0 or np.roll(beta,-1)[i] != 0.0:
+                field[i] = (rhs[i] + dt*uf[i]*np.roll(field_old,1)[i]/dxc[i])/(1 + np.roll(uf,-1)[i]*dt/dxc[i])
+            else:
+                field[i] = rhs[i]
+        field_old = field.copy()
+    return field
+
+def hybrid_Upwind_Upwind1J(init, nt, dt, uf, dxc, eps=1e-6):
+    print()
