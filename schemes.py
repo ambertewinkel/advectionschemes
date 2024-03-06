@@ -77,7 +77,7 @@ def CTCS(init, nt, dt, uf, dxc):
     """
 
     # Setup and initial condition
-    field = np.zeros(len(init))
+    field = init.copy()
     field_old = init.copy()
 
     # First time step is forward in time, centered in space (FTCS)
@@ -549,7 +549,7 @@ def MPDATA(init, nt, dt, uf, dxc, eps=1e-6):
     """
 
     # Initialisation
-    field = np.zeros(len(init))
+    field = init.copy()
     field_old = init
     field_FP = np.zeros(len(init))
     A = np.zeros(len(init)) # A[i] is A_{i-1/2}
@@ -616,7 +616,7 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, eps=1e-6):
             the initial condition. Dimensions: length of init.
     """
     # Initialisation
-    field = np.zeros(len(init))
+    field = init.copy()
     field_old = init
     field_FP = np.zeros(len(init))
     A = np.zeros(len(init)) # A[i] is A_{i-1/2}
@@ -626,7 +626,32 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, eps=1e-6):
     # Criterion explicit/implicit
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc # assumes uf is positive when pointed to the right (i.e., direction of increasing x)
     beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1)) # beta[i] is defined at i-1/2 # 0: explicit, 1: implicit  
+    #beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is defined at i-1/2 # 0: fully explicit, 1: fully implicit 
 
+    ufp = 0.5*(uf + abs(uf)) # uf[i] is defined at i-1/2
+    ufm = 0.5*(uf - abs(uf))
+    
+    # Time stepping
+    for it in range(nt):
+        # First pass
+        flx = ufp*np.roll(field_old,1) + ufm*field_old # flx[i] is defined at i-1/2
+        rhs = field_old - dt*(np.roll((1. - beta)*flx,-1) - (1. - beta)*flx)/dxc
+        for i in range(len(cc)):
+            if beta[i] != 0.0 or np.roll(beta,-1)[i] != 0.0:
+                field_FP[i] = (rhs[i] + dt*uf[i]*np.roll(field_old,1)[i]/dxc[i])/(1 + np.roll(uf,-1)[i]*dt/dxc[i])
+            else:
+                field_FP[i] = rhs[i]
+
+        # Second pass
+        A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps)
+        V = (abs(U) - U*U)*A
+        flx2 = flux(np.roll(field_FP,1), field_FP, V)
+        field = field_FP - np.roll(flx2,-1) + flx2                
+        field_old = field.copy()
+    return field
+
+
+"""
     # Time stepping
     for it in range(nt):
         for i in range(len(cc)):
@@ -643,8 +668,14 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, eps=1e-6):
             if beta[i] == True: # BTBS with 1 Jacobi iteration 
                 field[i] = (field_temp[i] + dt*uf[i]*np.roll(field_temp,1)[i]/dxc[i])/(1 + np.roll(uf,-1)[i]*dt/dxc[i])
         field_old = field
+"""
 
-    return field
+
+
+
+
+
+
 
 """
 # MPDATA
@@ -699,9 +730,8 @@ def hybrid_Upwind_BTBS1J(init, nt, dt, uf, dxc):
             the initial condition. Dimensions: length of init.
     """
     # Initialisation
-    field = np.zeros(len(init))
+    field = init.copy()
     field_old = init.copy()
-    flx = np.zeros(len(init))
 
     # Criterion explicit/implicit
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc # assumes uf is positive when pointed to the right (i.e., direction of increasing x)
@@ -723,5 +753,48 @@ def hybrid_Upwind_BTBS1J(init, nt, dt, uf, dxc):
         field_old = field.copy()
     return field
 
-def hybrid_Upwind_Upwind1J(init, nt, dt, uf, dxc, eps=1e-6):
-    print()
+def hybrid_Upwind_Upwind1J(init, nt, dt, uf, dxc): # !!! wrong! in the implicit part somewhere
+    """
+    This functions implements 
+    Explicit: upwind scheme (assuming a 
+    constant velocity and a 
+    periodic spatial domain)
+    Implicit: BTBS with 1 Jacobi iteration
+    Reference (1): P. Smolarkiewicz and L. Margolin. MPDATA: A finite-difference 
+    solver for geophysical flows. J. Comput. Phys., 140:459-480, 1998.
+    --- Input ---
+    init : array of floats, initial field to advect
+    nt      : integer, total number of time steps to take
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
+    --- Output --- 
+    field   : 1D array of floats. Outputs the final timestep after advecting 
+            the initial condition. Dimensions: length of init.
+    """
+    # Initialisation
+    field = init.copy()
+    field_old = init.copy()
+
+    # Criterion explicit/implicit
+    cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc # assumes uf is positive when pointed to the right (i.e., direction of increasing x)
+    beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1)) # beta[i] is defined at i-1/2 # 0: explicit, 1: implicit  
+    #beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is defined at i-1/2 # 0: fully explicit, 1: fully implicit 
+
+    ufp = 0.5*(uf + abs(uf)) # uf[i] is defined at i-1/2
+    ufm = 0.5*(uf - abs(uf))
+
+    # Time stepping
+    for it in range(nt):
+        flx = ufp*np.roll(field_old,1) + ufm*field_old # flx[i] is defined at i-1/2
+        rhs = field_old - dt*(np.roll((1. - beta)*flx,-1) - (1. - beta)*flx)/dxc
+        for i in range(len(cc)):
+            if beta[i] != 0.0 or np.roll(beta,-1)[i] != 0.0:
+                aii = 1. + dt*(np.roll(beta*ufp,-1)[i] - (1. - beta[i])*ufm[i])/dxc[i]
+                aiim1 = -dt*(1. - beta[i])*ufm[i]/dxc[i]
+                aiip1 = dt*np.roll(beta*ufp,-1)[i]/dxc[i]
+                field[i] = (rhs[i] - aiim1*np.roll(field_old,1)[i] - aiip1*np.roll(field_old,-1)[i])/aii # !!! do I use field_old inside the np.rolls?
+            else:
+                field[i] = rhs[i]
+        field_old = field.copy()
+    return field
