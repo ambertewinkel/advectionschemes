@@ -790,9 +790,9 @@ def hybrid_Upwind_Upwind1J(init, nt, dt, uf, dxc): # !!! wrong! in the implicit 
         rhs = field_old - dt*(np.roll((1. - beta)*flx,-1) - (1. - beta)*flx)/dxc
         for i in range(len(cc)):
             if beta[i] != 0.0 or np.roll(beta,-1)[i] != 0.0:
-                aii = 1. + dt*(np.roll(beta*ufp,-1)[i] - (1. - beta[i])*ufm[i])/dxc[i]
-                aiim1 = -dt*(1. - beta[i])*ufm[i]/dxc[i]
-                aiip1 = dt*np.roll(beta*ufp,-1)[i]/dxc[i]
+                aii = 1. + dt*(np.roll(beta*ufp,-1)[i] - beta[i]*ufm[i])/dxc[i]
+                aiim1 = -dt*beta[i]*ufp[i]/dxc[i]
+                aiip1 = dt*np.roll(beta*ufm,-1)[i]/dxc[i]
                 field[i] = (rhs[i] - aiim1*np.roll(field_old,1)[i] - aiip1*np.roll(field_old,-1)[i])/aii # !!! do I use field_old inside the np.rolls?
             else:
                 field[i] = rhs[i]

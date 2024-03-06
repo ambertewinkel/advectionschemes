@@ -20,7 +20,7 @@ def main():
     function, both defined on a subdomain. 
     Schemes included: FTBS, FTFS, FTCS, CTBS, CTFS, CTCS, Upwind, BTBS, BTFS, BTCS, CNBS, MPDATA
     """
-    
+
     # Initial conditions
     dt = 0.1                    # time step
     nt = 1                    # number of time steps
@@ -65,7 +65,7 @@ def main():
 
     do_basicschemes = False
     basicschemes = []
-    advancedschemes = ['hybrid_Upwind_Upwind1J']#'BTBS_Jacobi', 'hybrid_MPDATA_BTBS1J']#['BTBS_Jacobi', 'hybrid']
+    advancedschemes = ['hybrid_Upwind_Upwind1J', 'hybrid_Upwind_BTBS1J']#'BTBS_Jacobi', 'hybrid_MPDATA_BTBS1J']#['BTBS_Jacobi', 'hybrid']
     markers_as = ['x', 'x', '+', '', '', '']
     linestyle_as = ['-','-','-', '--', '-', '--']
     colors_as = ['red', 'blue', 'orange', 'red', 'lightblue', 'gray']
