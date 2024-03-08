@@ -112,7 +112,7 @@ def Upwind(init, nt, dt, uf, dxc): # FTBS when u >= 0, FTFS when u < 0
     field = init.copy()
     field_new = np.zeros(len(init))
     
-    cc = 0.5*dt*(uf + np.roll(uf,-1))/dxc # sum for cc[i] is over the faces at i-1/2 and i+1/2
+    cc = 0.5*dt*(uf + np.roll(uf,-1))/dxc # sum for cc[i] is over faces i-1/2 and i+1/2
 
     # Time stepping
     for it in range(nt):
@@ -552,13 +552,13 @@ def MPDATA(init, nt, dt, uf, dxc, eps=1e-6):
     field = init.copy()
     field_old = init
     field_FP = np.zeros(len(init))
-    A = np.zeros(len(init)) # A[i] is A_{i-1/2}
+    A = np.zeros(len(init)) # A[i] is at i-1/2
     V = np.zeros(len(init)) # Same index shift as for A
 
     # Time stepping
     for it in range(nt):
         # First pass  
-        flx = flux(np.roll(field_old,1), field_old, uf) # flx[i] is defined at i-1/2
+        flx = flux(np.roll(field_old,1), field_old, uf) # flx[i] is at i-1/2
         field_FP = field_old + dt*(-np.roll(flx,-1) + flx)/dxc
 
         # Second pass
@@ -593,18 +593,18 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, eps=1e-6): # !!! 07.03.2024: not
     field = init.copy()
     field_old = init
     field_FP = np.zeros(len(init))
-    A = np.zeros(len(init)) # A[i] is A_{i-1/2}
+    A = np.zeros(len(init)) # A[i] is at i-1/2
     V = np.zeros(len(init)) # Same index shift as for A
 
     # Criterion explicit/implicit
-    cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc # assumes uf is positive when pointed to the right (i.e., direction of increasing x)
-    beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1)) # beta[i] is defined at i-1/2 # 0: explicit, 1: implicit  
-    #beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is defined at i-1/2 # 0: fully explicit, 1: fully implicit 
+    cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
+    beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit  
+    #beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
     
     # Time stepping
     for it in range(nt):
         # First pass
-        flx = flux(np.roll(field_old,1), field_old, uf) # flx[i] is defined at i-1/2
+        flx = flux(np.roll(field_old,1), field_old, uf) # flx[i] is at i-1/2
         rhs = field_old - dt*(np.roll((1. - beta)*flx,-1) - (1. - beta)*flx)/dxc
         for i in range(len(cc)):
             if beta[i] != 0.0 or np.roll(beta,-1)[i] != 0.0:
@@ -643,16 +643,16 @@ def hybrid_Upwind_BTBS1J(init, nt, dt, uf, dxc):
     field_old = init.copy()
 
     # Criterion explicit/implicit
-    cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc # assumes uf is positive when pointed to the right (i.e., direction of increasing x)
-    beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1)) # beta[i] is defined at i-1/2 # 0: explicit, 1: implicit  
-    #beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is defined at i-1/2 # 0: fully explicit, 1: fully implicit 
+    cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
+    beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit  
+    #beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
     
-    ufp = 0.5*(uf + abs(uf)) # uf[i] is defined at i-1/2
+    ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
     ufm = 0.5*(uf - abs(uf))
 
     # Time stepping
     for it in range(nt):
-        flx = ufp*np.roll(field_old,1) + ufm*field_old # flx[i] is defined at i-1/2
+        flx = flux(np.roll(field_old,1), field_old, uf) # flx[i] is at i-1/2
         rhs = field_old - dt*(np.roll((1. - beta)*flx,-1) - (1. - beta)*flx)/dxc
         for i in range(len(cc)):
             if beta[i] != 0.0 or np.roll(beta,-1)[i] != 0.0:
@@ -683,16 +683,16 @@ def hybrid_Upwind_Upwind1J(init, nt, dt, uf, dxc):
     field_old = init.copy()
 
     # Criterion explicit/implicit
-    cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc # assumes uf is positive when pointed to the right (i.e., direction of increasing x)
-    beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1)) # beta[i] is defined at i-1/2 # 0: explicit, 1: implicit  
-    #beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is defined at i-1/2 # 0: fully explicit, 1: fully implicit 
+    cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
+    beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit  
+    #beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
 
-    ufp = 0.5*(uf + abs(uf)) # uf[i] is defined at i-1/2
+    ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
     ufm = 0.5*(uf - abs(uf))
 
     # Time stepping
     for it in range(nt):
-        flx = ufp*np.roll(field_old,1) + ufm*field_old # flx[i] is defined at i-1/2
+        flx = flux(np.roll(field_old,1), field_old, uf) # flx[i] is at i-1/2
         rhs = field_old - dt*(np.roll((1. - beta)*flx,-1) - (1. - beta)*flx)/dxc
         for i in range(len(cc)):
             if beta[i] != 0.0 or np.roll(beta,-1)[i] != 0.0:
