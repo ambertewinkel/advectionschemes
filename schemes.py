@@ -555,47 +555,21 @@ def MPDATA(init, nt, dt, uf, dxc, eps=1e-6):
     A = np.zeros(len(init)) # A[i] is A_{i-1/2}
     V = np.zeros(len(init)) # Same index shift as for A
 
-    U = uf*dt/np.roll(dxc,1) # U[i] is defined at i-1/2 # !!! keep dxc separate form U -- keep the code close to the fundamental equations
-
     # Time stepping
     for it in range(nt):
         # First pass  
-
-        field_FP = field_old - flux(field_old, np.roll(field_old,-1), np.roll(U,-1)) + flux(np.roll(field_old,1), field_old, U)
+        flx = flux(np.roll(field_old,1), field_old, uf) # flx[i] is defined at i-1/2
+        field_FP = field_old + dt*(-np.roll(flx,-1) + flx)/dxc
 
         # Second pass
         A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps)
-        V = (abs(U) - U*U)*A
-        #fluxtemp = flux()
-        field = field_FP - flux(field_FP, np.roll(field_FP,-1), np.roll(V,-1)) + flux(np.roll(field_FP,1), field_FP, V)
+        V = (abs(uf) - uf)*A
+        flx2 = flux(np.roll(field_FP,1), field_FP, V)
+        field = field_FP + dt*(-np.roll(flx2,-1) + flx2)/dxc
         field_old = field
-
     return field
 
-def flux(Psi_L, Psi_R, U):
-    """
-    This function computes the upwind flux for the MPDATA scheme, based on eq (3a)-(3d)
-    in: P. Smolarkiewicz and L. Margolin. MPDATA: A finite-difference 
-    solver for geophysical flows. J. Comput. Phys., 140:459-480, 1998.
-    --- Input ---
-    Psi_L   : 1D array of floats, Psi in grid cell left of flux cell face
-    Psi_R   : 1D array of floats, Psi in grid cell right of flux cell face
-    U       : float or 1D array of floats with the length of Psi_L and Psi_R,
-              local Courant number at cell face. U[i] is defined at the face 
-              between grid cells i and i+1
-    --- Output --- 
-    F       : 1D array of floats describing total outgoing flux corresponding to each grid point
-    """
-    # Calculate U+ and U- from U
-    U_p = 0.5*(U + abs(U))
-    U_m = 0.5*(U - abs(U))
-
-    # Calculate the upwind flux
-    F = U_p*Psi_L + U_m*Psi_R
-
-    return F
-
-def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, eps=1e-6):
+def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, eps=1e-6): # !!! 07.03.2024: not correct yet
     """
     This functions implements 
     Explicit: MPDATA scheme (without a gauge, assuming a 
@@ -621,20 +595,16 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, eps=1e-6):
     field_FP = np.zeros(len(init))
     A = np.zeros(len(init)) # A[i] is A_{i-1/2}
     V = np.zeros(len(init)) # Same index shift as for A
-    U = uf*dt/np.roll(dxc,1) # U[i] is defined at i-1/2
 
     # Criterion explicit/implicit
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc # assumes uf is positive when pointed to the right (i.e., direction of increasing x)
     beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1)) # beta[i] is defined at i-1/2 # 0: explicit, 1: implicit  
     #beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is defined at i-1/2 # 0: fully explicit, 1: fully implicit 
-
-    ufp = 0.5*(uf + abs(uf)) # uf[i] is defined at i-1/2
-    ufm = 0.5*(uf - abs(uf))
     
     # Time stepping
     for it in range(nt):
         # First pass
-        flx = ufp*np.roll(field_old,1) + ufm*field_old # flx[i] is defined at i-1/2
+        flx = flux(np.roll(field_old,1), field_old, uf) # flx[i] is defined at i-1/2
         rhs = field_old - dt*(np.roll((1. - beta)*flx,-1) - (1. - beta)*flx)/dxc
         for i in range(len(cc)):
             if beta[i] != 0.0 or np.roll(beta,-1)[i] != 0.0:
@@ -644,71 +614,12 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, eps=1e-6):
 
         # Second pass
         A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps)
-        V = (abs(U) - U*U)*A
+        V = (abs(uf) - uf*uf)*A
         flx2 = flux(np.roll(field_FP,1), field_FP, V)
-        field = field_FP - np.roll(flx2,-1) + flx2                
+        field = field_FP + dt*(-np.roll(flx2,-1) + flx2)/dxc                
         field_old = field.copy()
-    return field
-
-
-"""
-    # Time stepping
-    for it in range(nt):
-        for i in range(len(cc)):
-            if beta[i] == False: # MPDATA
-                # First pass  
-                field_FP[i] = field_old[i] - flux(field_old[i], np.roll(field_old,-1)[i], np.roll(U,-1)[i]) + flux(np.roll(field_old,1)[i], field_old[i], U[i])
-
-                # Second pass
-                A[i] = (field_FP[i] - np.roll(field_FP,1)[i])/(field_FP[i] + np.roll(field_FP,1)[i] + eps)
-                V[i] = (abs(U[i]) - U[i]*U[i])*A[i]
-                field[i] = field_FP[i] - flux(field_FP[i], np.roll(field_FP,-1)[i], np.roll(V,-1)[i]) + flux(np.roll(field_FP,1)[i], field_FP[i], V[i])
-        field_temp = field.copy()
-        for i in range(len(cc)):
-            if beta[i] == True: # BTBS with 1 Jacobi iteration 
-                field[i] = (field_temp[i] + dt*uf[i]*np.roll(field_temp,1)[i]/dxc[i])/(1 + np.roll(uf,-1)[i]*dt/dxc[i])
-        field_old = field
-"""
-
-
-
-
-
-
-
-
-"""
-# MPDATA
-    # Time stepping
-    for it in range(nt):
-        # First pass  
-        field_FP = field_old - flux(field_old, np.roll(field_old,-1), np.roll(U,-1)) + flux(np.roll(field_old,1), field_old, U)
-
-        # Second pass
-        A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps)
-        V = (abs(U) - U*U)*A
-        field = field_FP - flux(field_FP, np.roll(field_FP,-1), np.roll(V,-1)) + flux(np.roll(field_FP,1), field_FP, V)
-        field_old = field
 
     return field
-
-
-# BTBS+Jacobi
-        # Define initial condition
-    field = init.copy()
-
-    # Define the matrix to solve
-    M = np.zeros((len(init), len(init)))
-    for i in range(len(init)): 
-        M[i,i] = 1 + dt*np.roll(uf,-1)[i]/dxc[i]
-        M[i, i-1] = -dt*uf[i]/dxc[i]
-
-    # Time stepping
-    for it in range(nt):
-        field = sv.Jacobi(M, field, field, niter)
-
-    return field
-"""
 
 def hybrid_Upwind_BTBS1J(init, nt, dt, uf, dxc):
     """
@@ -717,8 +628,6 @@ def hybrid_Upwind_BTBS1J(init, nt, dt, uf, dxc):
     constant velocity and a 
     periodic spatial domain)
     Implicit: BTBS with 1 Jacobi iteration
-    Reference (1): P. Smolarkiewicz and L. Margolin. MPDATA: A finite-difference 
-    solver for geophysical flows. J. Comput. Phys., 140:459-480, 1998.
     --- Input ---
     init : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
@@ -753,15 +662,12 @@ def hybrid_Upwind_BTBS1J(init, nt, dt, uf, dxc):
         field_old = field.copy()
     return field
 
-def hybrid_Upwind_Upwind1J(init, nt, dt, uf, dxc): # !!! wrong! in the implicit part somewhere
+def hybrid_Upwind_Upwind1J(init, nt, dt, uf, dxc):
     """
     This functions implements 
-    Explicit: upwind scheme (assuming a 
-    constant velocity and a 
+    Explicit: upwind scheme (assuming a constant velocity and a 
     periodic spatial domain)
-    Implicit: BTBS with 1 Jacobi iteration
-    Reference (1): P. Smolarkiewicz and L. Margolin. MPDATA: A finite-difference 
-    solver for geophysical flows. J. Comput. Phys., 140:459-480, 1998.
+    Implicit: Upwind with 1 Jacobi iteration
     --- Input ---
     init : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
@@ -793,8 +699,31 @@ def hybrid_Upwind_Upwind1J(init, nt, dt, uf, dxc): # !!! wrong! in the implicit 
                 aii = 1. + dt*(np.roll(beta*ufp,-1)[i] - beta[i]*ufm[i])/dxc[i]
                 aiim1 = -dt*beta[i]*ufp[i]/dxc[i]
                 aiip1 = dt*np.roll(beta*ufm,-1)[i]/dxc[i]
-                field[i] = (rhs[i] - aiim1*np.roll(field_old,1)[i] - aiip1*np.roll(field_old,-1)[i])/aii # !!! do I use field_old inside the np.rolls?
+                field[i] = (rhs[i] - aiim1*np.roll(field_old,1)[i] - aiip1*np.roll(field_old,-1)[i])/aii
             else:
                 field[i] = rhs[i]
         field_old = field.copy()
     return field
+
+def flux(Psi_L, Psi_R, U):
+    """
+    This function computes the upwind flux for the MPDATA scheme, based on eq (3a)-(3d)
+    in: P. Smolarkiewicz and L. Margolin. MPDATA: A finite-difference 
+    solver for geophysical flows. J. Comput. Phys., 140:459-480, 1998.
+    --- Input ---
+    Psi_L   : 1D array of floats, Psi in grid cell left of flux cell face
+    Psi_R   : 1D array of floats, Psi in grid cell right of flux cell face
+    U       : float or 1D array of floats with the length of Psi_L and Psi_R,
+              local Courant number at cell face. U[i] is defined at the face 
+              between grid cells i and i+1
+    --- Output --- 
+    F       : 1D array of floats describing total outgoing flux corresponding to each grid point
+    """
+    # Calculate U+ and U- from U
+    U_p = 0.5*(U + abs(U))
+    U_m = 0.5*(U - abs(U))
+
+    # Calculate the upwind flux
+    F = U_p*Psi_L + U_m*Psi_R
+
+    return F

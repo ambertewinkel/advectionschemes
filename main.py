@@ -26,7 +26,7 @@ def main():
     nt = 1                    # number of time steps
     nx = 40                     # number of points in space
     xmax = 2.0                  # physical domain parameters
-    uf = np.full(nx, 1.0)       # velocity at faces (assume constant)
+    uf = np.full(nx, 0.2)       # velocity at faces (assume constant)
     
     keep_model_stable = False
     if keep_model_stable == True:
@@ -65,8 +65,8 @@ def main():
 
     do_basicschemes = False
     basicschemes = []
-    advancedschemes = ['hybrid_Upwind_Upwind1J', 'hybrid_Upwind_BTBS1J']#'BTBS_Jacobi', 'hybrid_MPDATA_BTBS1J']#['BTBS_Jacobi', 'hybrid']
-    markers_as = ['x', 'x', '+', '', '', '']
+    advancedschemes = ['hybrid_Upwind_BTBS1J']#'BTBS_Jacobi', 'hybrid_MPDATA_BTBS1J']#['BTBS_Jacobi', 'hybrid']
+    markers_as = ['x', '+', '+', '', '', '']
     linestyle_as = ['-','-','-', '--', '-', '--']
     colors_as = ['red', 'blue', 'orange', 'red', 'lightblue', 'gray']
     allschemes = basicschemes + advancedschemes
