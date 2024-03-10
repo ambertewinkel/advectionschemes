@@ -26,7 +26,7 @@ def main():
     nt = 10                    # number of time steps
     nx = 40                     # number of points in space
     xmax = 2.0                  # physical domain parameters
-    uf = np.full(nx, 0.2)       # velocity at faces (assume constant)
+    uf = np.full(nx, 0.2)       # velocity at faces (assume constant) # weird stuff happens when uf=1.0 and keep_model_stable=True
     
     keep_model_stable = True
     if keep_model_stable == True:
@@ -38,7 +38,7 @@ def main():
     xf, dxc, xc, dxf = gr.coords_centralstretching(xmax, nx, nx/2, dxcmin=dxcmin) # points in space, length of spatial step
     #xf, dxc, xc, dxf = gr.coords_uniform(xmax, nx) # points in space, length of spatial step
     uc = gr.linear(xc, xf, uf)       # velocity at centers
-    cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc # Courant number (defined at cell center)
+    cc = 0.5*dt*(np.roll(abs(uf),-1) + abs(uf))/dxc # Courant number (defined at cell center)
     niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
     
     #ut.make_animation('Upwind', 'Upwind_nt100', nt, dt, uf, dxc, xc, xmax, uc)
@@ -65,7 +65,7 @@ def main():
 
     do_basicschemes = False
     basicschemes = []
-    advancedschemes = ['hybrid_MPDATA_BTBS1J', 'MPDATA', 'BTBS_Jacobi']#'hybrid_MPDATA_BTBS1J']#'BTBS_Jacobi', 'hybrid_MPDATA_BTBS1J']#['BTBS_Jacobi', 'hybrid']
+    advancedschemes = ['Upwind', 'MPDATA']#'hybrid_MPDATA_BTBS1J', 'hybrid_Upwind_BTBS1J', 'Upwind', 'MPDATA']#, 'MPDATA', 'BTBS_Jacobi']#'hybrid_MPDATA_BTBS1J']#'BTBS_Jacobi', 'hybrid_MPDATA_BTBS1J']#['BTBS_Jacobi', 'hybrid']
     markers_as = ['x', '+', '+', '', '', '']
     linestyle_as = ['-','-','-', '--', '-', '--']
     colors_as = ['red', 'blue', 'orange', 'red', 'lightblue', 'gray']

@@ -6,6 +6,7 @@
 import numpy as np
 import utils as ut
 import solvers as sv
+import matplotlib.pyplot as plt
 
 def FTBS(init, nt, dt, uf, dxc):
     """
@@ -559,14 +560,26 @@ def MPDATA(init, nt, dt, uf, dxc, eps=1e-6):
     for it in range(nt):
         # First pass  
         flx = flux(np.roll(field_old,1), field_old, uf) # flx[i] is at i-1/2
-        field_FP = field_old + dt*(-np.roll(flx,-1) + flx)/dxc
+        field_FP = field_old - dt*(np.roll(flx,-1) - flx)/dxc
 
         # Second pass
         A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps)
-        V = (abs(uf) - uf)*A
+        V = (abs(uf) - uf*uf)*A
+
+        # The below commented-out code considers ensuring the sign-preservation of the second pass
+        #V = np.array([V[i] if abs(V[i]/uf[i])<=0.5 else 0.5*V[i]*abs(uf[i]/V[i]) for i in range(len(V))]) # !!! this does not solve the strong fluctuations in MPDATA
+
+        #ccV = 0.5*dt*(np.roll(abs(V),-1) + abs(V))/dxc # Courant number antidiffusive velocity (defined at cell center)
+        #ratio = abs(V/uf)
+        #plt.plot(ratio, label='|V/uf|')
+        #plt.plot(ccV, label='C_V')
+        #plt.axhline(0.5, color='k')
+        #plt.legend()
+        #plt.show()
+
         flx2 = flux(np.roll(field_FP,1), field_FP, V)
-        field = field_FP + dt*(-np.roll(flx2,-1) + flx2)/dxc
-        field_old = field
+        field = field_FP - dt*(np.roll(flx2,-1) - flx2)/dxc
+        field_old = field.copy()
     return field
 
 def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, eps=1e-6): # !!! 07.03.2024: not correct yet
@@ -614,8 +627,8 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, eps=1e-6): # !!! 07.03.2024: not
                 field_FP[i] = (rhs[i] - aiim1*np.roll(field_old,1)[i])/aii            
             else:
                 field_FP[i] = rhs[i]
-
-        # Second pass
+        field = field_FP.copy()
+        # Second pass # 10.03.2024: with the second pass commented-out, this function behaves as Upwind !!!
         A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps)
         V = (abs(uf) - xi*uf*uf)*A
         flx2 = flux(np.roll(field_FP,1), field_FP, V)
