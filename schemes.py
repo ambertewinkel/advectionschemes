@@ -550,7 +550,7 @@ def MPDATA(init, nt, dt, uf, dxc, eps=1e-6):
 
     # Initialisation
     field = init.copy()
-    field_old = init
+    field_old = init.copy()
     field_FP = np.zeros(len(init))
     A = np.zeros(len(init)) # A[i] is at i-1/2
     V = np.zeros(len(init)) # Same index shift as for A
@@ -591,7 +591,7 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, eps=1e-6): # !!! 07.03.2024: not
     """
     # Initialisation
     field = init.copy()
-    field_old = init
+    field_old = init.copy()
     field_FP = np.zeros(len(init))
     A = np.zeros(len(init)) # A[i] is at i-1/2
     V = np.zeros(len(init)) # Same index shift as for A
@@ -600,25 +600,27 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, eps=1e-6): # !!! 07.03.2024: not
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
     beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit  
     #beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
-    
+    xi = np.maximum(1 - 2*beta, np.zeros(len(cc))) # xi[i] is at i-1/2
+
     # Time stepping
     for it in range(nt):
         # First pass
-        flx = flux(np.roll(field_old,1), field_old, uf) # flx[i] is at i-1/2
+        flx = flux(np.roll(field_old,1), field_old, uf) # flx[i] is at i-1/2 # upwind
         rhs = field_old - dt*(np.roll((1. - beta)*flx,-1) - (1. - beta)*flx)/dxc
         for i in range(len(cc)):
-            if beta[i] != 0.0 or np.roll(beta,-1)[i] != 0.0:
-                field_FP[i] = (rhs[i] + dt*uf[i]*np.roll(field_old,1)[i]/dxc[i])/(1 + np.roll(uf,-1)[i]*dt/dxc[i])
+            if beta[i] != 0.0 or np.roll(beta,-1)[i] != 0.0: # BTBS1J
+                aii = 1 + np.roll(beta*uf,-1)[i]*dt/dxc[i]
+                aiim1 = -dt*beta[i]*uf[i]/dxc[i]
+                field_FP[i] = (rhs[i] - aiim1*np.roll(field_old,1)[i])/aii            
             else:
                 field_FP[i] = rhs[i]
 
         # Second pass
         A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps)
-        V = (abs(uf) - uf*uf)*A
+        V = (abs(uf) - xi*uf*uf)*A
         flx2 = flux(np.roll(field_FP,1), field_FP, V)
         field = field_FP + dt*(-np.roll(flx2,-1) + flx2)/dxc                
         field_old = field.copy()
-
     return field
 
 def hybrid_Upwind_BTBS1J(init, nt, dt, uf, dxc):
@@ -646,17 +648,16 @@ def hybrid_Upwind_BTBS1J(init, nt, dt, uf, dxc):
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
     beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit  
     #beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
-    
-    ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
-    ufm = 0.5*(uf - abs(uf))
 
     # Time stepping
     for it in range(nt):
-        flx = flux(np.roll(field_old,1), field_old, uf) # flx[i] is at i-1/2
+        flx = flux(np.roll(field_old,1), field_old, uf) # flx[i] is at i-1/2 # upwind
         rhs = field_old - dt*(np.roll((1. - beta)*flx,-1) - (1. - beta)*flx)/dxc
         for i in range(len(cc)):
-            if beta[i] != 0.0 or np.roll(beta,-1)[i] != 0.0:
-                field[i] = (rhs[i] + dt*uf[i]*np.roll(field_old,1)[i]/dxc[i])/(1 + np.roll(uf,-1)[i]*dt/dxc[i])
+            if beta[i] != 0.0 or np.roll(beta,-1)[i] != 0.0: # BTBS1J
+                aii = 1 + np.roll(beta*uf,-1)[i]*dt/dxc[i]
+                aiim1 = -dt*beta[i]*uf[i]/dxc[i]
+                field[i] = (rhs[i] - aiim1*np.roll(field_old,1)[i])/aii
             else:
                 field[i] = rhs[i]
         field_old = field.copy()
