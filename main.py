@@ -4,6 +4,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
 import schemes as sch
 import experiments as epm
 import utils as ut
@@ -20,15 +21,25 @@ def main():
     function, both defined on a subdomain. 
     Schemes included: FTBS, FTFS, FTCS, CTBS, CTFS, CTCS, Upwind, BTBS, BTFS, BTCS, CNBS, MPDATA
     """
+    # Input booleans
+    predefined_output = True
+    keep_model_stable = True
+    create_animation = False
+    check_orderofconvergence = False
+    schemenames = ['hybrid_MPDATA_BTBS1J', 'MPDATA']
+
+    # Plotting setup
+    markers = ['x', '+', '+', '', '', '']
+    linestyle = ['-','-','-', '--', '-', '--']
+    colors = ['red', 'blue', 'orange', 'red', 'lightblue', 'gray']
 
     # Initial conditions
     dt = 0.1                    # time step
-    nt = 10                    # number of time steps
+    nt = 100                    # number of time steps
     nx = 40                     # number of points in space
     xmax = 2.0                  # physical domain parameters
     uf = np.full(nx, 0.2)       # velocity at faces (assume constant) # weird stuff happens when uf=1.0 and keep_model_stable=True
-    
-    keep_model_stable = True
+
     if keep_model_stable == True:
         cmax = 1.
         dxcmin = np.min(0.5*dt*(np.roll(uf,-1) + uf)/cmax)
@@ -41,7 +52,18 @@ def main():
     cc = 0.5*dt*(np.roll(abs(uf),-1) + abs(uf))/dxc # Courant number (defined at cell center)
     niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
     
-    #ut.make_animation('Upwind', 'Upwind_nt100', nt, dt, uf, dxc, xc, xmax, uc)
+    cmax = np.max(cc)
+    cmin = np.min(cc)
+
+    # Saving the reference of the standard output
+    original_stdout = sys.stdout 
+
+    # Setup output
+    filename = 'output_' + "[" + "-".join(schemenames) + "]" + '_t'+ f"{nt*dt:.2f}" + '_C' + f"{cmin:.2f}" + '-' + f"{cmax:.2f}" + '.out'
+    plotname1 = 'Psi1_' + "[" + "-".join(schemenames) + "]" + '_t' + f"{nt*dt:.2f}" + '_C' + f"{cmin:.2f}" + '-' + f"{cmax:.2f}" #+ '.pdf'
+    plotname2 = 'Psi2_' + "[" + "-".join(schemenames) + "]" + '_t' + f"{nt*dt:.2f}" + '-C' + f"{cmin:.2f}" + '-' + f"{cmax:.2f}" #+ '.pdf'
+            
+    #if create_animation == True: ut.make_animation('Upwind', 'Upwind_nt100', nt, dt, uf, dxc, xc, xmax, uc) # !!! not implemented for multiple schemes yet, nor with specific fname
 
     # Print and plot grid and Courant number
     print('The (cell center) points and Courant numbers are:')
@@ -63,16 +85,8 @@ def main():
     #### Schemes ####
     #################
 
-    do_basicschemes = False
-    basicschemes = []
-    advancedschemes = ['Upwind', 'MPDATA']#'hybrid_MPDATA_BTBS1J', 'hybrid_Upwind_BTBS1J', 'Upwind', 'MPDATA']#, 'MPDATA', 'BTBS_Jacobi']#'hybrid_MPDATA_BTBS1J']#'BTBS_Jacobi', 'hybrid_MPDATA_BTBS1J']#['BTBS_Jacobi', 'hybrid']
-    markers_as = ['x', '+', '+', '', '', '']
-    linestyle_as = ['-','-','-', '--', '-', '--']
-    colors_as = ['red', 'blue', 'orange', 'red', 'lightblue', 'gray']
-    allschemes = basicschemes + advancedschemes
-
     # Calculate numerical results
-    for s in allschemes:
+    for s in schemenames:
         fn = getattr(sch, f'{s}')
         if 'Jacobi' in s or 'GaussSeidel' in s:
             locals()[f'psi1_{s}'] = fn(psi1_in.copy(), nt, dt, uf, dxc, niter)
@@ -85,48 +99,30 @@ def main():
     #### Plotting schemes ####
     ##########################
     
-    if do_basicschemes == True:
-        plt.plot(xc, psi1_in, label='Initial', linestyle='-', color='grey')
-        plt.plot(xc, psi1_an, label='Analytic', linestyle='-', color='k', marker='x')
-        for s in basicschemes:
-            plt.plot(xc, locals()[f'psi1_{s}'], label=f'{s}')
-        ut.design_figure('Psi1_bs.pdf', f'$\\Psi_1$ at t={nt*dt} - Basic Schemes', \
-                        'x', '$\\Psi_1$', True, -1.5, 1.5)
-
-
     plt.plot(xc, psi1_in, label='Initial', linestyle='-', color='grey')
     plt.plot(xc, psi1_an, label='Analytic', linestyle='-', color='k')
-    for s in advancedschemes:
-        si = advancedschemes.index(s)
+    for s in schemenames:
+        si = schemenames.index(s)
         if 'Jacobi' in s or 'GaussSeidel' in s:
             slabel = f'{s}, it={niter}'
         elif s == 'BTBS':
             slabel = 'BTBS_numpy'
         else: 
             slabel = s
-        plt.plot(xc, locals()[f'psi1_{s}'], label=f'{slabel}', marker=markers_as[si], linestyle=linestyle_as[si], color=colors_as[si])
-    ut.design_figure('Psi1_as.pdf', f'$\\Psi_1$ at t={nt*dt}', \
+        plt.plot(xc, locals()[f'psi1_{s}'], label=f'{slabel}', marker=markers[si], linestyle=linestyle[si], color=colors[si])
+    ut.design_figure('Psi1.pdf', f'$\\Psi_1$ at t={nt*dt}', \
                      'x', '$\\Psi_1$', True, -1.5, 1.5)
 
-    if do_basicschemes == True:
-        plt.plot(xc, psi2_in, label='Initial', linestyle='-', color='grey')
-        plt.plot(xc, psi2_an, label='Analytic', linestyle='-', color='k', marker='x')
-        for s in basicschemes:
-            plt.plot(xc, locals()[f'psi2_{s}'], label=f'{s}')
-        ut.design_figure('Psi2_bs.pdf', f'$\\Psi_2$ at t={nt*dt} - Basic Schemes', \
-                        'x', '$\\Psi_2$', True, -1.5, 1.5)
-    
-    
     plt.plot(xc, psi2_in, label='Initial', linestyle='-', color='grey')
     plt.plot(xc, psi2_an, label='Analytic', linestyle='-', color='k')
-    for s in advancedschemes:
-        si = advancedschemes.index(s)
+    for s in schemenames:
+        si = schemenames.index(s)
         if 'Jacobi' in s or 'GaussSeidel' in s:
             slabel = f'{s}, it={niter}'
         else: 
             slabel = s
-        plt.plot(xc, locals()[f'psi2_{s}'], label=f'{slabel}', marker=markers_as[si], linestyle=linestyle_as[si], color=colors_as[si])
-    ut.design_figure('Psi2_as.pdf', f'$\\Psi_2$ at t={nt*dt}', \
+        plt.plot(xc, locals()[f'psi2_{s}'], label=f'{slabel}', marker=markers[si], linestyle=linestyle[si], color=colors[si])
+    ut.design_figure('Psi2.pdf', f'$\\Psi_2$ at t={nt*dt}', \
                      'x', '$\\Psi_2$', True,  -1.5, 1.5)
     plt.close()
 
@@ -134,29 +130,100 @@ def main():
     #### Experiments ####
     #####################
 
-    #### Total variation
-    for s in allschemes:
-        locals()[f'TV_psi1_{s}'] = epm.totalvariation(locals()[f'psi1_{s}'])
-        print(f'1 - Total variation at t={nt*dt} - {s} {locals()[f'TV_psi1_{s}']:.2E}')
+    with open(filename, 'w') as f:
+        if predefined_output == True:
+            print('See output file {filename}')
+            sys.stdout = f
+        else:
+            sys.stdout = original_stdout 
+        
+        print('Schemes included are:', schemenames)
+        print(f'Number of timesteps: {nt}')
+        print(f'Total runtime: {nt*dt:.2f} s')
+        print(f'Min Courant number: {cmin:.2f}')
+        print(f'Max Courant number: {cmax:.2f}')        
+        print()
+        print()
 
-    for s in allschemes:
-        locals()[f'TV_psi2_{s}'] = epm.totalvariation(locals()[f'psi2_{s}'])
-        print(f'2 - Total variation at t={nt*dt} - {s} {locals()[f'TV_psi2_{s}']:.2E}')
-    
-    print()
+        print('========== Psi 1 ==========')
+        print()
 
-    #### Conservation
-    csv_psi1_analytic = epm.check_conservation(psi1_in, psi1_an, dxc)
-    print(f'1 - Total mass gained at t={nt*dt} - Analytic {csv_psi1_analytic:.2E}')    
-    for s in allschemes:
-        locals()[f'csv_psi1_{s}'] = epm.check_conservation(psi1_in, locals()[f'psi1_{s}'], dxc)
-        print(f'1 - Total mass gained at t={nt*dt} - {s} {locals()[f'csv_psi1_{s}']:.2E}')
+        # Conservation, boundedness and total variation Psi1
+        csv_psi1_analytic = epm.check_conservation(psi1_in, psi1_an, dxc)
+        print(f'Analytic - Mass gained: {csv_psi1_analytic:.2E}')    
+        bdn_psi1_analytic = epm.check_boundedness(psi1_in, psi1_an)
+        print(f'Analytic - Boundedness: {bdn_psi1_analytic}')    
+        print()
+        for s in schemenames:
+            locals()[f'csv_psi1_{s}'] = epm.check_conservation(psi1_in, locals()[f'psi1_{s}'], dxc)
+            print(f'{s} - Mass gained: {locals()[f'csv_psi1_{s}']:.2E}')
+            locals()[f'bdn_psi1_{s}'] = epm.check_boundedness(psi1_in, locals()[f'psi1_{s}'])
+            print(f'{s} - Boundedness: {locals()[f'bdn_psi1_{s}']}')         
+            locals()[f'TV_psi1_{s}'] = epm.totalvariation(locals()[f'psi1_{s}'])
+            print(f'{s} - Variation: {locals()[f'TV_psi1_{s}']:.2E}')
+            print()
 
-    csv_psi2_analytic = epm.check_conservation(psi2_in, psi2_an, dxc)
-    print(f'2 - Total mass gained at t={nt*dt} - Analytic {csv_psi2_analytic:.2E}')   
-    for s in allschemes:
-        locals()[f'csv_psi2_{s}'] = epm.check_conservation(psi2_in, locals()[f'psi2_{s}'], dxc)
-        print(f'2 - Total mass gained at t={nt*dt} - {s} {locals()[f'csv_psi2_{s}']:.2E}')
+        print()
+        print('========== Psi 2 ==========')
+        print()
+
+        # Conservation, boundedness and total variation Psi2
+        csv_psi2_analytic = epm.check_conservation(psi2_in, psi2_an, dxc)
+        print(f'Analytic - Mass gained: {csv_psi2_analytic:.2E}')   
+        bdn_psi2_analytic = epm.check_boundedness(psi2_in, psi2_an)
+        print(f'Analytic - Boundedness: {bdn_psi2_analytic}')   
+        print()
+        for s in schemenames:
+            locals()[f'csv_psi2_{s}'] = epm.check_conservation(psi2_in, locals()[f'psi2_{s}'], dxc)
+            print(f'{s} - Mass gained: {locals()[f'csv_psi2_{s}']:.2E}')
+            locals()[f'bdn_psi2_{s}'] = epm.check_boundedness(psi2_in, locals()[f'psi2_{s}'])
+            print(f'{s} - Boundedness: {locals()[f'bdn_psi2_{s}']}')
+            locals()[f'TV_psi2_{s}'] = epm.totalvariation(locals()[f'psi2_{s}'])
+            print(f'{s} - Variation: {locals()[f'TV_psi2_{s}']:.2E}')
+            print()
+        
+        """
+        #### Conservation
+        csv_psi1_analytic = epm.check_conservation(psi1_in, psi1_an, dxc)
+        print(f'1 - Total mass gained at t={nt*dt} - Analytic {csv_psi1_analytic:.2E}')    
+        for s in schemenames:
+            locals()[f'csv_psi1_{s}'] = epm.check_conservation(psi1_in, locals()[f'psi1_{s}'], dxc)
+            print(f'1 - Total mass gained at t={nt*dt} - {s} {locals()[f'csv_psi1_{s}']:.2E}')
+
+        csv_psi2_analytic = epm.check_conservation(psi2_in, psi2_an, dxc)
+        print(f'2 - Total mass gained at t={nt*dt} - Analytic {csv_psi2_analytic:.2E}')   
+        for s in schemenames:
+            locals()[f'csv_psi2_{s}'] = epm.check_conservation(psi2_in, locals()[f'psi2_{s}'], dxc)
+            print(f'2 - Total mass gained at t={nt*dt} - {s} {locals()[f'csv_psi2_{s}']:.2E}')
+
+        print()
+
+        #### Boundedness
+        bdn_psi1_analytic = epm.check_boundedness(psi1_in, psi1_an)
+        print(f'1 - Boundedness at t={nt*dt} - Analytic: {bdn_psi1_analytic}')    
+        for s in schemenames:
+            locals()[f'bdn_psi1_{s}'] = epm.check_boundedness(psi1_in, locals()[f'psi1_{s}'])
+            print(f'1 - Boundedness at t={nt*dt} - {s}: {locals()[f'bdn_psi1_{s}']}')
+
+        bdn_psi2_analytic = epm.check_boundedness(psi2_in, psi2_an)
+        print(f'2 - Boundedness at t={nt*dt} - Analytic: {bdn_psi2_analytic}')   
+        for s in schemenames:
+            locals()[f'bdn_psi2_{s}'] = epm.check_boundedness(psi2_in, locals()[f'psi2_{s}'])
+            print(f'2 - Boundedness at t={nt*dt} - {s}: {locals()[f'bdn_psi2_{s}']}')
+        
+        print()
+
+        #### Total variation
+        for s in schemenames:
+            locals()[f'TV_psi1_{s}'] = epm.totalvariation(locals()[f'psi1_{s}'])
+            print(f'1 - Total variation at t={nt*dt} - {s} {locals()[f'TV_psi1_{s}']:.2E}')
+
+        for s in schemenames:
+            locals()[f'TV_psi2_{s}'] = epm.totalvariation(locals()[f'psi2_{s}'])
+            print(f'2 - Total variation at t={nt*dt} - {s} {locals()[f'TV_psi2_{s}']:.2E}')
+
+        """
+
     
     """
     #### Error analysis for a single scheme
@@ -182,19 +249,8 @@ def main():
     ut.design_figure(f'loglog_{scheme}.pdf', f'RMSE for {scheme} scheme', 'dx', 'RMSE')
     """
 
-    print()
-
-    #### Boundedness
-    bdn_psi1_analytic = epm.check_boundedness(psi1_in, psi1_an)
-    print(f'1 - Boundedness at t={nt*dt} - Analytic: {bdn_psi1_analytic}')    
-    for s in allschemes:
-        locals()[f'bdn_psi1_{s}'] = epm.check_boundedness(psi1_in, locals()[f'psi1_{s}'])
-        print(f'1 - Boundedness at t={nt*dt} - {s}: {locals()[f'bdn_psi1_{s}']}')
-
-    bdn_psi2_analytic = epm.check_boundedness(psi2_in, psi2_an)
-    print(f'2 - Boundedness at t={nt*dt} - Analytic: {bdn_psi2_analytic}')   
-    for s in allschemes:
-        locals()[f'bdn_psi2_{s}'] = epm.check_boundedness(psi2_in, locals()[f'psi2_{s}'])
-        print(f'2 - Boundedness at t={nt*dt} - {s}: {locals()[f'bdn_psi2_{s}']}')
+    # Reset the standard output
+    sys.stdout = original_stdout 
+    print('Done')
 
 if __name__ == "__main__": main()
