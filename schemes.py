@@ -530,7 +530,7 @@ def CNCS(init, nt, dt, uf, dxc): # Crank-Nicolson (implicit)
 
     return field
 
-def MPDATA(init, nt, dt, uf, dxc, eps=1e-6):
+def MPDATA(init, nt, dt, uf, dxc, dxf, eps=1e-6):
     """
     This functions implements the MPDATA scheme without a gauge, assuming a 
     constant velocity (input through the Courant number) and a 
@@ -563,8 +563,12 @@ def MPDATA(init, nt, dt, uf, dxc, eps=1e-6):
         field_FP = field_old - dt*(np.roll(flx,-1) - flx)/dxc
 
         # Second pass
-        A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps)
-        V = (abs(uf) - uf*uf)*A
+        dx_up = 0.5*flux(np.roll(dxc,1), dxc, np.roll(uf,1)/abs(np.roll(uf,1)))
+        B = np.roll(uf,1)*(field_FP - np.roll(field_FP,1))/(0.5*(field_FP + np.roll(field_FP,1) + eps)*np.roll(dxf,-1))
+        V = B*(dx_up - 0.5*dt*uf)
+
+        #A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps)
+        #V = (abs(uf) - uf*uf)*A # dimensionally incorrect
 
         # The below commented-out code considers ensuring the sign-preservation of the second pass
         #V = np.array([V[i] if abs(V[i]/uf[i])<=0.5 else 0.5*V[i]*abs(uf[i]/V[i]) for i in range(len(V))]) # !!! this does not solve the strong fluctuations in MPDATA
@@ -582,7 +586,7 @@ def MPDATA(init, nt, dt, uf, dxc, eps=1e-6):
         field_old = field.copy()
     return field
 
-def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, eps=1e-6): # !!! 07.03.2024: not correct yet
+def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, dxf, eps=1e-6, do_beta='switch'): # !!! 07.03.2024: not correct yet
     """
     This functions implements 
     Explicit: MPDATA scheme (without a gauge, assuming a 
@@ -611,8 +615,13 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, eps=1e-6): # !!! 07.03.2024: not
 
     # Criterion explicit/implicit
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
-    beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit  
-    #beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
+    if do_beta == 'switch':
+        beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit 
+    elif do_beta == 'blend':
+        beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
+    else:
+        print('Error: do_beta must be either "switch" or "blend"')
+
     xi = np.maximum(1 - 2*beta, np.zeros(len(cc))) # xi[i] is at i-1/2
 
     # Time stepping
@@ -629,8 +638,12 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, eps=1e-6): # !!! 07.03.2024: not
                 field_FP[i] = rhs[i]
         field = field_FP.copy()
         # Second pass # 10.03.2024: with the second pass commented-out, this function behaves as Upwind !!!
-        A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps)
-        V = (abs(uf) - xi*uf*uf)*A
+                # Second pass
+        dx_up = 0.5*flux(np.roll(dxc,1), dxc, np.roll(uf,1)/abs(np.roll(uf,1)))
+        B = np.roll(uf,1)*(field_FP - np.roll(field_FP,1))/(0.5*(field_FP + np.roll(field_FP,1) + eps)*np.roll(dxf,-1))
+        V = B*(dx_up - 0.5*dt*xi*uf)
+        #A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps)
+        #V = (abs(uf) - xi*uf*uf)*A
         flx2 = flux(np.roll(field_FP,1), field_FP, V)
         field = field_FP + dt*(-np.roll(flx2,-1) + flx2)/dxc                
         field_old = field.copy()
@@ -666,6 +679,7 @@ def hybrid_Upwind_BTBS1J(init, nt, dt, uf, dxc):
     for it in range(nt):
         flx = flux(np.roll(field_old,1), field_old, uf) # flx[i] is at i-1/2 # upwind
         rhs = field_old - dt*(np.roll((1. - beta)*flx,-1) - (1. - beta)*flx)/dxc
+        # for ... # include number of iterations here!
         for i in range(len(cc)):
             if beta[i] != 0.0 or np.roll(beta,-1)[i] != 0.0: # BTBS1J
                 aii = 1 + np.roll(beta*uf,-1)[i]*dt/dxc[i]

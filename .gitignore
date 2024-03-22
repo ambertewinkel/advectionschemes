@@ -166,3 +166,4 @@ cython_debug/
 *.gif
 *.pdf
 *.txt
+*.out

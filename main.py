@@ -22,16 +22,27 @@ def main():
     Schemes included: FTBS, FTFS, FTCS, CTBS, CTFS, CTCS, Upwind, BTBS, BTFS, BTCS, CNBS, MPDATA
     """
     # Input booleans
-    predefined_output = True
-    keep_model_stable = True
+    schemenames = ['hybrid_Upwind_BTBS1J']#'hybrid_MPDATA_BTBS1J', 'MPDATA']
+    predefined_output_file = True
+    keep_model_stable = False
     create_animation = False
     check_orderofconvergence = False
-    schemenames = ['hybrid_MPDATA_BTBS1J', 'MPDATA']
+    do_beta = 'switch' # 'switch' or 'blend'
+    coords = 'centralstretching' # 'uniform' or 'centralstretching'
+    niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
+    # !!! implement criterion for convergence with Jacobi and Gauss-Seidel iterations?
 
-    # Plotting setup
-    markers = ['x', '+', '+', '', '', '']
-    linestyle = ['-','-','-', '--', '-', '--']
-    colors = ['red', 'blue', 'orange', 'red', 'lightblue', 'gray']
+    # Saving the reference of the standard output
+    original_stdout = sys.stdout 
+
+    # Setup output
+    filename = 'output_' + "[" + "-".join(schemenames) + "]" + '_t'+ f"{nt*dt:.2f}" + '_C' + f"{cmin:.2f}" + '-' + f"{cmax:.2f}" + '.out'
+    plotname1 = 'Psi1_' + "[" + "-".join(schemenames) + "]" + '_t' + f"{nt*dt:.2f}" + '_C' + f"{cmin:.2f}" + '-' + f"{cmax:.2f}" #+ '.pdf'
+    plotname2 = 'Psi2_' + "[" + "-".join(schemenames) + "]" + '_t' + f"{nt*dt:.2f}" + '-C' + f"{cmin:.2f}" + '-' + f"{cmax:.2f}" #+ '.pdf'
+
+    #######################
+    #### Run the model ####
+    #######################
 
     # Initial conditions
     dt = 0.1                    # time step
@@ -46,23 +57,19 @@ def main():
     else:
         dxcmin = 0.
         
-    xf, dxc, xc, dxf = gr.coords_centralstretching(xmax, nx, nx/2, dxcmin=dxcmin) # points in space, length of spatial step
-    #xf, dxc, xc, dxf = gr.coords_uniform(xmax, nx) # points in space, length of spatial step
+    if coords == 'centralstretching':
+        xf, dxc, xc, dxf = gr.coords_centralstretching(xmax, nx, nx/2, dxcmin=dxcmin) # points in space, length of spatial step
+    elif coords == 'uniform':
+        xf, dxc, xc, dxf = gr.coords_uniform(xmax, nx) # points in space, length of spatial step
+    else: 
+        print('Error: invalid coordinates')
+
     uc = gr.linear(xc, xf, uf)       # velocity at centers
     cc = 0.5*dt*(np.roll(abs(uf),-1) + abs(uf))/dxc # Courant number (defined at cell center)
-    niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
     
     cmax = np.max(cc)
     cmin = np.min(cc)
 
-    # Saving the reference of the standard output
-    original_stdout = sys.stdout 
-
-    # Setup output
-    filename = 'output_' + "[" + "-".join(schemenames) + "]" + '_t'+ f"{nt*dt:.2f}" + '_C' + f"{cmin:.2f}" + '-' + f"{cmax:.2f}" + '.out'
-    plotname1 = 'Psi1_' + "[" + "-".join(schemenames) + "]" + '_t' + f"{nt*dt:.2f}" + '_C' + f"{cmin:.2f}" + '-' + f"{cmax:.2f}" #+ '.pdf'
-    plotname2 = 'Psi2_' + "[" + "-".join(schemenames) + "]" + '_t' + f"{nt*dt:.2f}" + '-C' + f"{cmin:.2f}" + '-' + f"{cmax:.2f}" #+ '.pdf'
-            
     #if create_animation == True: ut.make_animation('Upwind', 'Upwind_nt100', nt, dt, uf, dxc, xc, xmax, uc) # !!! not implemented for multiple schemes yet, nor with specific fname
 
     # Print and plot grid and Courant number
@@ -89,16 +96,29 @@ def main():
     for s in schemenames:
         fn = getattr(sch, f'{s}')
         if 'Jacobi' in s or 'GaussSeidel' in s:
-            locals()[f'psi1_{s}'] = fn(psi1_in.copy(), nt, dt, uf, dxc, niter)
-            locals()[f'psi2_{s}'] = fn(psi2_in.copy(), nt, dt, uf, dxc, niter)
+            if 'hybrid' in s:
+                locals()[f'psi1_{s}'] = fn(psi1_in.copy(), nt, dt, uf, dxc, niter, do_beta)
+                locals()[f'psi2_{s}'] = fn(psi2_in.copy(), nt, dt, uf, dxc, niter, do_beta)
+            else:
+                locals()[f'psi1_{s}'] = fn(psi1_in.copy(), nt, dt, uf, dxc, niter)
+                locals()[f'psi2_{s}'] = fn(psi2_in.copy(), nt, dt, uf, dxc, niter)
         else:
-            locals()[f'psi1_{s}'] = fn(psi1_in.copy(), nt, dt, uf, dxc)
-            locals()[f'psi2_{s}'] = fn(psi2_in.copy(), nt, dt, uf, dxc)
+            if 'hybrid' in s:
+                locals()[f'psi1_{s}'] = fn(psi1_in.copy(), nt, dt, uf, dxc, do_beta)
+                locals()[f'psi2_{s}'] = fn(psi2_in.copy(), nt, dt, uf, dxc, do_beta)
+            else:
+                locals()[f'psi1_{s}'] = fn(psi1_in.copy(), nt, dt, uf, dxc)
+                locals()[f'psi2_{s}'] = fn(psi2_in.copy(), nt, dt, uf, dxc)
     
     ##########################
     #### Plotting schemes ####
     ##########################
     
+    # Plotting setup
+    markers = ['x', '+', '+', '', '', '']
+    linestyle = ['-','-','-', '--', '-', '--']
+    colors = ['red', 'blue', 'orange', 'red', 'lightblue', 'gray']
+
     plt.plot(xc, psi1_in, label='Initial', linestyle='-', color='grey')
     plt.plot(xc, psi1_an, label='Analytic', linestyle='-', color='k')
     for s in schemenames:
@@ -131,7 +151,7 @@ def main():
     #####################
 
     with open(filename, 'w') as f:
-        if predefined_output == True:
+        if predefined_output_file == True:
             print('See output file {filename}')
             sys.stdout = f
         else:
@@ -248,6 +268,76 @@ def main():
     plt.loglog(dx_arr, dx_arr, color='green', label='O(dx) accurate')
     ut.design_figure(f'loglog_{scheme}.pdf', f'RMSE for {scheme} scheme', 'dx', 'RMSE')
     """
+
+    ##########################
+    #### Plot experiments ####
+    ##########################
+    
+    fig, (ax1, ax2, ax3, ax4, ax5, ax6, ax7, ax8) = plt.subplots(2, 4, figsize=(25, 10))
+    # Mass over time
+    for s in schemenames:
+        si = schemenames.index(s)
+        for it in range(nt):
+            locals()[f'mass_psi1_{s}'] = epm.totalmass(locals()[f'psi1_{s}'][it], dxc)
+            locals()[f'mass_psi2_{s}'] = epm.totalmass(locals()[f'psi2_{s}'][it], dxc)
+        ax1.plot(np.arange(0,nt), locals()[f'mass_psi1_{s}'], marker=markers[si], color=colors[si])
+        ax5.plot(np.arange(0,nt), locals()[f'mass_psi2_{s}'], marker=markers[si], color=colors[si])
+    ax1.set_title('Mass Psi1')
+    ax5.set_title('Mass Psi2')
+
+    # Boundedness (min/max) over time
+    # ax2, ax6
+        
+
+        
+
+    
+    # Total variation over time
+    # ax3, ax7
+
+
+    # Error over time
+    # ax4, ax8
+
+
+    plt.tight_layout()
+    plt.show()
+    
+    # Error over grid spacing
+    if check_orderofconvergence == True:
+        fig, ax1 = plt.subplots(1, 1, figsize=(10, 5))
+        # Run schemes for multiple grid spacings
+
+        # Calculate error for each grid spacing for the final time
+
+        # Plot error over grid spacing
+
+        # Calculate order of convergence
+        print('do something')
+
+        plt.tight_layout()
+        plt.show()
+
+
+
+
+
+
+
+
+    ###########################
+    #### Create animations ####
+    ###########################
+
+    
+    # Save each time point as a plot
+        
+
+    # Create animation from this set of plots from the create_animation function ?
+
+
+
+
 
     # Reset the standard output
     sys.stdout = original_stdout 
