@@ -21,16 +21,17 @@ def FTBS(init, nt, dt, uf, dxc):
     uf      : array of floats, velocity defined at faces
     dxc     : array of floats, spacing between cell faces
     --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
     """
 
     # Setup and initial condition
-    field = init.copy()
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
 
     # Time stepping
     for it in range(nt):
-        field = field - dt*(np.roll(uf,-1)*field - uf*np.roll(field,1))/dxc
+        field[it+1] = field[it] - dt*(np.roll(uf,-1)*field[it] - uf*np.roll(field[it],1))/dxc
  
     return field
 
@@ -47,16 +48,17 @@ def FTFS(init, nt, dt, uf, dxc):
     uf      : array of floats, velocity defined at faces
     dxc     : array of floats, spacing between cell faces
     --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
     """
 
     # Setup and initial condition
-    field = init.copy()
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
 
     # Time stepping
     for it in range(nt):
-        field = field - dt*(np.roll(uf*field,-1) - uf*field)/dxc
+        field[it+1] = field[it] - dt*(np.roll(uf*field[it],-1) - uf*field[it])/dxc
 
     return field
 
@@ -73,22 +75,20 @@ def CTCS(init, nt, dt, uf, dxc):
     uf      : array of floats, velocity defined at faces
     dxc     : array of floats, spacing between cell faces
     --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init. Defined at centers
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init Defined at centers
     """
 
     # Setup and initial condition
-    field = init.copy()
-    field_old = init.copy()
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
 
     # First time step is forward in time, centered in space (FTCS)
-    field = field_old - 0.5*dt*(np.roll(uf,-1)*(field - np.roll(field,-1)) - uf*(np.roll(field,1) + field))/dxc
+    field[1] = field[0] - 0.5*dt*(np.roll(uf,-1)*(field[0] - np.roll(field[0],-1)) - uf*(np.roll(field[0],1) + field[0]))/dxc
 
     # Time stepping
     for it in range(1, nt):
-        field_new = field_old - dt*(np.roll(uf,-1)*(field - np.roll(field,-1)) - uf*(np.roll(field,1) + field))/dxc
-        field_old = field.copy()
-        field = field_new.copy()
+        field[it+1] = field[it-1] - dt*(np.roll(uf,-1)*(field[it] - np.roll(field[it],-1)) - uf*(np.roll(field[it],1) + field[it]))/dxc
         
     return field
 
@@ -105,24 +105,20 @@ def Upwind(init, nt, dt, uf, dxc): # FTBS when u >= 0, FTFS when u < 0
     uf      : array of floats, velocity defined at faces
     dxc     : array of floats, spacing between cell faces
     --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
     """
 
     # Setup and initial condition
-    field = init.copy()
-    field_new = np.zeros(len(init))
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
     
     cc = 0.5*dt*(uf + np.roll(uf,-1))/dxc # sum for cc[i] is over faces i-1/2 and i+1/2
 
     # Time stepping
     for it in range(nt):
-        for i in range(len(init)):
-            if cc[i] >= 0.0:  # FTBS when u >= 0, FTFS when u < 0
-                field_new[i] = field[i] - dt*(np.roll(uf,-1)[i]*field[i] - uf[i]*np.roll(field,1)[i])/dxc[i]
-            else: 
-                field_new[i] = field[i] - dt*(np.roll(uf*field,-1)[i] - uf[i]*field[i])/dxc[i]
-        field = field_new.copy()    
+        spatial = np.where(cc >= 0.0, np.roll(uf,-1)*field[it] - uf*np.roll(field[it],1), np.roll(uf*field[it],-1) - uf*field[it]) # BS when u >= 0, FS when u < 0
+        field[it+1] = field[it] - dt*spatial/dxc
     
     return field
 
@@ -138,11 +134,12 @@ def BTBS(init, nt, dt, uf, dxc):
     uf      : array of floats, velocity defined at faces
     dxc     : array of floats, spacing between cell faces
     --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
     """
     # Define initial condition
-    field = init.copy()
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
@@ -152,7 +149,7 @@ def BTBS(init, nt, dt, uf, dxc):
 
     # Time stepping
     for it in range(nt):
-        field = np.linalg.solve(M, field)
+        field[it+1] = np.linalg.solve(M, field[it])
 
     return field
 
@@ -169,11 +166,12 @@ def BTBS_Jacobi(init, nt, dt, uf, dxc, niter=1):
     dxc     : array of floats, spacing between cell faces
     niter   : number of iterations used for the Jacobi iterative method, default=1
     --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
     """
     # Define initial condition
-    field = init.copy()
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
@@ -183,7 +181,7 @@ def BTBS_Jacobi(init, nt, dt, uf, dxc, niter=1):
 
     # Time stepping
     for it in range(nt):
-        field = sv.Jacobi(M, field, field, niter)
+        field[it+1] = sv.Jacobi(M, field[it], field[it], niter)
 
     return field
 
@@ -200,11 +198,12 @@ def BTBS_GaussSeidel(init, nt, dt, uf, dxc, niter=1):
     dxc     : array of floats, spacing between cell faces
     niter   : number of iterations used for the Jacobi iterative method, default=1
     --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
     """
     # Define initial condition
-    field = init.copy()
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
@@ -214,7 +213,7 @@ def BTBS_GaussSeidel(init, nt, dt, uf, dxc, niter=1):
 
     # Time stepping
     for it in range(nt):
-        field = sv.GaussSeidel(M, field, field, niter)
+        field[it+1] = sv.GaussSeidel(M, field[it], field[it], niter)
 
     return field
 
@@ -231,11 +230,12 @@ def BTBS_SymmetricGaussSeidel(init, nt, dt, uf, dxc, niter=1):
     dxc     : array of floats, spacing between cell faces
     niter   : number of iterations used for the Jacobi iterative method, desfault=1
     --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
     """
     # Define initial condition
-    field = init.copy()
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
@@ -245,7 +245,7 @@ def BTBS_SymmetricGaussSeidel(init, nt, dt, uf, dxc, niter=1):
 
     # Time stepping
     for it in range(nt):
-        field = sv.SymmetricGaussSeidel(M, field, field, niter)
+        field[it+1] = sv.SymmetricGaussSeidel(M, field[it], field[it], niter)
 
     return field
 
@@ -261,11 +261,12 @@ def BTFS(init, nt, dt, uf, dxc):
     uf      : array of floats, velocity defined at faces
     dxc     : array of floats, spacing between cell faces
     --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
     """
     # Define initial condition
-    field = init.copy()
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
@@ -275,7 +276,7 @@ def BTFS(init, nt, dt, uf, dxc):
 
     # Time stepping
     for it in range(nt):
-        field = np.linalg.solve(M, field)
+        field[it+1] = np.linalg.solve(M, field[it])
     
     return field
 
@@ -292,11 +293,12 @@ def BTFS_Jacobi(init, nt, dt, uf, dxc, niter=1):
     dxc     : array of floats, spacing between cell faces
     niter   : number of iterations used for the Jacobi iterative method, default=1
     --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
     """
     # Define initial condition
-    field = init.copy()
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
@@ -306,7 +308,7 @@ def BTFS_Jacobi(init, nt, dt, uf, dxc, niter=1):
 
     # Time stepping
     for it in range(nt):
-        field = sv.Jacobi(M, field, field, niter)
+        field[it+1] = sv.Jacobi(M, field[it], field[it], niter)
 
     return field
 
@@ -323,11 +325,12 @@ def BTFS_GaussSeidel(init, nt, dt, uf, dxc, niter=1):
     dxc     : array of floats, spacing between cell faces
     niter   : number of iterations used for the Jacobi iterative method, default=1
     --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
     """
     # Define initial condition
-    field = init.copy()
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
@@ -337,7 +340,7 @@ def BTFS_GaussSeidel(init, nt, dt, uf, dxc, niter=1):
 
     # Time stepping
     for it in range(nt):
-        field = sv.BackwardGaussSeidel(M, field, field, niter)
+        field[it+1] = sv.BackwardGaussSeidel(M, field[it], field[it], niter)
 
     return field
 
@@ -354,11 +357,12 @@ def BTFS_SymmetricGaussSeidel(init, nt, dt, uf, dxc, niter=1):
     dxc     : array of floats, spacing between cell faces
     niter   : number of iterations used for the Jacobi iterative method, default=1
     --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
     """
     # Define initial condition
-    field = init.copy()
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
@@ -368,7 +372,7 @@ def BTFS_SymmetricGaussSeidel(init, nt, dt, uf, dxc, niter=1):
 
     # Time stepping
     for it in range(nt):
-        field = sv.SymmetricGaussSeidel(M, field, field, niter)
+        field[it+1] = sv.SymmetricGaussSeidel(M, field[it], field[it], niter)
 
     return field
 
@@ -384,11 +388,12 @@ def BTCS(init, nt, dt, uf, dxc):
     uf      : array of floats, velocity defined at faces
     dxc     : array of floats, spacing between cell faces
     --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
     """
     # Define initial condition
-    field = init.copy()
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
@@ -399,7 +404,7 @@ def BTCS(init, nt, dt, uf, dxc):
 
     # Time stepping
     for it in range(nt):
-        field = np.linalg.solve(M, field)
+        field[it+1] = np.linalg.solve(M, field[it])
 
     return field
 
@@ -416,11 +421,12 @@ def BTCS_Jacobi(init, nt, dt, uf, dxc, niter=1):
     dxc     : array of floats, spacing between cell faces
     niter   : number of iterations used for the Jacobi iterative method, default=1
     --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
     """
     # Define initial condition
-    field = init.copy()
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
@@ -431,7 +437,7 @@ def BTCS_Jacobi(init, nt, dt, uf, dxc, niter=1):
 
     # Time stepping
     for it in range(nt):
-        field = sv.Jacobi(M, field, field, niter)
+        field[it+1] = sv.Jacobi(M, field[it], field[it], niter)
 
     return field
 
@@ -448,11 +454,12 @@ def BTCS_GaussSeidel(init, nt, dt, uf, dxc, niter=1):
     dxc     : array of floats, spacing between cell faces
     niter   : number of iterations used for the Jacobi iterative method, default=1
     --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
     """
     # Define initial condition
-    field = init.copy()
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
@@ -463,7 +470,7 @@ def BTCS_GaussSeidel(init, nt, dt, uf, dxc, niter=1):
 
     # Time stepping
     for it in range(nt):
-        field = sv.GaussSeidel(M, field, field, niter)
+        field[it+1] = sv.GaussSeidel(M, field[it], field[it], niter)
 
     return field
 
@@ -479,11 +486,12 @@ def CNBS(init, nt, dt, uf, dxc): # Crank-Nicolson (implicit)
     uf      : array of floats, velocity defined at faces
     dxc     : array of floats, spacing between cell faces
     --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
     """
     # Define initial condition
-    field = init.copy()
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
@@ -493,8 +501,8 @@ def CNBS(init, nt, dt, uf, dxc): # Crank-Nicolson (implicit)
 
     # Time stepping
     for it in range(nt):
-        rhs = (1 - 0.5*dt*np.roll(uf,-1)/dxc)*field + 0.5*dt*uf*np.roll(field,1)/dxc
-        field = np.linalg.solve(M, rhs)
+        rhs = (1 - 0.5*dt*np.roll(uf,-1)/dxc)*field[it] + 0.5*dt*uf*np.roll(field[it],1)/dxc
+        field[it+1] = np.linalg.solve(M, rhs)
 
     return field
 
@@ -510,8 +518,8 @@ def CNCS(init, nt, dt, uf, dxc): # Crank-Nicolson (implicit)
     uf      : array of floats, velocity defined at faces
     dxc     : array of floats, spacing between cell faces
     --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
     """
     # Define initial condition
     field = init.copy()
@@ -525,8 +533,8 @@ def CNCS(init, nt, dt, uf, dxc): # Crank-Nicolson (implicit)
 
     # Time stepping
     for it in range(nt):
-        rhs = (1 - 0.25*dt*(np.roll(uf,-1) - uf)/dxc)*field + 0.25*dt*uf*np.roll(field,1)/dxc - 0.25*dt*np.roll(uf,-1)*np.roll(field,-1)/dxc
-        field = np.linalg.solve(M, rhs)
+        rhs = (1 - 0.25*dt*(np.roll(uf,-1) - uf)/dxc)*field[it] + 0.25*dt*uf*np.roll(field[it],1)/dxc - 0.25*dt*np.roll(uf,-1)*np.roll(field[it],-1)/dxc
+        field[it+1] = np.linalg.solve(M, rhs)
 
     return field
 
@@ -545,33 +553,30 @@ def MPDATA(init, nt, dt, uf, dxc, dxf, eps=1e-6):
     dxc     : array of floats, spacing between cell faces
     eps     : float, optional. Small number to avoid division by zero.
     --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
     """
 
     # Initialisation
-    field = init.copy()
-    field_old = init.copy()
-    field_FP = np.zeros(len(init))
-    A = np.zeros(len(init)) # A[i] is at i-1/2
-    V = np.zeros(len(init)) # Same index shift as for A
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
 
     # Time stepping
     for it in range(nt):
         # First pass  
-        flx = flux(np.roll(field_old,1), field_old, uf) # flx[i] is at i-1/2
-        field_FP = field_old - dt*(np.roll(flx,-1) - flx)/dxc
+        flx_FP = flux(np.roll(field[it],1), field[it], uf) # flx_FP[i] is at i-1/2
+        field_FP = field[it] - dt*(np.roll(flx_FP,-1) - flx_FP)/dxc
 
         # Second pass
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, np.roll(uf,1)/abs(np.roll(uf,1)))
-        A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps)
-        V = A*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*uf)
-        flx2 = flux(np.roll(field_FP,1), field_FP, V)
-        field = field_FP - dt*(np.roll(flx2,-1) - flx2)/dxc
-        field_old = field.copy()
+        A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps) # A[i] is at i-1/2
+        V = A*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*uf) # Same index shift as for A
+        flx_SP = flux(np.roll(field_FP,1), field_FP, V)
+        field[it+1] = field_FP - dt*(np.roll(flx_SP,-1) - flx_SP)/dxc
+
     return field
 
-def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, dxf, eps=1e-6, do_beta='switch'): # !!! 07.03.2024: not correct yet
+def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, dxf, eps=1e-6, do_beta='switch'):
     """
     This functions implements 
     Explicit: MPDATA scheme (without a gauge, assuming a 
@@ -588,15 +593,13 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, dxf, eps=1e-6, do_beta='switch')
     dxc     : array of floats, spacing between cell faces
     eps     : float, optional. Small number to avoid division by zero.
     --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
     """
     # Initialisation
-    field = init.copy()
-    field_old = init.copy()
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
     field_FP = np.zeros(len(init))
-    A = np.zeros(len(init)) # A[i] is at i-1/2
-    V = np.zeros(len(init)) # Same index shift as for A
 
     # Criterion explicit/implicit
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
@@ -612,24 +615,24 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, dxf, eps=1e-6, do_beta='switch')
     # Time stepping
     for it in range(nt):
         # First pass
-        flx = flux(np.roll(field_old,1), field_old, uf) # flx[i] is at i-1/2 # upwind
-        rhs = field_old - dt*(np.roll((1. - beta)*flx,-1) - (1. - beta)*flx)/dxc
+        flx_FP = flux(np.roll(field[it],1), field[it], uf) # flx_FP[i] is at i-1/2 # upwind
+        rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
         for i in range(len(cc)):
             if beta[i] != 0.0 or np.roll(beta,-1)[i] != 0.0: # BTBS1J
                 aii = 1 + np.roll(beta*uf,-1)[i]*dt/dxc[i]
                 aiim1 = -dt*beta[i]*uf[i]/dxc[i]
-                field_FP[i] = (rhs[i] - aiim1*np.roll(field_old,1)[i])/aii            
+                field_FP[i] = (rhs[i] - aiim1*np.roll(field[it],1)[i])/aii            
             else:
                 field_FP[i] = rhs[i]
         field = field_FP.copy()
-        
+
         # Second pass
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, np.roll(uf,1)/abs(np.roll(uf,1)))
-        A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps)
-        V = A*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*xi*uf)
-        flx2 = flux(np.roll(field_FP,1), field_FP, V)
-        field = field_FP + dt*(-np.roll(flx2,-1) + flx2)/dxc                
-        field_old = field.copy()
+        A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps) # A[i] is at i-1/2
+        V = A*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*xi*uf) # Same index shift as for A
+        flx_SP = flux(np.roll(field_FP,1), field_FP, V)
+        field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc                
+
     return field
 
 def hybrid_Upwind_BTBS1J(init, nt, dt, uf, dxc):
@@ -646,31 +649,31 @@ def hybrid_Upwind_BTBS1J(init, nt, dt, uf, dxc):
     uf      : array of floats, velocity defined at faces
     dxc     : array of floats, spacing between cell faces
     --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
     """
     # Initialisation
-    field = init.copy()
-    field_old = init.copy()
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
 
-    # Criterion explicit/implicit
+    # Criterion explicit/implicit # !!! include do_beta criterion
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
     beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit  
     #beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
 
     # Time stepping
     for it in range(nt):
-        flx = flux(np.roll(field_old,1), field_old, uf) # flx[i] is at i-1/2 # upwind
-        rhs = field_old - dt*(np.roll((1. - beta)*flx,-1) - (1. - beta)*flx)/dxc
-        # for ... # include number of iterations here!
+        flx = flux(np.roll(field[it],1), field[it], uf) # flx[i] is at i-1/2 # upwind
+        rhs = field[it] - dt*(np.roll((1. - beta)*flx,-1) - (1. - beta)*flx)/dxc
+        # for ... # include number of iterations here!!!
         for i in range(len(cc)):
             if beta[i] != 0.0 or np.roll(beta,-1)[i] != 0.0: # BTBS1J
                 aii = 1 + np.roll(beta*uf,-1)[i]*dt/dxc[i]
                 aiim1 = -dt*beta[i]*uf[i]/dxc[i]
-                field[i] = (rhs[i] - aiim1*np.roll(field_old,1)[i])/aii
+                field[it+1,i] = (rhs[i] - aiim1*np.roll(field[it],1)[i])/aii
             else:
-                field[i] = rhs[i]
-        field_old = field.copy()
+                field[it+1,i] = rhs[i]
+
     return field
 
 def hybrid_Upwind_Upwind1J(init, nt, dt, uf, dxc):
@@ -686,14 +689,14 @@ def hybrid_Upwind_Upwind1J(init, nt, dt, uf, dxc):
     uf      : array of floats, velocity defined at faces
     dxc     : array of floats, spacing between cell faces
     --- Output --- 
-    field   : 1D array of floats. Outputs the final timestep after advecting 
-            the initial condition. Dimensions: length of init.
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
     """
     # Initialisation
-    field = init.copy()
-    field_old = init.copy()
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
 
-    # Criterion explicit/implicit
+    # Criterion explicit/implicit # !!! include do_beta criterion
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
     beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit  
     #beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
@@ -703,17 +706,17 @@ def hybrid_Upwind_Upwind1J(init, nt, dt, uf, dxc):
 
     # Time stepping
     for it in range(nt):
-        flx = flux(np.roll(field_old,1), field_old, uf) # flx[i] is at i-1/2
-        rhs = field_old - dt*(np.roll((1. - beta)*flx,-1) - (1. - beta)*flx)/dxc
+        flx = flux(np.roll(field[it],1), field[it], uf) # flx[i] is at i-1/2
+        rhs = field[it] - dt*(np.roll((1. - beta)*flx,-1) - (1. - beta)*flx)/dxc
         for i in range(len(cc)):
             if beta[i] != 0.0 or np.roll(beta,-1)[i] != 0.0:
                 aii = 1. + dt*(np.roll(beta*ufp,-1)[i] - beta[i]*ufm[i])/dxc[i]
                 aiim1 = -dt*beta[i]*ufp[i]/dxc[i]
                 aiip1 = dt*np.roll(beta*ufm,-1)[i]/dxc[i]
-                field[i] = (rhs[i] - aiim1*np.roll(field_old,1)[i] - aiip1*np.roll(field_old,-1)[i])/aii
+                field[it+1,i] = (rhs[i] - aiim1*np.roll(field[it],1)[i] - aiip1*np.roll(field[it],-1)[i])/aii
             else:
-                field[i] = rhs[i]
-        field_old = field.copy()
+                field[it+1,i] = rhs[i]
+
     return field
 
 def flux(Psi_L, Psi_R, U):
