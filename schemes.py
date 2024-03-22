@@ -635,7 +635,7 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, dxf, eps=1e-6, do_beta='switch')
 
     return field
 
-def hybrid_Upwind_BTBS1J(init, nt, dt, uf, dxc):
+def hybrid_Upwind_BTBS1J(init, nt, dt, uf, dxc, do_beta='switch'):
     """
     This functions implements 
     Explicit: upwind scheme (assuming a 
@@ -656,10 +656,14 @@ def hybrid_Upwind_BTBS1J(init, nt, dt, uf, dxc):
     field = np.zeros((nt+1, len(init)))
     field[0] = init.copy()
 
-    # Criterion explicit/implicit # !!! include do_beta criterion
+    # Criterion explicit/implicit
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
-    beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit  
-    #beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
+    if do_beta == 'switch':
+        beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit 
+    elif do_beta == 'blend':
+        beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
+    else:
+        print('Error: do_beta must be either "switch" or "blend"')
 
     # Time stepping
     for it in range(nt):
@@ -676,7 +680,7 @@ def hybrid_Upwind_BTBS1J(init, nt, dt, uf, dxc):
 
     return field
 
-def hybrid_Upwind_Upwind1J(init, nt, dt, uf, dxc):
+def hybrid_Upwind_Upwind1J(init, nt, dt, uf, dxc, do_beta='switch'):
     """
     This functions implements 
     Explicit: upwind scheme (assuming a constant velocity and a 
@@ -696,10 +700,14 @@ def hybrid_Upwind_Upwind1J(init, nt, dt, uf, dxc):
     field = np.zeros((nt+1, len(init)))
     field[0] = init.copy()
 
-    # Criterion explicit/implicit # !!! include do_beta criterion
+    # Criterion explicit/implicit
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
-    beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit  
-    #beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
+    if do_beta == 'switch':
+        beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit 
+    elif do_beta == 'blend':
+        beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
+    else:
+        print('Error: do_beta must be either "switch" or "blend"')
 
     ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
     ufm = 0.5*(uf - abs(uf))
