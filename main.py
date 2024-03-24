@@ -80,13 +80,16 @@ def main():
     ut.plot_Courant(xc, cc)
     ut.plot_grid(xc, dxc)
 
-    # Calculate initial functions
-    psi1_in = an.analytic1(xc, xmax)
-    psi2_in = an.analytic2(xc, xmax)
 
     # Calculate analytic solutions
-    psi1_an = an.analytic1(xc, xmax, uc, nt*dt)
-    psi2_an = an.analytic2(xc, xmax, uc, nt*dt)
+    psi1_an, psi2_an = np.zeros((nt+1, 40)), np.zeros((nt+1, 40))
+    for it in range(nt):
+        psi1_an = an.analytic1(xc, xmax, uc, it*dt)
+        psi2_an = an.analytic2(xc, xmax, uc, it*dt)
+
+    # Calculate initial functions
+    psi1_in = psi1_an[0]
+    psi2_in = psi2_an[0]
 
     #################
     #### Schemes ####
@@ -120,7 +123,7 @@ def main():
     colors = ['red', 'blue', 'orange', 'red', 'lightblue', 'gray']
 
     plt.plot(xc, psi1_in, label='Initial', linestyle='-', color='grey')
-    plt.plot(xc, psi1_an, label='Analytic', linestyle='-', color='k')
+    plt.plot(xc, psi1_an[nt], label='Analytic', linestyle='-', color='k')
     for s in schemenames:
         si = schemenames.index(s)
         if 'Jacobi' in s or 'GaussSeidel' in s:
@@ -129,19 +132,19 @@ def main():
             slabel = 'BTBS_numpy'
         else: 
             slabel = s
-        plt.plot(xc, locals()[f'psi1_{s}'], label=f'{slabel}', marker=markers[si], linestyle=linestyle[si], color=colors[si])
+        plt.plot(xc, locals()[f'psi1_{s}'][nt], label=f'{slabel}', marker=markers[si], linestyle=linestyle[si], color=colors[si])
     ut.design_figure('Psi1.pdf', f'$\\Psi_1$ at t={nt*dt}', \
                      'x', '$\\Psi_1$', True, -1.5, 1.5)
 
     plt.plot(xc, psi2_in, label='Initial', linestyle='-', color='grey')
-    plt.plot(xc, psi2_an, label='Analytic', linestyle='-', color='k')
+    plt.plot(xc, psi2_an[nt], label='Analytic', linestyle='-', color='k')
     for s in schemenames:
         si = schemenames.index(s)
         if 'Jacobi' in s or 'GaussSeidel' in s:
             slabel = f'{s}, it={niter}'
         else: 
             slabel = s
-        plt.plot(xc, locals()[f'psi2_{s}'], label=f'{slabel}', marker=markers[si], linestyle=linestyle[si], color=colors[si])
+        plt.plot(xc, locals()[f'psi2_{s}'][nt], label=f'{slabel}', marker=markers[si], linestyle=linestyle[si], color=colors[si])
     ut.design_figure('Psi2.pdf', f'$\\Psi_2$ at t={nt*dt}', \
                      'x', '$\\Psi_2$', True,  -1.5, 1.5)
     plt.close()
@@ -169,17 +172,17 @@ def main():
         print()
 
         # Conservation, boundedness and total variation Psi1
-        csv_psi1_analytic = epm.check_conservation(psi1_in, psi1_an, dxc)
+        csv_psi1_analytic = epm.check_conservation(psi1_in, psi1_an[nt], dxc)
         print(f'Analytic - Mass gained: {csv_psi1_analytic:.2E}')    
-        bdn_psi1_analytic = epm.check_boundedness(psi1_in, psi1_an)
+        bdn_psi1_analytic = epm.check_boundedness(psi1_in, psi1_an[nt])
         print(f'Analytic - Boundedness: {bdn_psi1_analytic}')    
         print()
         for s in schemenames:
-            locals()[f'csv_psi1_{s}'] = epm.check_conservation(psi1_in, locals()[f'psi1_{s}'], dxc)
+            locals()[f'csv_psi1_{s}'] = epm.check_conservation(psi1_in, locals()[f'psi1_{s}'][nt], dxc)
             print(f'{s} - Mass gained: {locals()[f'csv_psi1_{s}']:.2E}')
-            locals()[f'bdn_psi1_{s}'] = epm.check_boundedness(psi1_in, locals()[f'psi1_{s}'])
+            locals()[f'bdn_psi1_{s}'] = epm.check_boundedness(psi1_in, locals()[f'psi1_{s}'][nt])
             print(f'{s} - Boundedness: {locals()[f'bdn_psi1_{s}']}')         
-            locals()[f'TV_psi1_{s}'] = epm.totalvariation(locals()[f'psi1_{s}'])
+            locals()[f'TV_psi1_{s}'] = epm.totalvariation(locals()[f'psi1_{s}'][nt])
             print(f'{s} - Variation: {locals()[f'TV_psi1_{s}']:.2E}')
             print()
 
@@ -188,63 +191,83 @@ def main():
         print()
 
         # Conservation, boundedness and total variation Psi2
-        csv_psi2_analytic = epm.check_conservation(psi2_in, psi2_an, dxc)
+        csv_psi2_analytic = epm.check_conservation(psi2_in, psi2_an[nt], dxc)
         print(f'Analytic - Mass gained: {csv_psi2_analytic:.2E}')   
-        bdn_psi2_analytic = epm.check_boundedness(psi2_in, psi2_an)
+        bdn_psi2_analytic = epm.check_boundedness(psi2_in, psi2_an[nt])
         print(f'Analytic - Boundedness: {bdn_psi2_analytic}')   
         print()
         for s in schemenames:
-            locals()[f'csv_psi2_{s}'] = epm.check_conservation(psi2_in, locals()[f'psi2_{s}'], dxc)
+            locals()[f'csv_psi2_{s}'] = epm.check_conservation(psi2_in, locals()[f'psi2_{s}'][nt], dxc)
             print(f'{s} - Mass gained: {locals()[f'csv_psi2_{s}']:.2E}')
-            locals()[f'bdn_psi2_{s}'] = epm.check_boundedness(psi2_in, locals()[f'psi2_{s}'])
+            locals()[f'bdn_psi2_{s}'] = epm.check_boundedness(psi2_in, locals()[f'psi2_{s}'][nt])
             print(f'{s} - Boundedness: {locals()[f'bdn_psi2_{s}']}')
-            locals()[f'TV_psi2_{s}'] = epm.totalvariation(locals()[f'psi2_{s}'])
+            locals()[f'TV_psi2_{s}'] = epm.totalvariation(locals()[f'psi2_{s}'][nt])
             print(f'{s} - Variation: {locals()[f'TV_psi2_{s}']:.2E}')
-            print()
-        
-        """
-        #### Conservation
-        csv_psi1_analytic = epm.check_conservation(psi1_in, psi1_an, dxc)
-        print(f'1 - Total mass gained at t={nt*dt} - Analytic {csv_psi1_analytic:.2E}')    
-        for s in schemenames:
-            locals()[f'csv_psi1_{s}'] = epm.check_conservation(psi1_in, locals()[f'psi1_{s}'], dxc)
-            print(f'1 - Total mass gained at t={nt*dt} - {s} {locals()[f'csv_psi1_{s}']:.2E}')
+            print()    
 
-        csv_psi2_analytic = epm.check_conservation(psi2_in, psi2_an, dxc)
-        print(f'2 - Total mass gained at t={nt*dt} - Analytic {csv_psi2_analytic:.2E}')   
-        for s in schemenames:
-            locals()[f'csv_psi2_{s}'] = epm.check_conservation(psi2_in, locals()[f'psi2_{s}'], dxc)
-            print(f'2 - Total mass gained at t={nt*dt} - {s} {locals()[f'csv_psi2_{s}']:.2E}')
+    ##########################
+    #### Plot experiments ####
+    ##########################
+    
+    fig, (ax1, ax2, ax3, ax4, ax5, ax6, ax7, ax8) = plt.subplots(2, 4, figsize=(25, 10))
+    # Mass over time (ax1,ax5)
+    for s in schemenames:
+        si = schemenames.index(s)
+        for it in range(nt):
+            locals()[f'mass_psi1_{s}'] = epm.totalmass(locals()[f'psi1_{s}'][it], dxc)
+            locals()[f'mass_psi2_{s}'] = epm.totalmass(locals()[f'psi2_{s}'][it], dxc)
+        ax1.plot(np.arange(0,nt), locals()[f'mass_psi1_{s}'], marker=markers[si], color=colors[si])
+        ax5.plot(np.arange(0,nt), locals()[f'mass_psi2_{s}'], marker=markers[si], color=colors[si])
+    ax1.set_title('Mass Psi1')
+    ax5.set_title('Mass Psi2')
 
+    # Boundedness (min/max) over time
+    # ax2, ax6
+    for s in schemenames:
+        si = schemenames.index(s)
+        minarr1, maxarr1, minarr2, maxarr2 = np.zeros(len(nt)), np.zeros(len(nt)), np.zeros(len(nt)), np.zeros(len(nt))
+        for it in range(nt):     
+            minarr1[it] = np.min(locals()[f'psi1_{s}'][it]) # !!! np max can perhaps introduce axis and for loop is not necessary?
+            maxarr1[it] = np.max(locals()[f'psi1_{s}'][it]) # !!! np max can perhaps introduce axis and for loop is not necessary?
+            minarr2[it] = np.min(locals()[f'psi2_{s}'][it]) # !!! np max can perhaps introduce axis and for loop is not necessary?
+            maxarr2[it] = np.max(locals()[f'psi2_{s}'][it]) # !!! np max can perhaps introduce axis and for loop is not necessary?
         print()
+        print('Scheme - {s}')
+        print(f'Psi 1 - Minimum over the time integration: {np.min(minarr1)}')
+        print(f'Psi 1 - Maximum over the time integration: {np.max(maxarr1)}')
+        print(f'PSi 2 - Minimum over the time integration: {np.min(minarr2)}')
+        print(f'PSi 2 - Maximum over the time integration: {np.max(maxarr2)}')
+        ax1.plot(np.arange(0,nt), minarr1, label='Min')
+        ax1.plot(np.arange(0,nt), maxarr1, label='Max')
+        ax5.plot(np.arange(0,nt), minarr2, label='Min')
+        ax5.plot(np.arange(0,nt), maxarr2, label='Max')
+        ax1.legend()
+        ax5.legend()
+    
+    # Total variation over time
+    # ax3, ax7
 
-        #### Boundedness
-        bdn_psi1_analytic = epm.check_boundedness(psi1_in, psi1_an)
-        print(f'1 - Boundedness at t={nt*dt} - Analytic: {bdn_psi1_analytic}')    
-        for s in schemenames:
-            locals()[f'bdn_psi1_{s}'] = epm.check_boundedness(psi1_in, locals()[f'psi1_{s}'])
-            print(f'1 - Boundedness at t={nt*dt} - {s}: {locals()[f'bdn_psi1_{s}']}')
 
-        bdn_psi2_analytic = epm.check_boundedness(psi2_in, psi2_an)
-        print(f'2 - Boundedness at t={nt*dt} - Analytic: {bdn_psi2_analytic}')   
-        for s in schemenames:
-            locals()[f'bdn_psi2_{s}'] = epm.check_boundedness(psi2_in, locals()[f'psi2_{s}'])
-            print(f'2 - Boundedness at t={nt*dt} - {s}: {locals()[f'bdn_psi2_{s}']}')
-        
-        print()
+    # Error over time
+    # ax4, ax8
 
-        #### Total variation
-        for s in schemenames:
-            locals()[f'TV_psi1_{s}'] = epm.totalvariation(locals()[f'psi1_{s}'])
-            print(f'1 - Total variation at t={nt*dt} - {s} {locals()[f'TV_psi1_{s}']:.2E}')
-
-        for s in schemenames:
-            locals()[f'TV_psi2_{s}'] = epm.totalvariation(locals()[f'psi2_{s}'])
-            print(f'2 - Total variation at t={nt*dt} - {s} {locals()[f'TV_psi2_{s}']:.2E}')
-
-        """
 
     
+    # Error over grid spacing
+    if check_orderofconvergence == True:
+        fig, ax1 = plt.subplots(1, 1, figsize=(10, 5))
+        # Run schemes for multiple grid spacings
+
+        # Calculate error for each grid spacing for the final time
+
+        # Plot error over grid spacing
+
+        # Calculate order of convergence
+        print('do something')
+
+        plt.tight_layout()
+        plt.show()
+
     """
     #### Error analysis for a single scheme
     scheme = 'Upwind'
@@ -269,56 +292,8 @@ def main():
     ut.design_figure(f'loglog_{scheme}.pdf', f'RMSE for {scheme} scheme', 'dx', 'RMSE')
     """
 
-    ##########################
-    #### Plot experiments ####
-    ##########################
-    
-    fig, (ax1, ax2, ax3, ax4, ax5, ax6, ax7, ax8) = plt.subplots(2, 4, figsize=(25, 10))
-    # Mass over time
-    for s in schemenames:
-        si = schemenames.index(s)
-        for it in range(nt):
-            locals()[f'mass_psi1_{s}'] = epm.totalmass(locals()[f'psi1_{s}'][it], dxc)
-            locals()[f'mass_psi2_{s}'] = epm.totalmass(locals()[f'psi2_{s}'][it], dxc)
-        ax1.plot(np.arange(0,nt), locals()[f'mass_psi1_{s}'], marker=markers[si], color=colors[si])
-        ax5.plot(np.arange(0,nt), locals()[f'mass_psi2_{s}'], marker=markers[si], color=colors[si])
-    ax1.set_title('Mass Psi1')
-    ax5.set_title('Mass Psi2')
-
-    # Boundedness (min/max) over time
-    # ax2, ax6
-        
-
-        
-
-    
-    # Total variation over time
-    # ax3, ax7
-
-
-    # Error over time
-    # ax4, ax8
-
-
     plt.tight_layout()
     plt.show()
-    
-    # Error over grid spacing
-    if check_orderofconvergence == True:
-        fig, ax1 = plt.subplots(1, 1, figsize=(10, 5))
-        # Run schemes for multiple grid spacings
-
-        # Calculate error for each grid spacing for the final time
-
-        # Plot error over grid spacing
-
-        # Calculate order of convergence
-        print('do something')
-
-        plt.tight_layout()
-        plt.show()
-
-
 
 
 
