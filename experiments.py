@@ -33,7 +33,7 @@ def rmse(field, analytic, dx):
     rmse     : 1D array of floats, root-mean-square-error.
     """
     rmse = np.zeros(len(field))
-    rmse = np.sqrt((np.sum(dx*(field-analytic)*(field-analytic)))/(np.sum(dx*analytic*analytic)))
+    rmse = np.sqrt((np.sum(dx*(field-analytic)*(field-analytic)))/(np.sum(dx*analytic*analytic) + 1e-16))
 
     return rmse
 

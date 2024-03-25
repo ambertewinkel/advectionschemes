@@ -36,6 +36,13 @@ def coords_centralstretching(xmax, imax, i_maxC=0., dxcmin=0.):
     xc[-1] = 0.5*(xmax + xf[-1]) # periodic
     dxf = 0.5*(dxc + np.roll(dxc,-1))
    
+
+    # !!! working here
+    #dxf[i] = xc[i+1] - xc[i]
+    #dxf[i] = 0.5*(xf[i+1] + xf[i] - xf[i] - xf[i-1])
+    #dxf[i] = 0.5*(dxc[i] + dxc[i-1])
+    #dxf = 0.5*(dxc + np.roll(dxc,1)) # this is the opposite as to what i have defiend above? check how i have defined the grid
+
     return  xf, dxc, xc, dxf
 
 def coords_uniform(xmax, imax):
