@@ -44,11 +44,11 @@ def make_animation(fn, filebasename, nt, dt, uf, dxc, xc, xmax, uc, niter=1):
         
         # Calculating field snapshots to plot
         if 'Jacobi' in fn or 'GaussSeidel' in fn:
-            locals()[f'psi1_{fn}'] = f(psi1_in.copy(), it, dt, uf, dxc, niter)
-            locals()[f'psi2_{fn}'] = f(psi2_in.copy(), it, dt, uf, dxc, niter)
+            locals()[f'psi1_{fn}'] = f(psi1_in.copy(), it, dt, uf, dxc, niter)[-1]
+            locals()[f'psi2_{fn}'] = f(psi2_in.copy(), it, dt, uf, dxc, niter)[-1]
         else:
-            locals()[f'psi1_{fn}'] = f(psi1_in.copy(), it, dt, uf, dxc)
-            locals()[f'psi2_{fn}'] = f(psi2_in.copy(), it, dt, uf, dxc)
+            locals()[f'psi1_{fn}'] = f(psi1_in.copy(), it, dt, uf, dxc)[-1]
+            locals()[f'psi2_{fn}'] = f(psi2_in.copy(), it, dt, uf, dxc)[-1]
         
         # Plotting and saving snapshots
         # Initial condition 1
@@ -97,6 +97,6 @@ def produce_standalone_animation():
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc # Courant number (defined at cell center)
     niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
     
-    make_animation('hybrid_Upwind_BTBS1J', 'test', nt, dt, uf, dxc, xc, xmax, uc)
+    make_animation('hybrid_MPDATA_BTBS1J', 'hybrid_MPDATA_BTBS1J_notkeptstable', nt, dt, uf, dxc, xc, xmax, uc)
 
 if __name__ == "__main__": produce_standalone_animation()

@@ -538,7 +538,7 @@ def CNCS(init, nt, dt, uf, dxc): # Crank-Nicolson (implicit)
 
     return field
 
-def MPDATA(init, nt, dt, uf, dxc, eps=1e-6):
+def MPDATA(init, nt, dt, uf, dxc, eps=1e-16):
     """
     This functions implements the MPDATA scheme without a gauge, assuming a 
     constant velocity (input through the Courant number) and a 
@@ -578,7 +578,7 @@ def MPDATA(init, nt, dt, uf, dxc, eps=1e-6):
 
     return field
 
-def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-6):
+def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
     """
     This functions implements 
     Explicit: MPDATA scheme (without a gauge, assuming a 
