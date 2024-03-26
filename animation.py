@@ -116,7 +116,7 @@ def create_animation_from_data(filebasename, field, analytic, nt, dt, xc, animdi
         # Plot each timestep in a figure and save in the plots subdirectory
         plt.plot(xc, field_in, label='Initial', linestyle='-', color='grey')
         plt.plot(xc, analytic[it], label='Analytic', linestyle='-', color='k')
-        plt.plot(xc, field[it], label='Numerical soln', marker='x', linestyle='-', color='blue')
+        plt.plot(xc, field[it], label='Numerical', marker='x', linestyle='-', color='blue')
         ut.design_figure(f'{plotdir}field_{it}.png', '', f'{filebasename} at t={it*dt:.2f}', \
                         'x', '$field$', True, -0.5, 1.5)
         filenames.append(f'{plotdir}field_{it}.png')

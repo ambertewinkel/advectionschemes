@@ -21,16 +21,17 @@ def main():
     with 1D periodic space and time. Results are compared to the analytic soln. 
     Two initial conditions are considered: a Gaussian distribution and a step 
     function, both defined on a subdomain. 
-    Schemes included: FTBS, FTFS, FTCS, CTBS, CTFS, CTCS, Upwind, BTBS, BTFS, BTCS, CNBS, MPDATA
+    Schemes included: FTBS, FTFS, FTCS, CTBS, CTFS, CTCS, Upwind, BTBS, BTFS, BTCS, CNBS, MPDATA, three hybrid schemes and Jacobi and Gauss-Seidel iterations.
     """
+
     # Input booleans
-    schemenames = ['hybrid_Upwind_BTBS1J', 'hybrid_Upwind_Upwind1J']
+    schemenames = ['BTBS_Jacobi', 'hybrid_MPDATA_BTBS1J'] #['hybrid_Upwind_BTBS1J', 'hybrid_Upwind_Upwind1J']
     predefined_output_file = True
     keep_model_stable = False
     create_animation = True
     check_orderofconvergence = True
     do_beta = 'switch'          # 'switch' or 'blend'
-    coords = 'stretching'       # 'uniform' or 'stretching'
+    coords = 'uniform'       # 'uniform' or 'stretching'
     niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
     # !!! implement criterion for convergence with Jacobi and Gauss-Seidel iterations?
 
@@ -46,6 +47,7 @@ def main():
     nt = 100                    # number of time steps
     nx = 40                     # number of points in space
     xmax = 2.0                  # physical domain parameters
+    uconstant = 1.0             # constant velocity
 
     # Setup output
     str_settings = '_t'+ f"{nt*dt:.2f}" + '_ks' + str(keep_model_stable)[0] + '_b' + do_beta[0] + '_g' + coords[0]
@@ -84,7 +86,7 @@ def main():
         nx = nx_arr[xi]
         dt = dt_arr[xi]
         nt = nt_arr[xi]
-        uf = np.full(nx, 0.2)
+        uf = np.full(nx, uconstant)
         l = gridlabels[xi]
 
         # Check whether to limit the Courant number by limiting the grid spacing
