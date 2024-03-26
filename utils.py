@@ -5,14 +5,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def design_figure(filename, title, xlabel, ylabel, bool_ylim = False, ylim1=0.0, ylim2=0.0):
+def design_figure(filename, outputdir, title, xlabel, ylabel, bool_ylim = False, ylim1=0.0, ylim2=0.0):
     if bool_ylim == True: plt.ylim(ylim1, ylim2)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.title(title)
     plt.legend()
     plt.tight_layout()
-    plt.savefig(filename)
+    plt.savefig(outputdir + filename)
     plt.clf()
 
 def to_vector(array, length):
@@ -44,7 +44,7 @@ def to_vector(array, length):
     
     return res
 
-def plot_Courant(x, c):
+def plot_Courant(x, c, outputdir):
     plt.plot(x, c)
     plt.axhline(1.0, color='grey', linestyle=':')
     plt.axvline(1.0)
@@ -52,21 +52,21 @@ def plot_Courant(x, c):
     plt.xlabel('x')
     plt.ylabel('C')
     plt.tight_layout()
-    plt.savefig('Courant.pdf')
+    plt.savefig(outputdir + 'Courant.pdf')
     plt.clf()
 
-def plot_grid(x, dx):
+def plot_grid(x, dx, outputdir):
     plt.plot(x)
     plt.title('Stretching: x against i')
     plt.xlabel('i')
     plt.ylabel('x')
     plt.tight_layout()
-    plt.savefig('gridpoints.pdf')
+    plt.savefig(outputdir + 'gridpoints.pdf')
     plt.clf()
     plt.plot(dx)
     plt.xlabel('i')
     plt.ylabel('dx')
     plt.title('Stretching: dx against i')
     plt.tight_layout()
-    plt.savefig('gridspacing.pdf')
+    plt.savefig(outputdir + 'gridspacing.pdf')
     plt.clf()

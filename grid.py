@@ -4,9 +4,9 @@
 
 import numpy as np
 
-def coords_centralstretching(xmax, imax, i_maxC=0., dxcmin=0.):
+def coords_stretching(xmax, imax, i_maxC=0., dxcmin=0.):
     """
-    This function implements a varying grid spacing, with stretching in the center: dx_center = 10*dx_boundary.
+    This function implements a varying grid spacing, with stretching (default, determined by dxcmin) in the center: dx_center = 10*dx_boundary.
     We use a cosine function to define the grid spacing: dx[i] = dx0(6-5cos(2pi*(i-i_maxC)/imax)) for i ranging from 0 to imax.
     From integration we know that dx0 = xmax/(6*imax).
     We assume a periodic domain that ranges from 0 to xmax in size. xmax is not included in x-array

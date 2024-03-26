@@ -10,6 +10,8 @@ import experiments as epm
 import utils as ut
 import analytic as an
 import grid as gr
+import animation as anim
+import os
 
 # !!! future: allow the wind to change over time?
 
@@ -25,16 +27,15 @@ def main():
     schemenames = ['hybrid_Upwind_BTBS1J', 'hybrid_Upwind_Upwind1J']
     predefined_output_file = True
     keep_model_stable = False
-    create_animation = False
+    create_animation = True
     check_orderofconvergence = True
-    do_beta = 'switch' # 'switch' or 'blend'
-    coords = 'centralstretching' # 'uniform' or 'centralstretching'
+    do_beta = 'switch'          # 'switch' or 'blend'
+    coords = 'stretching'       # 'uniform' or 'stretching'
     niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
     # !!! implement criterion for convergence with Jacobi and Gauss-Seidel iterations?
 
     # Saving the reference of the standard output
     original_stdout = sys.stdout 
-
 
     #######################
     #### Run the model ####
@@ -47,64 +48,69 @@ def main():
     xmax = 2.0                  # physical domain parameters
 
     # Setup output
-    filename = 'output_' + "[" + "-".join(schemenames) + "]" + '_t'+ f"{nt*dt:.2f}" + '_' + f"ModelStable{keep_model_stable}" + '.out'
-    plotname1 = 'Psi1_' + "[" + "-".join(schemenames) + "]" + '_t' + f"{nt*dt:.2f}" + '_' + f"ModelStable{keep_model_stable}" #+ '.pdf'
-    plotname2 = 'Psi2_' + "[" + "-".join(schemenames) + "]" + '_t' + f"{nt*dt:.2f}" + '-' + f"ModelStable{keep_model_stable}" #+ '.pdf'
+    str_settings = '_t'+ f"{nt*dt:.2f}" + '_ks' + str(keep_model_stable)[0] + '_b' + do_beta[0] + '_g' + coords[0]
+    str_schemenames_settings = "-".join(schemenames) + str_settings
+    filebasename = [s  + str_settings for s in schemenames] # name of the directory to save the animation and its corresponding plots in
+            # !!! To do: when option to include niter in hybrid scheme, add niter to the filebasename
+    outputdir = './output/' + str_schemenames_settings + '/'
+    # Check if outputdir exists, if not create it, if so, !!! to do: if so give error message and choice to overwrite or n
+    if not os.path.exists(outputdir):
+        os.mkdir(outputdir)
+        print("Folder %s created!" % outputdir)
+    
+    filename = outputdir + 'outputdata_' + str_schemenames_settings + '.out' 
+    plotname1 = 'Psi1_' + str_schemenames_settings
+    plotname2 = 'Psi2_' + str_schemenames_settings
     
     #################
     #### Schemes ####
     #################
 
-    # Calculate numerical results
+    # Setup: run schemes for one or three grid spacings (nx*factor, nx/factor, nx)
     if check_orderofconvergence == True: # Run schemes for two extra grid spacings
         factor = 2
         nx_arr = np.array([nx*factor, nx/factor, nx], dtype=int)
         dt_arr = np.array([dt/factor, dt*factor, dt], dtype=float)
         nt_arr = np.array([nt*factor, nt/factor, nt], dtype=int)
         gridlabels = ['fine', 'coarse', 'reg']
-    else:
+    else: # Run schemes for only the one grid spacing defined above
         nx_arr = np.array([nx], dtype=int)
         dt_arr = np.array([dt], dtype=float)
         nt_arr = np.array([nt], dtype=int)
         gridlabels = ['reg']
     
-    for xi in range(len(nx_arr)):
+    # Calculate numerical results
+    for xi in range(len(nx_arr)): # Loop over 1 or 3 grid spacings
         nx = nx_arr[xi]
         dt = dt_arr[xi]
         nt = nt_arr[xi]
         uf = np.full(nx, 0.2)
         l = gridlabels[xi]
 
-        if keep_model_stable == True:
+        # Check whether to limit the Courant number by limiting the grid spacing
+        if keep_model_stable == True: 
             cmax = 1.
             dxcmin = np.min(0.5*dt*(np.roll(uf,-1) + uf)/cmax)
         else:
             dxcmin = 0.
 
-        if coords == 'centralstretching':
-            xf, dxc, xc, dxf = gr.coords_centralstretching(xmax, nx, nx/2, dxcmin=dxcmin) # points in space, length of spatial step
+        # Setup grid for each of the grid spacings
+        if coords == 'stretching':
+            xf, dxc, xc, dxf = gr.coords_stretching(xmax, nx, nx/2, dxcmin=dxcmin) # points in space, length of spatial step
         elif coords == 'uniform':
             xf, dxc, xc, dxf = gr.coords_uniform(xmax, nx) # points in space, length of spatial step
         else: 
             print('Error: invalid coordinates')
 
-        uc = gr.linear(xc, xf, uf)       # velocity at centers
-        cc = 0.5*dt*(np.roll(abs(uf),-1) + abs(uf))/dxc # Courant number (defined at cell center)
+        # Calculate velocity and Courant number at cell centers 
+        uc = gr.linear(xc, xf, uf)       # velocity at cell centers
+        cc = 0.5*dt*(np.roll(abs(uf),-1) + abs(uf))/dxc # Courant number at cell centers
         cmax = np.max(cc)
         cmin = np.min(cc)
-            
-        if gridlabels[xi] == 'reg':
-            # Print and plot grid and Courant number
-            print('The (cell center) points and Courant numbers are:')
-            for i in range(nx):
-                print(i, "%.2f" %xc[i], "%.2f" %cc[i])
-            print()
-            ut.plot_Courant(xc, cc)
-            ut.plot_grid(xc, dxc)
 
-        # Calculate analytic solutions
+        # Calculate analytic solutions for each time step
         locals()[f'psi1_an_{l}'], locals()[f'psi2_an_{l}'] = np.zeros((nt+1, nx)), np.zeros((nt+1, nx))
-        for it in range(nt):
+        for it in range(nt+1):
             locals()[f'psi1_an_{l}'][it] = an.analytic1(xc, xmax, uc, it*dt)
             locals()[f'psi2_an_{l}'][it] = an.analytic2(xc, xmax, uc, it*dt)
 
@@ -112,6 +118,8 @@ def main():
         psi1_in = locals()[f'psi1_an_{l}'][0]
         psi2_in = locals()[f'psi2_an_{l}'][0]
 
+        # Calculate numerical solutions for each scheme through time
+        # Output is 2D field ([1d time, 1d space])
         for s in schemenames:
             fn = getattr(sch, f'{s}')
             if 'Jacobi' in s or 'GaussSeidel' in s:
@@ -138,6 +146,7 @@ def main():
     linestyle = ['-','-','-', '--', '-', '--']
     colors = ['red', 'blue', 'orange', 'red', 'lightblue', 'gray']
 
+    # Psi 1: Plotting the final time step for each scheme in the same plot
     plt.plot(xc, psi1_in, label='Initial', linestyle='-', color='grey')
     plt.plot(xc, locals()['psi1_an_reg'][nt], label='Analytic', linestyle='-', color='k')
     for s in schemenames:
@@ -149,9 +158,10 @@ def main():
         else: 
             slabel = s
         plt.plot(xc, locals()[f'psi1_{s}_reg'][nt], label=f'{slabel}', marker=markers[si], linestyle=linestyle[si], color=colors[si])
-    ut.design_figure(plotname1 + '.pdf', f'$\\Psi_1$ at t={nt*dt}', \
+    ut.design_figure(plotname1 + '.png', outputdir, f'$\\Psi_1$ at t={nt*dt}', \
                      'x', '$\\Psi_1$', True, -1.5, 1.5)
 
+    # Psi 2: Plotting the final time step for each scheme in the same plot
     plt.plot(xc, psi2_in, label='Initial', linestyle='-', color='grey')
     plt.plot(xc, locals()['psi2_an_reg'][nt], label='Analytic', linestyle='-', color='k')
     for s in schemenames:
@@ -161,7 +171,7 @@ def main():
         else: 
             slabel = s
         plt.plot(xc, locals()[f'psi2_{s}_reg'][nt], label=f'{slabel}', marker=markers[si], linestyle=linestyle[si], color=colors[si])
-    ut.design_figure(plotname2 + '.pdf', f'$\\Psi_2$ at t={nt*dt}', \
+    ut.design_figure(plotname2 + '.png', outputdir, f'$\\Psi_2$ at t={nt*dt}', \
                      'x', '$\\Psi_2$', True,  -1.5, 1.5)
     plt.close()
 
@@ -170,24 +180,36 @@ def main():
     #####################
 
     with open(filename, 'w') as f:
+        # Redirect the standard output to the output file if predefined_output_file is True
         if predefined_output_file == True:
             print(f'See output file {filename}')
             sys.stdout = f
-        else:
+        else: # Output in terminal
             sys.stdout = original_stdout 
         
+        # Print results in output file/terminal for the final time step
+        print('========== Output file for data at the final time step ==========')
+        print()
         print('Schemes included are:', schemenames)
         print(f'Number of timesteps: {nt}')
         print(f'Total runtime: {nt*dt:.2f} s')
         print(f'Min Courant number: {cmin:.2f}')
         print(f'Max Courant number: {cmax:.2f}')        
         print()
-        print()
 
+        # Print and plot grid and Courant number (solely for the regular grid spacing)
+        if gridlabels[xi] == 'reg':
+            print('The (cell center) points and Courant numbers are:')
+            for i in range(nx):
+                print(i, "%.2f" %xc[i], "%.2f" %cc[i])
+            print()
+            ut.plot_Courant(xc, cc, outputdir)
+            ut.plot_grid(xc, dxc, outputdir)
+        
+        # Conservation, boundedness and total variation Psi1
+        print()
         print('========== Psi 1 ==========')
         print()
-
-        # Conservation, boundedness and total variation Psi1
         csv_psi1_analytic = epm.check_conservation(psi1_in, locals()['psi1_an_reg'][nt], dxc)
         print(f'Analytic - Mass gained: {csv_psi1_analytic:.2E}')    
         bdn_psi1_analytic = epm.check_boundedness(psi1_in, locals()['psi1_an_reg'][nt])
@@ -202,11 +224,10 @@ def main():
             print(f'{s} - Variation: {locals()[f'TV_psi1_{s}']:.2E}')
             print()
 
+        # Conservation, boundedness and total variation Psi2
         print()
         print('========== Psi 2 ==========')
         print()
-
-        # Conservation, boundedness and total variation Psi2
         csv_psi2_analytic = epm.check_conservation(psi2_in, locals()['psi2_an_reg'][nt], dxc)
         print(f'Analytic - Mass gained: {csv_psi2_analytic:.2E}')   
         bdn_psi2_analytic = epm.check_boundedness(psi2_in, locals()['psi2_an_reg'][nt])
@@ -225,9 +246,13 @@ def main():
         #### Plot experiments ####
         ##########################
         
-        fig, ((ax1, ax2, ax4),(ax5, ax6, ax8)) = plt.subplots(2, 3, figsize=(17, 10))
+        print()
+        print('========== Data during the time integration ==========')
 
-        # Mass over time (ax1,ax5)
+        # Setup plot for results (mass, min/max, RMSE) over time
+        fig, ((ax1, ax2, ax3),(ax5, ax6, ax7)) = plt.subplots(2, 3, figsize=(17, 10))
+
+        # Mass over time (ax1, ax5)
         for s in schemenames:
             si = schemenames.index(s)
             mass1, mass2 = np.zeros(nt+1), np.zeros(nt+1)
@@ -243,22 +268,21 @@ def main():
         ax1.legend()
         ax5.legend()
 
-        # Boundedness (min/max) over time
-        # ax2, ax6
+        # Boundedness (min/max) over time (ax2, ax6)
         for s in schemenames:
             si = schemenames.index(s)
             minarr1, maxarr1, minarr2, maxarr2 = np.zeros(nt+1), np.zeros(nt+1), np.zeros(nt+1), np.zeros(nt+1)
             for it in range(nt+1):     
                 minarr1[it] = np.min(locals()[f'psi1_{s}_reg'][it]) # !!! np max can perhaps introduce axis and for loop is not necessary?
-                maxarr1[it] = np.max(locals()[f'psi1_{s}_reg'][it]) # !!! np max can perhaps introduce axis and for loop is not necessary?
-                minarr2[it] = np.min(locals()[f'psi2_{s}_reg'][it]) # !!! np max can perhaps introduce axis and for loop is not necessary?
-                maxarr2[it] = np.max(locals()[f'psi2_{s}_reg'][it]) # !!! np max can perhaps introduce axis and for loop is not necessary?
+                maxarr1[it] = np.max(locals()[f'psi1_{s}_reg'][it])
+                minarr2[it] = np.min(locals()[f'psi2_{s}_reg'][it])
+                maxarr2[it] = np.max(locals()[f'psi2_{s}_reg'][it])
             print()
             print(f'Scheme - {s}')
-            print(f'Psi 1 - Minimum over the time integration: {np.min(minarr1)}')
-            print(f'Psi 1 - Maximum over the time integration: {np.max(maxarr1)}')
-            print(f'PSi 2 - Minimum over the time integration: {np.min(minarr2)}')
-            print(f'PSi 2 - Maximum over the time integration: {np.max(maxarr2)}')
+            print(f'Psi 1 - Minimum bound during the time integration: {np.min(minarr1)}')
+            print(f'Psi 1 - Maximum bound during the time integration: {np.max(maxarr1)}')
+            print(f'Psi 2 - Minimum bound during the time integration: {np.min(minarr2)}')
+            print(f'Psi 2 - Maximum bound during the time integration: {np.max(maxarr2)}')
             ax2.plot(np.arange(0,nt+1), minarr1, marker=markers[si], color=colors[si], label=f'Min {s}')
             ax2.plot(np.arange(0,nt+1), maxarr1, marker=markers[si], color=colors[si], label=f'Max {s}')
             ax6.plot(np.arange(0,nt+1), minarr2, marker=markers[si], color=colors[si], label=f'Min {s}')
@@ -270,50 +294,47 @@ def main():
         ax2.legend()
         ax6.legend()
             
-        # Total variation over time
-        # ax3, ax7
-        # !!! to do
-
-        # Error over time
-        # ax4, ax8
+        # Error over time (ax3, ax7)
         for s in schemenames:
             si = schemenames.index(s)
             rmse_time1, rmse_time2 = np.zeros(nt+1), np.zeros(nt+1)
             for it in range(nt+1):     
-                rmse_time1[it] = epm.rmse(locals()[f'psi1_{s}_reg'][it], locals()['psi1_an_reg'][it], dxc) # !!! check whether dxc makes sense
-                rmse_time2[it] = epm.rmse(locals()[f'psi2_{s}_reg'][it], locals()['psi2_an_reg'][it], dxc) # !!! check whether dxc makes sense
+                rmse_time1[it] = epm.rmse(locals()[f'psi1_{s}_reg'][it], locals()['psi1_an_reg'][it], dxc) 
+                rmse_time2[it] = epm.rmse(locals()[f'psi2_{s}_reg'][it], locals()['psi2_an_reg'][it], dxc)
             print()
-            print('Scheme - {s}')
-            print(f'Psi 1 - Max RMSE over the time integration: {np.max(rmse_time1)}')
-            print(f'PSi 2 - Max RMSE over the time integration: {np.max(rmse_time2)}')
-            ax4.plot(np.arange(0,nt+1), rmse_time1, marker=markers[si], color=colors[si], label=s)
-            ax8.plot(np.arange(0,nt+1), rmse_time2, marker=markers[si], color=colors[si], label=s)
-        ax4.set_yscale('log')
-        ax8.set_yscale('log')
-        ax4.set_title('RMSE Psi1')
-        ax8.set_title('RMSE Psi2')    
-        ax4.set_xlabel('Time')
-        ax8.set_xlabel('Time')         
-        ax4.legend()
-        ax8.legend()
+            print(f'Scheme - {s}')
+            print(f'Psi 1 - Max RMSE during the time integration: {np.max(rmse_time1)}')
+            print(f'Psi 2 - Max RMSE during the time integration: {np.max(rmse_time2)}')
+            ax3.plot(np.arange(0,nt+1), rmse_time1, marker=markers[si], color=colors[si], label=s)
+            ax7.plot(np.arange(0,nt+1), rmse_time2, marker=markers[si], color=colors[si], label=s)
+        ax3.set_yscale('log')
+        ax7.set_yscale('log')
+        ax3.set_title('RMSE Psi1')
+        ax7.set_title('RMSE Psi2')    
+        ax3.set_xlabel('Time')
+        ax7.set_xlabel('Time')         
+        ax3.legend()
+        ax7.legend()
 
-        plt.savefig(f'infoplot_' + "[" + "-".join(schemenames) + "]" + '_t' + f"{nt*dt:.2f}" + '_' + f"ModelStable{keep_model_stable}" + '.png')
+        # Save plot for results (mass, min/max, RMSE) over time
+        plt.savefig(outputdir + f'epm_over_time_' + str_schemenames_settings + '.png')
         plt.tight_layout()
         plt.close()
 
-        # Error over grid spacing
+        # Calculate and plot error over grid spacing (for the final timestep) if check_orderofconvergence is True
         if check_orderofconvergence == True:
+            # Setup plot
             fig, ax1 = plt.subplots(1, 1, figsize=(10, 5))
             for s in schemenames:
-                # Calculate error for each grid spacing for the final time
+                # Calculate error for each grid spacing (one or three)
                 rmse_x1, rmse_x2 = np.zeros(len(nx_arr)), np.zeros(len(nx_arr))
                 dxc_arr = np.zeros(len(nx_arr))
                 for xi in range(len(nx_arr)):
                     l = gridlabels[xi]
                     nx = nx_arr[xi]
                     nt = nt_arr[xi]                
-                    if coords == 'centralstretching':
-                        xf, dxc, xc, dxf = gr.coords_centralstretching(xmax, nx, nx/2, dxcmin=dxcmin) # points in space, length of spatial step
+                    if coords == 'stretching':
+                        xf, dxc, xc, dxf = gr.coords_stretching(xmax, nx, nx/2, dxcmin=dxcmin) # points in space, length of spatial step
                     elif coords == 'uniform':
                         xf, dxc, xc, dxf = gr.coords_uniform(xmax, nx) # points in space, length of spatial step
                     else: 
@@ -321,17 +342,20 @@ def main():
                     rmse_x1[xi] = epm.rmse(locals()[f'psi1_{s}_{l}'][nt], locals()[f'psi1_an_{l}'][nt], dxc) # Calculate RMSE for each grid spacing at the final time
                     rmse_x2[xi] = epm.rmse(locals()[f'psi2_{s}_{l}'][nt], locals()[f'psi1_an_{l}'][nt], dxc)
                     dxc_arr[xi] = np.mean(dxc)
-                    print(rmse_x1[xi], rmse_x2[xi], dxc_arr[xi])
 
                 # Plot error over grid spacing
                 ax1.scatter(dxc_arr, rmse_x1, marker='+', label=f'Psi1 {s}')
                 ax1.scatter(dxc_arr, rmse_x2, marker='x', label=f'Psi2 {s}')
+
+            # Plot details
             ax1.set_xscale('log')
             ax1.set_yscale('log')
             ax1.set_title(f'RMSE at t_final')
             ax1.set_xlabel('Mean dx')
             ax1.legend()
-            plt.savefig(f'RMSE_gridspacing_' + "[" + "-".join(schemenames) + "]" + '_t' + f"{nt*dt:.2f}" + '_' + f"ModelStable{keep_model_stable}" + '.png')
+
+            # Save plot of error over grid spacing
+            plt.savefig(outputdir + f'RMSE_over_dx_' + str_schemenames_settings + '.png')
             plt.tight_layout()
             plt.close()
 
@@ -362,19 +386,18 @@ def main():
         ut.design_figure(f'loglog_{scheme}.pdf', f'RMSE for {scheme} scheme', 'dx', 'RMSE')
         """
 
-    ###########################
-    #### Create animations ####
-    ###########################
-
+        ###########################
+        #### Create animations ####
+        ###########################
     
-    # Save each time point as a plot
-    
-    # Create animation from this set of plots from the create_animation function ?
-    #if create_animation == True:
-    #    for s in schemenames:
-    #        !!! to do: I need to adjust the make_animation function to work with the fields already being calculated but not put into pngs yet. Split make_animation into two functions
-    #        ut.make_animation('Upwind', 'Upwind_nt100', nt, dt, uf, dxc, xc, xmax, uc)
-
+        # Create animation from the data
+        if create_animation == True:
+            animdir = outputdir + 'animations/'
+            if not os.path.exists(animdir):
+                os.mkdir(animdir)
+            for s in schemenames:
+                anim.create_animation_from_data('Psi1_' + filebasename[schemenames.index(s)], locals()[f'psi1_{s}_reg'], locals()['psi1_an_reg'], nt, dt, xc, animdir)
+                anim.create_animation_from_data('Psi2_' + filebasename[schemenames.index(s)], locals()[f'psi2_{s}_reg'], locals()['psi2_an_reg'], nt, dt, xc, animdir)
 
     # Reset the standard output
     sys.stdout = original_stdout 

@@ -31,7 +31,7 @@ def make_animation(fn, filebasename, nt, dt, uf, dxc, xc, xmax, uc, niter=1):
         print("Folder %s created!" % plotdir)
 
     # Calculate initial functions
-    psi1_in = an.analytic1(xc, xmax)
+    field_in = an.analytic1(xc, xmax)
     psi2_in = an.analytic2(xc, xmax)
 
     filenames1, images1, filenames2, images2 = [], [], [], []
@@ -39,21 +39,21 @@ def make_animation(fn, filebasename, nt, dt, uf, dxc, xc, xmax, uc, niter=1):
         f = getattr(sch, f'{fn}')
         
         # Calculate analytic solutions
-        psi1_an = an.analytic1(xc, xmax, uc, it*dt)
+        analytic = an.analytic1(xc, xmax, uc, it*dt)
         psi2_an = an.analytic2(xc, xmax, uc, it*dt)
         
         # Calculating field snapshots to plot
         if 'Jacobi' in fn or 'GaussSeidel' in fn:
-            locals()[f'psi1_{fn}'] = f(psi1_in.copy(), it, dt, uf, dxc, niter)[-1]
+            locals()[f'psi1_{fn}'] = f(field_in.copy(), it, dt, uf, dxc, niter)[-1]
             locals()[f'psi2_{fn}'] = f(psi2_in.copy(), it, dt, uf, dxc, niter)[-1]
         else:
-            locals()[f'psi1_{fn}'] = f(psi1_in.copy(), it, dt, uf, dxc)[-1]
+            locals()[f'psi1_{fn}'] = f(field_in.copy(), it, dt, uf, dxc)[-1]
             locals()[f'psi2_{fn}'] = f(psi2_in.copy(), it, dt, uf, dxc)[-1]
         
         # Plotting and saving snapshots
         # Initial condition 1
-        plt.plot(xc, psi1_in, label='Initial', linestyle='-', color='grey')
-        plt.plot(xc, psi1_an, label='Analytic', linestyle='-', color='k')
+        plt.plot(xc, field_in, label='Initial', linestyle='-', color='grey')
+        plt.plot(xc, analytic, label='Analytic', linestyle='-', color='k')
         plt.plot(xc, locals()[f'psi1_{fn}'], label=f'{fn}', marker='x', linestyle='-', color='blue')
         ut.design_figure(f'{plotdir}Psi1_{fn}_{it}.png', f'$\\Psi_1$ at t={it*dt:.2f}', \
                         'x', '$\\Psi_1$', True, -0.1, 1.1)
@@ -98,5 +98,38 @@ def produce_standalone_animation():
     niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
     
     make_animation('hybrid_MPDATA_BTBS1J', 'hybrid_MPDATA_BTBS1J_notkeptstable', nt, dt, uf, dxc, xc, xmax, uc)
+
+def create_animation_from_data(filebasename, field, analytic, nt, dt, xc, animdir):
+    """This function creates an animation from a given data file of a single scheme. The input is a 2D field of a single scheme (shape = 1d time x 1d space), analytic solution (shape = 1d time x 1d space), nt, dx in the centers (dxc; shape 1d space) and ....
+    This is a function that is to be called from other files, not from produce_standalone_animation()."""
+
+    # Directory to put animation and subdirectory for plots in
+    plotdir = animdir + 'plots_' + filebasename + '/'
+    os.mkdir(plotdir)
+
+    # Calculate initial functions
+    field_in = analytic[0]
+
+    # Timestepping loop to create plots and save filenames
+    filenames, images = [], []
+    for it in range(nt+1):              
+        # Plot each timestep in a figure and save in the plots subdirectory
+        plt.plot(xc, field_in, label='Initial', linestyle='-', color='grey')
+        plt.plot(xc, analytic[it], label='Analytic', linestyle='-', color='k')
+        plt.plot(xc, field[it], label='Numerical soln', marker='x', linestyle='-', color='blue')
+        ut.design_figure(f'{plotdir}field_{it}.png', '', f'{filebasename} at t={it*dt:.2f}', \
+                        'x', '$field$', True, -0.5, 1.5)
+        filenames.append(f'{plotdir}field_{it}.png')
+
+    # Create animation from plots in the plots subdirectory
+    for filename in filenames:
+        images.append(imageio.imread(filename))
+    anim_filename = f'{animdir}{filebasename}.gif'
+    imageio.mimsave(anim_filename, images, duration=500)
+
+    # Remove .png files used to create the animation
+    for filename in filenames:
+        os.remove(filename)
+    os.rmdir(plotdir)
 
 if __name__ == "__main__": produce_standalone_animation()
