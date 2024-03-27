@@ -117,7 +117,7 @@ def Upwind(init, nt, dt, uf, dxc): # FTBS when u >= 0, FTFS when u < 0
 
     # Time stepping
     for it in range(nt):
-        spatial = np.where(cc >= 0.0, np.roll(uf,-1)*field[it] - uf*np.roll(field[it],1), np.roll(uf*field[it],-1) - uf*field[it]) # BS when u >= 0, FS when u < 0
+        spatial = np.where(cc >= 0., np.roll(uf,-1)*field[it] - uf*np.roll(field[it],1), np.roll(uf*field[it],-1) - uf*field[it]) # BS when u >= 0, FS when u < 0
         field[it+1] = field[it] - dt*spatial/dxc
     
     return field
@@ -561,7 +561,7 @@ def MPDATA(init, nt, dt, uf, dxc, eps=1e-16):
     field = np.zeros((nt+1, len(init)))
     field[0] = init.copy()
 
-    dxf = 0.5*(dxc + np.roll(dxc,-1)) # !!! check if this or 0.5*(dxc + np.roll(dxc,1))
+    dxf = 0.5*(dxc + np.roll(dxc,1))
 
     # Time stepping
     for it in range(nt):
@@ -574,6 +574,47 @@ def MPDATA(init, nt, dt, uf, dxc, eps=1e-16):
         A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps) # A[i] is at i-1/2
         V = A*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*uf) # Same index shift as for A
         flx_SP = flux(np.roll(field_FP,1), field_FP, V)
+        field[it+1] = field_FP - dt*(np.roll(flx_SP,-1) - flx_SP)/dxc
+
+    return field
+
+
+def MPDATA_gauge(init, nt, dt, uf, dxc, eps=1e-16):
+    """
+    This functions implements the MPDATA scheme without a gauge, assuming a 
+    constant velocity (input through the Courant number) and a 
+    periodic spatial domain.
+    Reference (1): P. Smolarkiewicz and L. Margolin. MPDATA: A finite-difference 
+    solver for geophysical flows. J. Comput. Phys., 140:459-480, 1998.
+    --- Input ---
+    init : array of floats, initial field to advect
+    nt      : integer, total number of time steps to take
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
+    eps     : float, optional. Small number to avoid division by zero.
+    --- Output --- 
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
+    """
+
+    # Initialisation
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
+
+    dxf = 0.5*(dxc + np.roll(dxc,1))
+
+    # Time stepping
+    for it in range(nt):
+        # First pass  
+        flx_FP = flux(np.roll(field[it],1), field[it], uf) # flx_FP[i] is at i-1/2
+        field_FP = field[it] - dt*(np.roll(flx_FP,-1) - flx_FP)/dxc
+
+        # Second pass
+        # Infinite gauge: multiply the pseudovelocity by 0.5 and do not divide by (field_FP + np.roll(field_FP,1) + eps), and set the first two arguments in flux() to 1.
+        dx_up = 0.5*flux(np.roll(dxc,1), dxc, np.roll(uf,1)/abs(np.roll(uf,1)))
+        V = 0.5*(field_FP - np.roll(field_FP,1))*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*uf)   # V[i] is at i-1/2
+        flx_SP = flux(1., 1., V)
         field[it+1] = field_FP - dt*(np.roll(flx_SP,-1) - flx_SP)/dxc
 
     return field
@@ -603,12 +644,12 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
     field[0] = init.copy()
     field_FP = np.zeros(len(init))
 
-    dxf = 0.5*(dxc + np.roll(dxc,-1)) # !!! check if this or 0.5*(dxc + np.roll(dxc,1))
+    dxf = 0.5*(dxc + np.roll(dxc,1)) # dxf[i] is at i-1/2
 
     # Criterion explicit/implicit
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
     if do_beta == 'switch':
-        beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit 
+        beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1.)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit 
     elif do_beta == 'blend':
         beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
     else:
@@ -621,8 +662,9 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
         # First pass
         flx_FP = flux(np.roll(field[it],1), field[it], uf) # flx_FP[i] is at i-1/2 # upwind
         rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
+        # Determine whether implicit or explicit (or blend)
         for i in range(len(cc)):
-            if beta[i] != 0.0 or np.roll(beta,-1)[i] != 0.0: # BTBS1J
+            if beta[i] != 0. or np.roll(beta,-1)[i] != 0.: # BTBS1J
                 aii = 1 + np.roll(beta*uf,-1)[i]*dt/dxc[i]
                 aiim1 = -dt*beta[i]*uf[i]/dxc[i]
                 field_FP[i] = (rhs[i] - aiim1*np.roll(field[it],1)[i])/aii            
@@ -674,7 +716,7 @@ def hybrid_Upwind_BTBS1J(init, nt, dt, uf, dxc, do_beta='switch'):
         rhs = field[it] - dt*(np.roll((1. - beta)*flx,-1) - (1. - beta)*flx)/dxc
         # for ... # include number of iterations here!!!
         for i in range(len(cc)):
-            if beta[i] != 0.0 or np.roll(beta,-1)[i] != 0.0: # BTBS1J
+            if beta[i] != 0. or np.roll(beta,-1)[i] != 0.: # BTBS1J
                 aii = 1 + np.roll(beta*uf,-1)[i]*dt/dxc[i]
                 aiim1 = -dt*beta[i]*uf[i]/dxc[i]
                 field[it+1,i] = (rhs[i] - aiim1*np.roll(field[it],1)[i])/aii
@@ -720,7 +762,7 @@ def hybrid_Upwind_Upwind1J(init, nt, dt, uf, dxc, do_beta='switch'):
         flx = flux(np.roll(field[it],1), field[it], uf) # flx[i] is at i-1/2
         rhs = field[it] - dt*(np.roll((1. - beta)*flx,-1) - (1. - beta)*flx)/dxc
         for i in range(len(cc)):
-            if beta[i] != 0.0 or np.roll(beta,-1)[i] != 0.0:
+            if beta[i] != 0. or np.roll(beta,-1)[i] != 0.:
                 aii = 1. + dt*(np.roll(beta*ufp,-1)[i] - beta[i]*ufm[i])/dxc[i]
                 aiim1 = -dt*beta[i]*ufp[i]/dxc[i]
                 aiip1 = dt*np.roll(beta*ufm,-1)[i]/dxc[i]

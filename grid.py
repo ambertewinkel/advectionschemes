@@ -19,7 +19,7 @@ def coords_stretching(xmax, imax, i_maxC=0., dxcmin=0.):
     xf       : array of floats, spatial points of cell faces
     dxc      : array of floats, grid spacing between cell faces (dxc[i] = xf[i+1] - xf[i]), i.e., grid box size
     xc       : array of floats, spatial points of cell centers (xc[i+1] = 0.5*(xf[i+1] + xf[i]))
-    dxf      : array of floats, grid spacing between cell centers (dxf[i] = xc[i+1] - xc[i])
+    dxf      : array of floats, grid spacing between cell centers (dxf[i] = xc[i] - xc[i-1])
     """
     # Initialisation
     xf, dxc, xc, dxf = np.zeros(imax), np.zeros(imax), np.zeros(imax), np.zeros(imax)
@@ -34,14 +34,7 @@ def coords_stretching(xmax, imax, i_maxC=0., dxcmin=0.):
         xf[i+1] = xf[i] + dxc[i]
     xc = 0.5*(np.roll(xf,-1) + xf)
     xc[-1] = 0.5*(xmax + xf[-1]) # periodic
-    dxf = 0.5*(dxc + np.roll(dxc,-1))
-   
-
-    # !!! working here
-    #dxf[i] = xc[i+1] - xc[i]
-    #dxf[i] = 0.5*(xf[i+1] + xf[i] - xf[i] - xf[i-1])
-    #dxf[i] = 0.5*(dxc[i] + dxc[i-1])
-    #dxf = 0.5*(dxc + np.roll(dxc,1)) # this is the opposite as to what i have defiend above? check how i have defined the grid
+    dxf = 0.5*(dxc + np.roll(dxc,1))
 
     return  xf, dxc, xc, dxf
 

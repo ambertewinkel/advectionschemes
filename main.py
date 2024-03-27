@@ -25,10 +25,10 @@ def main():
     """
 
     # Input booleans
-    schemenames = ['BTBS_Jacobi', 'hybrid_MPDATA_BTBS1J'] #['hybrid_Upwind_BTBS1J', 'hybrid_Upwind_Upwind1J']
+    schemenames = ['BTBS_Jacobi','hybrid_Upwind_BTBS1J', 'hybrid_Upwind_Upwind1J'] #['hybrid_Upwind_BTBS1J', 'hybrid_Upwind_Upwind1J']
     predefined_output_file = True
     keep_model_stable = False
-    create_animation = True
+    create_animation = False
     check_orderofconvergence = True
     do_beta = 'switch'          # 'switch' or 'blend'
     coords = 'uniform'       # 'uniform' or 'stretching'
@@ -144,9 +144,9 @@ def main():
     ##########################
     
     # Plotting setup
-    markers = ['x', '+', '+', '', '', '']
+    markers = ['o', 'x', '+', '', '', '']
     linestyle = ['-','-','-', '--', '-', '--']
-    colors = ['red', 'blue', 'orange', 'red', 'lightblue', 'gray']
+    colors = ['red', 'blue', 'orange', 'green', 'lightblue', 'gray']
 
     # Psi 1: Plotting the final time step for each scheme in the same plot
     plt.plot(xc, psi1_in, label='Initial', linestyle='-', color='grey')
