@@ -25,11 +25,11 @@ def main():
     """
 
     # Input booleans
-    schemenames = ['BTBS_Jacobi','hybrid_Upwind_BTBS1J', 'hybrid_Upwind_Upwind1J'] #['hybrid_Upwind_BTBS1J', 'hybrid_Upwind_Upwind1J']
+    schemenames = ['Upwind', 'BTBS_Jacobi', 'hybrid_MPDATA_BTBS']#, 'hybrid_Upwind_BTBS1J'] #['hybrid_Upwind_BTBS1J', 'hybrid_Upwind_Upwind1J']
     predefined_output_file = True
     keep_model_stable = False
     create_animation = False
-    check_orderofconvergence = True
+    check_orderofconvergence = False
     do_beta = 'switch'          # 'switch' or 'blend'
     coords = 'uniform'       # 'uniform' or 'stretching'
     niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
@@ -44,7 +44,7 @@ def main():
 
     # Initial conditions
     dt = 0.1                    # time step
-    nt = 100                    # number of time steps
+    nt = 5                    # number of time steps
     nx = 40                     # number of points in space
     xmax = 2.0                  # physical domain parameters
     uconstant = 1.0             # constant velocity
