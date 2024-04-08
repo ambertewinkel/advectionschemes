@@ -798,7 +798,7 @@ def hybrid_MPDATA_BTBS(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
     else:
         print('Error: do_beta must be either "switch" or "blend"')
 
-    beta[:] = 1.
+    #beta[:] = 1.
     xi = np.maximum(1 - 2*beta, np.zeros(len(cc))) # xi[i] is at i-1/2
 
     # Define the matrix to solve
@@ -827,7 +827,9 @@ def hybrid_MPDATA_BTBS(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
         #A = (field[it] - np.roll(field[it],1))\
         #    /(field[it] + np.roll(field[it],1) + eps)
         # Same index shift as for A
-        V = A*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*xi*uf) 
+        V = A*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*xi*uf)
+        # Smooth V
+        V = 0.5*V + 0.5*(np.roll(V,1) + np.roll(V,-1))
         #ccV = 0.5*dt*(np.roll(V,-1) + V)/dxc
         c = dt*V/dxf
         print('\n\nfield[it] = ', field[it])
@@ -879,6 +881,7 @@ def hybrid_MPDATA_BTBS_fieldFP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-1
     else:
         print('Error: do_beta must be either "switch" or "blend"')
 
+    #beta[:] = 1.
     xi = np.maximum(1 - 2*beta, np.zeros(len(cc))) # xi[i] is at i-1/2
 
     # Define the matrix to solve

@@ -32,7 +32,7 @@ def main():
     check_orderofconvergence = False
     do_beta = 'blend'          # 'switch' or 'blend'
     coords = 'uniform'       # 'uniform' or 'stretching'
-    niter = 50                   # number of iterations (for Jacobi or Gauss-Seidel)
+    niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
     # !!! implement criterion for convergence with Jacobi and Gauss-Seidel iterations?
 
     # Saving the reference of the standard output
@@ -47,7 +47,7 @@ def main():
     nt = 1                    # number of time steps
     nx = 10                     # number of points in space
     xmax = 1.0                  # physical domain parameters
-    uconstant = 2.0             # constant velocity
+    uconstant = 2             # constant velocity
 
     # Setup output
     str_settings = '_t'+ f"{nt*dt:.2f}" + '_ks' + str(keep_model_stable)[0] + '_b' + do_beta[0] + '_g' + coords[0]
