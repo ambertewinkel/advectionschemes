@@ -790,12 +790,15 @@ def hybrid_MPDATA_BTBS(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
     # Criterion explicit/implicit
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
     if do_beta == 'switch':
-        beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1.)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit 
+        # beta[i] is at i-1/2 # 0: explicit, 1: implicit 
+        beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1.))
     elif do_beta == 'blend':
-        beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
+        # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
+        beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)])
     else:
         print('Error: do_beta must be either "switch" or "blend"')
 
+    beta[:] = 1.
     xi = np.maximum(1 - 2*beta, np.zeros(len(cc))) # xi[i] is at i-1/2
 
     # Define the matrix to solve
@@ -807,22 +810,36 @@ def hybrid_MPDATA_BTBS(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
     # Time stepping
     for it in range(nt):
         # First pass
-        flx_FP = flux(np.roll(field[it],1), field[it], uf) # flx_FP[i] is at i-1/2 # upwind
+        # flx_FP[i] is at i-1/2 # upwind
+        flx_FP = flux(np.roll(field[it],1), field[it], uf)
         rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
 
         # Temp check for converged BTBS -- assuming fully implicit
         field_FP = np.linalg.solve(M, rhs)
-        #field[it+1] = field_FP.copy() # with this instead of the 2nd pass, it indeed behaves like btbs converged
+        # with this instead of the 2nd pass, it indeed behaves like btbs converged
+        #field[it+1] = field_FP.copy() 
 
         # Second pass
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, np.roll(uf,1)/abs(np.roll(uf,1)))
-        A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps) # A[i] is at i-1/2
-        V = A*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*xi*uf) # Same index shift as for A
+        # A[i] is at i-1/2
+        A = (field_FP - np.roll(field_FP,1))\
+            /(field_FP + np.roll(field_FP,1) + eps)
+        #A = (field[it] - np.roll(field[it],1))\
+        #    /(field[it] + np.roll(field[it],1) + eps)
+        # Same index shift as for A
+        V = A*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*xi*uf) 
         #ccV = 0.5*dt*(np.roll(V,-1) + V)/dxc
+        c = dt*V/dxf
+        print('\n\nfield[it] = ', field[it])
+        print('field_FP = ', field_FP)
+        print('A = ', A)
+        print('V = ', V)
+        print('c = ', c)
         #for c in ccV:
         #    if abs(c) > 1.: print('Courant number V at timestep', it, ':', c)
         flx_SP = flux(np.roll(field_FP,1), field_FP, V)
-        field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc                
+        field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc
+        print('field[it+1] = ', field[it+1])
 
     return field
 

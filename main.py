@@ -25,14 +25,14 @@ def main():
     """
 
     # Input booleans
-    schemenames = ['BTBS_Jacobi', 'hybrid_MPDATA_BTBS', 'hybrid_MPDATA_BTBS_fieldFP']#, 'hybrid_Upwind_BTBS1J'] #['hybrid_Upwind_BTBS1J', 'hybrid_Upwind_Upwind1J']
+    schemenames = ['hybrid_MPDATA_BTBS', 'hybrid_MPDATA_BTBS_fieldFP']#, 'hybrid_Upwind_BTBS1J'] #['hybrid_Upwind_BTBS1J', 'hybrid_Upwind_Upwind1J']
     predefined_output_file = True
     keep_model_stable = False
     create_animation = True
     check_orderofconvergence = False
     do_beta = 'blend'          # 'switch' or 'blend'
     coords = 'uniform'       # 'uniform' or 'stretching'
-    niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
+    niter = 50                   # number of iterations (for Jacobi or Gauss-Seidel)
     # !!! implement criterion for convergence with Jacobi and Gauss-Seidel iterations?
 
     # Saving the reference of the standard output
@@ -44,10 +44,10 @@ def main():
 
     # Initial conditions
     dt = 0.1                    # time step
-    nt = 2                    # number of time steps
-    nx = 40                     # number of points in space
-    xmax = 2.0                  # physical domain parameters
-    uconstant = 1.0             # constant velocity
+    nt = 1                    # number of time steps
+    nx = 10                     # number of points in space
+    xmax = 1.0                  # physical domain parameters
+    uconstant = 2.0             # constant velocity
 
     # Setup output
     str_settings = '_t'+ f"{nt*dt:.2f}" + '_ks' + str(keep_model_stable)[0] + '_b' + do_beta[0] + '_g' + coords[0]
@@ -160,7 +160,7 @@ def main():
         else: 
             slabel = s
         plt.plot(xc, locals()[f'psi1_{s}_reg'][nt], label=f'{slabel}', marker=markers[si], linestyle=linestyle[si], color=colors[si])
-    ut.design_figure(plotname1 + '.png', outputdir, f'$\\Psi_1$ at t={nt*dt}', \
+    ut.design_figure(plotname1 + '.pdf', outputdir, f'$\\Psi_1$ at t={nt*dt}', \
                      'x', '$\\Psi_1$', True, -1.5, 1.5)
 
     # Psi 2: Plotting the final time step for each scheme in the same plot
@@ -173,7 +173,7 @@ def main():
         else: 
             slabel = s
         plt.plot(xc, locals()[f'psi2_{s}_reg'][nt], label=f'{slabel}', marker=markers[si], linestyle=linestyle[si], color=colors[si])
-    ut.design_figure(plotname2 + '.png', outputdir, f'$\\Psi_2$ at t={nt*dt}', \
+    ut.design_figure(plotname2 + '.pdf', outputdir, f'$\\Psi_2$ at t={nt*dt}', \
                      'x', '$\\Psi_2$', True,  -1.5, 1.5)
     plt.close()
 
@@ -219,11 +219,11 @@ def main():
         print()
         for s in schemenames:
             locals()[f'csv_psi1_{s}'] = epm.check_conservation(psi1_in, locals()[f'psi1_{s}_reg'][nt], dxc)
-            print(f'{s} - Mass gained: {locals()[f'csv_psi1_{s}']:.2E}')
+            print(f"{s} - Mass gained: {locals()[f'csv_psi1_{s}']:.2E}")
             locals()[f'bdn_psi1_{s}'] = epm.check_boundedness(psi1_in, locals()[f'psi1_{s}_reg'][nt])
-            print(f'{s} - Boundedness: {locals()[f'bdn_psi1_{s}']}')         
+            print(f"{s} - Boundedness: {locals()[f'bdn_psi1_{s}']}")         
             locals()[f'TV_psi1_{s}'] = epm.totalvariation(locals()[f'psi1_{s}_reg'][nt])
-            print(f'{s} - Variation: {locals()[f'TV_psi1_{s}']:.2E}')
+            print(f"{s} - Variation: {locals()[f'TV_psi1_{s}']:.2E}")
             print()
 
         # Conservation, boundedness and total variation Psi2
@@ -237,11 +237,11 @@ def main():
         print()
         for s in schemenames:
             locals()[f'csv_psi2_{s}'] = epm.check_conservation(psi2_in, locals()[f'psi2_{s}_reg'][nt], dxc)
-            print(f'{s} - Mass gained: {locals()[f'csv_psi2_{s}']:.2E}')
+            print(f"{s} - Mass gained: {locals()[f'csv_psi2_{s}']:.2E}")
             locals()[f'bdn_psi2_{s}'] = epm.check_boundedness(psi2_in, locals()[f'psi2_{s}_reg'][nt])
-            print(f'{s} - Boundedness: {locals()[f'bdn_psi2_{s}']}')
+            print(f"{s} - Boundedness: {locals()[f'bdn_psi2_{s}']}")
             locals()[f'TV_psi2_{s}'] = epm.totalvariation(locals()[f'psi2_{s}_reg'][nt])
-            print(f'{s} - Variation: {locals()[f'TV_psi2_{s}']:.2E}')
+            print(f"{s} - Variation: {locals()[f'TV_psi2_{s}']:.2E}")
             print()    
 
         ##########################
@@ -319,7 +319,7 @@ def main():
         ax7.legend()
 
         # Save plot for results (mass, min/max, RMSE) over time
-        plt.savefig(outputdir + f'epm_over_time_' + str_schemenames_settings + '.png')
+        plt.savefig(outputdir + f'epm_over_time_' + str_schemenames_settings + '.pdf')
         plt.tight_layout()
         plt.close()
 
@@ -357,7 +357,7 @@ def main():
             ax1.legend()
 
             # Save plot of error over grid spacing
-            plt.savefig(outputdir + f'RMSE_over_dx_' + str_schemenames_settings + '.png')
+            plt.savefig(outputdir + f'RMSE_over_dx_' + str_schemenames_settings + '.pdf')
             plt.tight_layout()
             plt.close()
 

@@ -19,7 +19,7 @@ def analytic1(x, xmax, u=0., t=0.):
     --- Output ---
     psi : 1D array of floats, result from function at the points defined in x
     """
-    a, b = 0.8, 1.2 # a = left boundary of wave, b = right boundary of wave
+    a, b = 0.2, 0.5 # a = left boundary of wave, b = right boundary of wave
     psi = np.zeros(len(x))
     x0 = (x - u*t)%xmax
     for i in range(len(x)):
@@ -46,7 +46,7 @@ def analytic2(x, xmax, u=0., t=0.):
     --- Output ---
     psi : 1D array of floats, result from function at the points defined in x
     """    
-    a, b = 0.8, 1.2 # a = left boundary of wave, b = right boundary of wave
+    a, b = 0.2, 0.5 # a = left boundary of wave, b = right boundary of wave
     psi = np.zeros(len(x))
     x0 = (x - u*t)%xmax
     for i in range(len(x)):
