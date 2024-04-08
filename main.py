@@ -25,13 +25,13 @@ def main():
     """
 
     # Input booleans
-    schemenames = ['BTBS_Jacobi','hybrid_Upwind_BTBS1J', 'hybrid_Upwind_Upwind1J'] #['hybrid_Upwind_BTBS1J', 'hybrid_Upwind_Upwind1J']
+    schemenames = ['BTBS_Jacobi','hybrid_MPDATA_BTBS1J', 'MPDATA'] #['hybrid_Upwind_BTBS1J', 'hybrid_Upwind_Upwind1J']
     predefined_output_file = True
-    keep_model_stable = False
+    keep_model_stable = False   # limits the Courant number to 1 by limiting the grid spacing
     create_animation = False
-    check_orderofconvergence = True
+    check_orderofconvergence = False
     do_beta = 'switch'          # 'switch' or 'blend'
-    coords = 'uniform'       # 'uniform' or 'stretching'
+    coords = 'uniform'          # 'uniform' or 'stretching'
     niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
     # !!! implement criterion for convergence with Jacobi and Gauss-Seidel iterations?
 
