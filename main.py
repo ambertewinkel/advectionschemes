@@ -25,12 +25,12 @@ def main():
     """
 
     # Input booleans
-    schemenames = ['Upwind', 'BTBS_Jacobi', 'hybrid_MPDATA_BTBS']#, 'hybrid_Upwind_BTBS1J'] #['hybrid_Upwind_BTBS1J', 'hybrid_Upwind_Upwind1J']
+    schemenames = ['BTBS_Jacobi', 'hybrid_MPDATA_BTBS', 'hybrid_MPDATA_BTBS_fieldFP']#, 'hybrid_Upwind_BTBS1J'] #['hybrid_Upwind_BTBS1J', 'hybrid_Upwind_Upwind1J']
     predefined_output_file = True
     keep_model_stable = False
-    create_animation = False
+    create_animation = True
     check_orderofconvergence = False
-    do_beta = 'switch'          # 'switch' or 'blend'
+    do_beta = 'blend'          # 'switch' or 'blend'
     coords = 'uniform'       # 'uniform' or 'stretching'
     niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
     # !!! implement criterion for convergence with Jacobi and Gauss-Seidel iterations?
@@ -44,14 +44,14 @@ def main():
 
     # Initial conditions
     dt = 0.1                    # time step
-    nt = 5                    # number of time steps
+    nt = 2                    # number of time steps
     nx = 40                     # number of points in space
     xmax = 2.0                  # physical domain parameters
     uconstant = 1.0             # constant velocity
 
     # Setup output
     str_settings = '_t'+ f"{nt*dt:.2f}" + '_ks' + str(keep_model_stable)[0] + '_b' + do_beta[0] + '_g' + coords[0]
-    str_schemenames_settings = "-".join(schemenames) + str_settings
+    str_schemenames_settings = '_'#"-".join(schemenames) + str_settings
     filebasename = [s  + str_settings for s in schemenames] # name of the directory to save the animation and its corresponding plots in
             # !!! To do: when option to include niter in hybrid scheme, add niter to the filebasename
     outputdir = './output/' + str_schemenames_settings + '/'
@@ -392,14 +392,17 @@ def main():
         #### Create animations ####
         ###########################
     
+        fields1, fields2 = [], []
         # Create animation from the data
         if create_animation == True:
             animdir = outputdir + 'animations/'
             if not os.path.exists(animdir):
                 os.mkdir(animdir)
             for s in schemenames:
-                anim.create_animation_from_data('Psi1_' + filebasename[schemenames.index(s)], locals()[f'psi1_{s}_reg'], locals()['psi1_an_reg'], nt, dt, xc, animdir)
-                anim.create_animation_from_data('Psi2_' + filebasename[schemenames.index(s)], locals()[f'psi2_{s}_reg'], locals()['psi2_an_reg'], nt, dt, xc, animdir)
+                fields1.append(locals()[f'psi1_{s}_reg'])
+                fields2.append(locals()[f'psi2_{s}_reg'])
+            anim.create_animation_from_data('Psi1', fields1, len(schemenames), schemenames, locals()['psi1_an_reg'], nt, dt, xc, animdir, colors)
+            anim.create_animation_from_data('Psi2', fields2, len(schemenames), schemenames, locals()['psi2_an_reg'], nt, dt, xc, animdir, colors)
 
     # Reset the standard output
     sys.stdout = original_stdout 

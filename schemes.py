@@ -573,10 +573,10 @@ def MPDATA(init, nt, dt, uf, dxc, eps=1e-16):
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, np.roll(uf,1)/abs(np.roll(uf,1)))
         A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps) # A[i] is at i-1/2
         V = A*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*uf) # Same index shift as for A
-        ccV = 0.5*dt*(np.roll(V,-1) + V)/dxc
-        for c in ccV:
-            if abs(c) > 1.: 
-                print('Courant number V at timestep', it, ':', c)
+        #ccV = 0.5*dt*(np.roll(V,-1) + V)/dxc
+        #for c in ccV:
+        #    if abs(c) > 1.: 
+        #        print('Courant number V at timestep', it, ':', c)
 
         flx_SP = flux(np.roll(field_FP,1), field_FP, V)
         field[it+1] = field_FP - dt*(np.roll(flx_SP,-1) - flx_SP)/dxc
@@ -661,8 +661,8 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
         print('Error: do_beta must be either "switch" or "blend"')
 
     xi = np.maximum(1 - 2*beta, np.zeros(len(cc))) # xi[i] is at i-1/2
-    print('beta is : ', beta)
-    print('xi is : ', xi)
+    #print('beta is : ', beta)
+    #print('xi is : ', xi)
 
     # Time stepping
     for it in range(nt):
@@ -683,12 +683,82 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, np.roll(uf,1)/abs(np.roll(uf,1)))
         A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps) # A[i] is at i-1/2
         V = A*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*xi*uf) # Same index shift as for A
-        ccV = 0.5*dt*(np.roll(V,-1) + V)/dxc
-        print('Courant number V at iteration', it, ':', ccV)
+        #ccV = 0.5*dt*(np.roll(V,-1) + V)/dxc
+        #print('Courant number V at iteration', it, ':', ccV)
         flx_SP = flux(np.roll(field_FP,1), field_FP, V)
         field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc                
 
     return field
+
+
+def hybrid_MPDATA_BTBS1J_fieldFP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
+    """
+    This functions implements 
+    Explicit: MPDATA scheme (without a gauge, assuming a 
+    constant velocity and a 
+    periodic spatial domain)
+    Implicit: BTBS with 1 Jacobi iteration
+    Reference (1): P. Smolarkiewicz and L. Margolin. MPDATA: A finite-difference 
+    solver for geophysical flows. J. Comput. Phys., 140:459-480, 1998.
+    --- Input ---
+    init : array of floats, initial field to advect
+    nt      : integer, total number of time steps to take
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
+    eps     : float, optional. Small number to avoid division by zero.
+    --- Output --- 
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
+    """
+    # Initialisation
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
+    field_FP = np.zeros(len(init))
+
+    dxf = 0.5*(dxc + np.roll(dxc,1)) # dxf[i] is at i-1/2
+
+    # Criterion explicit/implicit
+    cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
+    if do_beta == 'switch':
+        beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1.)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit 
+    elif do_beta == 'blend':
+        beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
+    else:
+        print('Error: do_beta must be either "switch" or "blend"')
+
+    xi = np.maximum(1 - 2*beta, np.zeros(len(cc))) # xi[i] is at i-1/2
+
+    field_FP_time = np.zeros((nt+1, len(init)))
+
+    # Time stepping
+    for it in range(nt):
+        # First pass
+        flx_FP = flux(np.roll(field[it],1), field[it], uf) # flx_FP[i] is at i-1/2 # upwind
+        rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
+        # Determine whether implicit or explicit (or blend)
+        for i in range(len(cc)):
+            if beta[i] != 0. or np.roll(beta,-1)[i] != 0.: # BTBS1J
+                aii = 1 + np.roll(beta*uf,-1)[i]*dt/dxc[i]
+                aiim1 = -dt*beta[i]*uf[i]/dxc[i]
+                field_FP[i] = (rhs[i] - aiim1*np.roll(field[it],1)[i])/aii            
+            else:
+                field_FP[i] = rhs[i]
+        
+        field_FP_time[it+1] = field_FP.copy()
+
+        #field[it+1] = field_FP.copy()
+        # Second pass
+        dx_up = 0.5*flux(np.roll(dxc,1), dxc, np.roll(uf,1)/abs(np.roll(uf,1)))
+        A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps) # A[i] is at i-1/2
+        V = A*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*xi*uf) # Same index shift as for A
+        #ccV = 0.5*dt*(np.roll(V,-1) + V)/dxc
+        #print('Courant number V at iteration', it, ':', ccV)
+        flx_SP = flux(np.roll(field_FP,1), field_FP, V)
+        field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc                
+
+    return field_FP_time
+
 
 def hybrid_MPDATA_BTBS(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
     """
@@ -727,55 +797,104 @@ def hybrid_MPDATA_BTBS(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
         print('Error: do_beta must be either "switch" or "blend"')
 
     xi = np.maximum(1 - 2*beta, np.zeros(len(cc))) # xi[i] is at i-1/2
-    print('beta is : ', beta)
-    print('xi is : ', xi)
+
+    # Define the matrix to solve
+    M = np.zeros((len(init), len(init)))
+    for i in range(len(init)): 
+        M[i,i] = 1 + dt*np.roll(beta*uf,-1)[i]/dxc[i]
+        M[i, i-1] = -dt*beta[i]*uf[i]/dxc[i]
+    
+    # Time stepping
+    for it in range(nt):
+        # First pass
+        flx_FP = flux(np.roll(field[it],1), field[it], uf) # flx_FP[i] is at i-1/2 # upwind
+        rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
+
+        # Temp check for converged BTBS -- assuming fully implicit
+        field_FP = np.linalg.solve(M, rhs)
+        #field[it+1] = field_FP.copy() # with this instead of the 2nd pass, it indeed behaves like btbs converged
+
+        # Second pass
+        dx_up = 0.5*flux(np.roll(dxc,1), dxc, np.roll(uf,1)/abs(np.roll(uf,1)))
+        A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps) # A[i] is at i-1/2
+        V = A*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*xi*uf) # Same index shift as for A
+        #ccV = 0.5*dt*(np.roll(V,-1) + V)/dxc
+        #for c in ccV:
+        #    if abs(c) > 1.: print('Courant number V at timestep', it, ':', c)
+        flx_SP = flux(np.roll(field_FP,1), field_FP, V)
+        field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc                
+
+    return field
+
+def hybrid_MPDATA_BTBS_fieldFP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
+    """
+    This functions implements 
+    Explicit: MPDATA scheme (without a gauge, assuming a 
+    constant velocity and a 
+    periodic spatial domain)
+    Implicit: BTBS with 1 Jacobi iteration
+    Reference (1): P. Smolarkiewicz and L. Margolin. MPDATA: A finite-difference 
+    solver for geophysical flows. J. Comput. Phys., 140:459-480, 1998.
+    --- Input ---
+    init : array of floats, initial field to advect
+    nt      : integer, total number of time steps to take
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
+    eps     : float, optional. Small number to avoid division by zero.
+    --- Output --- 
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
+    """
+    # Initialisation
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
+    field_FP = np.zeros(len(init))
+
+    dxf = 0.5*(dxc + np.roll(dxc,1)) # dxf[i] is at i-1/2
+
+    # Criterion explicit/implicit
+    cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
+    if do_beta == 'switch':
+        beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1.)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit 
+    elif do_beta == 'blend':
+        beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
+    else:
+        print('Error: do_beta must be either "switch" or "blend"')
+
+    xi = np.maximum(1 - 2*beta, np.zeros(len(cc))) # xi[i] is at i-1/2
+
+    # Define the matrix to solve
+    M = np.zeros((len(init), len(init)))
+    for i in range(len(init)): 
+        M[i,i] = 1 + dt*np.roll(beta*uf,-1)[i]/dxc[i]
+        M[i, i-1] = -dt*beta[i]*uf[i]/dxc[i]
+    
+    field_FP_time = np.zeros((nt+1, len(init)))
 
     # Time stepping
     for it in range(nt):
         # First pass
         flx_FP = flux(np.roll(field[it],1), field[it], uf) # flx_FP[i] is at i-1/2 # upwind
         rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
-        # Determine whether implicit or explicit (or blend)
 
         # Temp check for converged BTBS -- assuming fully implicit
-        # Define the matrix to solve
-        M = np.zeros((len(init), len(init)))
-        for i in range(len(init)): 
-            M[i,i] = 1 + dt*np.roll(beta*uf,-1)[i]/dxc[i]
-            M[i, i-1] = -dt*beta[i]*uf[i]/dxc[i]
-        # Time stepping
-        #for it in range(nt):
-        field_FP = np.linalg.solve(M, rhs)#field[it])
-
-        #for i in range(len(cc)):
-        #    if beta[i] != 0. or np.roll(beta,-1)[i] != 0.: # BTBS1J
-        #        aii = 1 + np.roll(beta*uf,-1)[i]*dt/dxc[i]
-        #        aiim1 = -dt*beta[i]*uf[i]/dxc[i]
-        #        field_FP[i] = (rhs[i] - aiim1*np.roll(field[it],1)[i])/aii            
-        #    else:
-        #        field_FP[i] = rhs[i]
-
-        #field[it+1] = field_FP.copy()
+        field_FP = np.linalg.solve(M, rhs)
+        #field[it+1] = field_FP.copy() # with this instead of the 2nd pass, it indeed behaves like btbs converged
+        
         # Second pass
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, np.roll(uf,1)/abs(np.roll(uf,1)))
         A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps) # A[i] is at i-1/2
         V = A*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*xi*uf) # Same index shift as for A
-        ccV = 0.5*dt*(np.roll(V,-1) + V)/dxc
-        print('Courant number V at iteration', it, ':', ccV)
+        #ccV = 0.5*dt*(np.roll(V,-1) + V)/dxc
+        #for c in ccV:
+        #    if abs(c) > 1.: print('Courant number V at timestep', it, ':', c)
         flx_SP = flux(np.roll(field_FP,1), field_FP, V)
         field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc                
+        
+        field_FP_time[it+1] = field_FP.copy()
 
-    return field
-
-
-
-
-
-
-
-
-
-
+    return field_FP_time
 
 def hybrid_Upwind_BTBS1J(init, nt, dt, uf, dxc, do_beta='switch'):
     """
