@@ -807,7 +807,7 @@ def hybrid_MPDATA_BTBS(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
         # Same index shift as for A
         V = A*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*chi*uf)
         # Smooth V
-        #V = 0.5*V + 0.5*(np.roll(V,1) + np.roll(V,-1))
+        #V = 0.5*V + 0.25*(np.roll(V,1) + np.roll(V,-1))
         c = dt*V/dxf
 
         #print('\n\nfield[it] = ', field[it])
