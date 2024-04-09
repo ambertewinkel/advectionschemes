@@ -25,14 +25,14 @@ def main():
     """
 
     # Input booleans
-    schemenames = ['BTBS_Jacobi', 'hybrid_MPDATA_BTBS', 'hybrid_MPDATA_BTBS_fieldFP']#, 'hybrid_Upwind_BTBS1J'] #['hybrid_Upwind_BTBS1J', 'hybrid_Upwind_Upwind1J']
+    schemenames = ['BTBS', 'hybrid_MPDATA_BTBS_retry', 'hybrid_MPDATA_BTBS_retry_fieldFP']#, 'hybrid_MPDATA_BTBS_retryHW']#, 'hybrid_Upwind_BTBS1J'] #['hybrid_Upwind_BTBS1J', 'hybrid_Upwind_Upwind1J']
     predefined_output_file = True
     keep_model_stable = False
     create_animation = True
     check_orderofconvergence = False
-    do_beta = 'blend'          # 'switch' or 'blend'
+    do_beta = 'switch'          # 'switch' or 'blend'
     coords = 'uniform'       # 'uniform' or 'stretching'
-    niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
+    niter = 10                   # number of iterations (for Jacobi or Gauss-Seidel)
     # !!! implement criterion for convergence with Jacobi and Gauss-Seidel iterations?
 
     # Saving the reference of the standard output
@@ -44,18 +44,23 @@ def main():
 
     # Initial conditions
     dt = 0.1                    # time step
-    nt = 2                    # number of time steps
+    nt = 10                    # number of time steps
     nx = 40                     # number of points in space
     xmax = 2.0                  # physical domain parameters
-    uconstant = 1.0             # constant velocity
+    uconstant = 0.6             # constant velocity
 
     # Setup output
     str_settings = '_t'+ f"{nt*dt:.2f}" + '_ks' + str(keep_model_stable)[0] + '_b' + do_beta[0] + '_g' + coords[0]
     str_schemenames_settings = '_'#"-".join(schemenames) + str_settings
     filebasename = [s  + str_settings for s in schemenames] # name of the directory to save the animation and its corresponding plots in
             # !!! To do: when option to include niter in hybrid scheme, add niter to the filebasename
+    
+    
     outputdir = './output/' + str_schemenames_settings + '/'
-    # Check if outputdir exists, if not create it, if so, !!! to do: if so give error message and choice to overwrite or n
+    # Check if ./output/ and outputdir exist, if not create them, if so, !!! to do: if so give error message and choice to overwrite or n
+    if not os.path.exists('./output/'):
+        os.mkdir('./output/')
+        print("Output folder created!")
     if not os.path.exists(outputdir):
         os.mkdir(outputdir)
         print("Folder %s created!" % outputdir)
@@ -219,11 +224,11 @@ def main():
         print()
         for s in schemenames:
             locals()[f'csv_psi1_{s}'] = epm.check_conservation(psi1_in, locals()[f'psi1_{s}_reg'][nt], dxc)
-            print(f'{s} - Mass gained: {locals()[f'csv_psi1_{s}']:.2E}')
+            print(f"{s} - Mass gained: {locals()[f'csv_psi1_{s}']:.2E}")
             locals()[f'bdn_psi1_{s}'] = epm.check_boundedness(psi1_in, locals()[f'psi1_{s}_reg'][nt])
-            print(f'{s} - Boundedness: {locals()[f'bdn_psi1_{s}']}')         
+            print(f"{s} - Boundedness: {locals()[f'bdn_psi1_{s}']}")         
             locals()[f'TV_psi1_{s}'] = epm.totalvariation(locals()[f'psi1_{s}_reg'][nt])
-            print(f'{s} - Variation: {locals()[f'TV_psi1_{s}']:.2E}')
+            print(f"{s} - Variation: {locals()[f'TV_psi1_{s}']:.2E}")
             print()
 
         # Conservation, boundedness and total variation Psi2
@@ -237,11 +242,11 @@ def main():
         print()
         for s in schemenames:
             locals()[f'csv_psi2_{s}'] = epm.check_conservation(psi2_in, locals()[f'psi2_{s}_reg'][nt], dxc)
-            print(f'{s} - Mass gained: {locals()[f'csv_psi2_{s}']:.2E}')
+            print(f"{s} - Mass gained: {locals()[f'csv_psi2_{s}']:.2E}")
             locals()[f'bdn_psi2_{s}'] = epm.check_boundedness(psi2_in, locals()[f'psi2_{s}_reg'][nt])
-            print(f'{s} - Boundedness: {locals()[f'bdn_psi2_{s}']}')
+            print(f"{s} - Boundedness: {locals()[f'bdn_psi2_{s}']}")
             locals()[f'TV_psi2_{s}'] = epm.totalvariation(locals()[f'psi2_{s}_reg'][nt])
-            print(f'{s} - Variation: {locals()[f'TV_psi2_{s}']:.2E}')
+            print(f"{s} - Variation: {locals()[f'TV_psi2_{s}']:.2E}")
             print()    
 
         ##########################
