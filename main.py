@@ -30,9 +30,9 @@ def main():
     keep_model_stable = False
     create_animation = True
     check_orderofconvergence = False
-    do_beta = 'blend'          # 'switch' or 'blend'
+    do_beta = 'switch'          # 'switch' or 'blend'
     coords = 'uniform'       # 'uniform' or 'stretching'
-    niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
+    niter = 10                   # number of iterations (for Jacobi or Gauss-Seidel)
     # !!! implement criterion for convergence with Jacobi and Gauss-Seidel iterations?
 
     # Saving the reference of the standard output
@@ -54,8 +54,13 @@ def main():
     str_schemenames_settings = '_'#"-".join(schemenames) + str_settings
     filebasename = [s  + str_settings for s in schemenames] # name of the directory to save the animation and its corresponding plots in
             # !!! To do: when option to include niter in hybrid scheme, add niter to the filebasename
+    
+    
     outputdir = './output/' + str_schemenames_settings + '/'
-    # Check if outputdir exists, if not create it, if so, !!! to do: if so give error message and choice to overwrite or n
+    # Check if ./output/ and outputdir exist, if not create them, if so, !!! to do: if so give error message and choice to overwrite or n
+    if not os.path.exists('./output/'):
+        os.mkdir('./output/')
+        print("Output folder created!")
     if not os.path.exists(outputdir):
         os.mkdir(outputdir)
         print("Folder %s created!" % outputdir)
