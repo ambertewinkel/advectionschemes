@@ -696,7 +696,7 @@ def hybrid_MPDATA_BTBS1J_fieldFP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e
     field = np.zeros((nt+1, len(init)))
     field[0] = init.copy()
     field_FP = np.zeros(len(init))
-    field_FP_time = np.zeros((nt+1, len(init)))
+    field_FP_time = np.zeros(nt+1, len(init))
 
     dxf = 0.5*(dxc + np.roll(dxc,1)) # dxf[i] is at i-1/2
 
@@ -716,7 +716,8 @@ def hybrid_MPDATA_BTBS1J_fieldFP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e
     # Time stepping
     for it in range(nt):
         # First pass
-        flx_FP = flux(np.roll(field[it],1), field[it], uf) # flx_FP[i] is at i-1/2 # upwind
+        # flx_FP[i] is at i-1/2 # upwind
+        flx_FP = flux(np.roll(field[it],1), field[it], uf)
         rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
         # Determine whether implicit or explicit (or blend)
         for i in range(len(cc)):
@@ -726,26 +727,26 @@ def hybrid_MPDATA_BTBS1J_fieldFP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e
                 field_FP[i] = (rhs[i] - aiim1*np.roll(field[it],1)[i])/aii            
             else:
                 field_FP[i] = rhs[i]
-        
-        field_FP_time[it+1] = field_FP.copy()
 
         # Second pass
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
-        A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps) # A[i] is at i-1/2
-        V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf) # Same index shift as for A
+        # A[i] is at i-1/2
+        A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps)
+        # Same index shift as for A
+        V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf)
         # Limit V
         corrCLimit = 0.5
         V = np.maximum(np.minimum(V, corrCLimit), -corrCLimit)
         flx_SP = flux(np.roll(field_FP,1), field_FP, V)
-        field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc                
+        field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc       
+        field_FP_time[it+1] = field_FP.copy()         
 
     return field_FP_time
 
-def hybrid_MPDATA_BTBS(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16): # !!! next thing to do: rename hybrid_MPDATA_BTBS to implicitMPDATA as it can always be used and is simply MPDATA with an implicit BTBS first pass. Though the first-pass should be made upwind implicit still to properly match the upwind explicit regular MPDATA.
+def implicitBTBSMPDATA(init, nt, dt, uf, dxc, eps=1e-16): # !!! next thing to do: Though the first-pass should be made upwind implicit still to properly match the upwind explicit regular MPDATA.
     """
-    This functions assumes that c is high enough for implicit to be needed. It implements 
-    First pass: BTBS with numpy direct elimination. This is the main difference with hybrid_MPDATA_BTBS1J above. 
-    Instead of a for loop with 1 Jacobi iteration, it uses numpy direct elimination on the whole spatial BTBS matrix.
+    Implements MPDATA with the first pass being implicit BTBS. 
+    First pass: BTBS with numpy direct elimination on the whole matrix.
     Second pass: MPDATA correction. For this:
     A is calculated with field_FP (first-pass) and not field[it]. The upwind direction is determined with the pseudovelocity V.
     V is limited to +-corrClimit. Another difference is the option (i.e., commented out) of smoothing V. 
@@ -760,26 +761,17 @@ def hybrid_MPDATA_BTBS(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16): # !!
     field   : 2D array of floats. Outputs each timestep of the field while advecting 
             the initial condition. Dimensions: nt+1 x length of init
     """
-       # Initialisation
+    # Initialisation
     field = np.zeros((nt+1, len(init)))
     field[0] = init.copy()
     field_FP = np.zeros(len(init))
 
     dxf = 0.5*(dxc + np.roll(dxc,1)) # dxf[i] is at i-1/2
 
-    # Criterion explicit/implicit
-    cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
-    if do_beta == 'switch':
-        # beta[i] is at i-1/2 # 0: explicit, 1: implicit 
-        beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1.))
-    elif do_beta == 'blend':
-        # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
-        beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)])
-    else:
-        print('Error: do_beta must be either "switch" or "blend"')
-
-    #beta[:] = 1.
-    chi = np.maximum(1 - 2*beta, np.zeros(len(cc))) # chi[i] is at i-1/2
+    # Set beta to use implicit everywhere
+    beta = np.ones(len(init))
+    # For stability, determine the amount of temporal MPDATA correction in V for use later
+    chi = np.maximum(1 - 2*beta, np.zeros(len(init))) # chi[i] is at i-1/2
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
@@ -793,7 +785,7 @@ def hybrid_MPDATA_BTBS(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16): # !!
         flx_FP = flux(np.roll(field[it],1), field[it], uf)
         rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
 
-        # First pass: converged BTBS -- assuming fully implicit (temporary!)
+        # First pass: converged BTBS
         field_FP = np.linalg.solve(M, rhs)
 
         # Second pass
@@ -813,9 +805,9 @@ def hybrid_MPDATA_BTBS(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16): # !!
 
     return field
 
-def hybrid_MPDATA_BTBS_fieldFP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
+def implicitBTBSMPDATA_fieldFP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
     """
-    This functions implements the above hybrid_MPDATA_BTBS scheme, but outputs the field_FP at each timestep.
+    This functions implements the above implicitBTBSMPDATA scheme, but outputs the field_FP at each timestep.
     """
     # Initialisation
     field = np.zeros((nt+1, len(init)))
@@ -825,19 +817,10 @@ def hybrid_MPDATA_BTBS_fieldFP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-1
 
     dxf = 0.5*(dxc + np.roll(dxc,1)) # dxf[i] is at i-1/2
 
-    # Criterion explicit/implicit
-    cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
-    if do_beta == 'switch':
-        # beta[i] is at i-1/2 # 0: explicit, 1: implicit 
-        beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1.))
-    elif do_beta == 'blend':
-        # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
-        beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)])
-    else:
-        print('Error: do_beta must be either "switch" or "blend"')
-
-    #beta[:] = 1.
-    chi = np.maximum(1 - 2*beta, np.zeros(len(cc))) # chi[i] is at i-1/2
+    # Set beta to use implicit everywhere
+    beta = np.ones(len(init))
+    # For stability, determine the amount of temporal MPDATA correction in V for use later
+    chi = np.maximum(1 - 2*beta, np.zeros(len(init))) # chi[i] is at i-1/2
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
@@ -851,7 +834,7 @@ def hybrid_MPDATA_BTBS_fieldFP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-1
         flx_FP = flux(np.roll(field[it],1), field[it], uf)
         rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
 
-        # First pass: converged BTBS -- assuming fully implicit (temporary!)
+        # First pass: converged BTBS
         field_FP = np.linalg.solve(M, rhs)
 
         # Second pass

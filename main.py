@@ -25,7 +25,7 @@ def main():
     """
 
     # Input booleans
-    schemenames = ['hybrid_MPDATA_BTBS', 'hybrid_MPDATA_BTBS_fieldFP']#, 'hybrid_Upwind_BTBS1J'] #['hybrid_Upwind_BTBS1J', 'hybrid_Upwind_Upwind1J']
+    schemenames = ['BTBS', 'implicitBTBSMPDATA', 'implicitBTBSMPDATA_fieldFP']
     predefined_output_file = True
     keep_model_stable = False
     create_animation = True
