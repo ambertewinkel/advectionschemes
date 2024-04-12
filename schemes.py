@@ -783,46 +783,27 @@ def hybrid_MPDATA_BTBS(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
     
     # Time stepping
     for it in range(nt):
-        # First pass
-        # flx_FP[i] is at i-1/2 # upwind
+        # First pass: upwind. flx_FP[i] is at i-1/2
         flx_FP = flux(np.roll(field[it],1), field[it], uf)
         rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
 
-        # First pass: converged BTBS -- assuming fully implicit
+        # First pass: converged BTBS -- assuming fully implicit (temporary!)
         field_FP = np.linalg.solve(M, rhs)
 
         # Second pass
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
-        # A[i] is at i-1/2
-        # Option 1: use the first-pass field
+        # Use the first-pass field for A. A[i] is at i-1/2
         A = (field_FP - np.roll(field_FP,1))\
-            /(field_FP + np.roll(field_FP,1) + eps) # should indeed be first-pass field
-        # Option 2: use the field at the start of each timestep
-        #A = (field[it] - np.roll(field[it],1))\
-        #    /(field[it] + np.roll(field[it],1) + eps)
+            /(field_FP + np.roll(field_FP,1) + eps)
 
-        # Same index shift as for A
+        # Calculate and limit the antidiffusive velocity V. Same index shift as for A
         V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf)
-
-        # Limit the antidiffusive velocity V
         corrCLimit = 0.5
         V = np.maximum(np.minimum(V, corrCLimit), -corrCLimit)
 
-        # Smooth V
-        #V = 0.5*V + 0.25*(np.roll(V,1) + np.roll(V,-1))
-        #c = dt*V/dxf
-
-        #print('\n\nfield[it] = ', field[it])
-        #print('field_FP = ', field_FP)
-        #print('A = ', A)
-        #print('V = ', V)
-        #print('c = ', c)
-        #for ci in c:
-        #    if abs(ci) > 1.: print('Courant number V at timestep', it, ':', ci)
-
-        flx_SP = flux(np.roll(field_FP,1), field_FP, V) # should indeed be pseudovelocity
+        # Calculate the flux and second-pass result
+        flx_SP = flux(np.roll(field_FP,1), field_FP, V)
         field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc
-        #print('field[it+1] = ', field[it+1])
 
     return field
 
@@ -860,46 +841,27 @@ def hybrid_MPDATA_BTBS_fieldFP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-1
     
     # Time stepping
     for it in range(nt):
-        # First pass
-        # flx_FP[i] is at i-1/2 # upwind
+        # First pass: upwind. flx_FP[i] is at i-1/2
         flx_FP = flux(np.roll(field[it],1), field[it], uf)
         rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
 
-        # First pass: converged BTBS -- assuming fully implicit
+        # First pass: converged BTBS -- assuming fully implicit (temporary!)
         field_FP = np.linalg.solve(M, rhs)
 
         # Second pass
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
-        # A[i] is at i-1/2
-        # Option 1: use the first-pass field
+        # Use the first-pass field for A. A[i] is at i-1/2
         A = (field_FP - np.roll(field_FP,1))\
-            /(field_FP + np.roll(field_FP,1) + eps) # should indeed be first-pass field
-        # Option 2: use the field at the start of each timestep
-        #A = (field[it] - np.roll(field[it],1))\
-        #    /(field[it] + np.roll(field[it],1) + eps)
+            /(field_FP + np.roll(field_FP,1) + eps)
 
-        # Same index shift as for A
+        # Calculate and limit the antidiffusive velocity V. Same index shift as for A
         V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf)
-
-        # Limit the antidiffusive velocity V
         corrCLimit = 0.5
         V = np.maximum(np.minimum(V, corrCLimit), -corrCLimit)
 
-        # Smooth V
-        #V = 0.5*V + 0.25*(np.roll(V,1) + np.roll(V,-1))
-        #c = dt*V/dxf
-
-        #print('\n\nfield[it] = ', field[it])
-        #print('field_FP = ', field_FP)
-        #print('A = ', A)
-        #print('V = ', V)
-        #print('c = ', c)
-        #for ci in c:
-        #    if abs(ci) > 1.: print('Courant number V at timestep', it, ':', ci)
-
-        flx_SP = flux(np.roll(field_FP,1), field_FP, V) # should indeed be pseudovelocity
+        # Calculate the flux and second-pass result
+        flx_SP = flux(np.roll(field_FP,1), field_FP, V)
         field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc
-        #print('field[it+1] = ', field[it+1])
         field_FP_time[it+1] = field_FP.copy()
 
     return field_FP_time
