@@ -675,11 +675,14 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
                 field_FP[i] = rhs[i]
 
         # Second pass
-        dx_up = 0.5*flux(np.roll(dxc,1), dxc, np.roll(uf,1)/abs(np.roll(uf,1)))
+        dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
         # A[i] is at i-1/2
         A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps)
         # Same index shift as for A
-        V = A*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*chi*uf)
+        V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf)
+        # Limit V
+        corrCLimit = 0.5
+        V = np.maximum(np.minimum(V, corrCLimit), -corrCLimit)
         flx_SP = flux(np.roll(field_FP,1), field_FP, V)
         field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc                
 
@@ -727,15 +730,18 @@ def hybrid_MPDATA_BTBS1J_fieldFP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e
         field_FP_time[it+1] = field_FP.copy()
 
         # Second pass
-        dx_up = 0.5*flux(np.roll(dxc,1), dxc, np.roll(uf,1)/abs(np.roll(uf,1)))
+        dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
         A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps) # A[i] is at i-1/2
-        V = A*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*chi*uf) # Same index shift as for A
+        V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf) # Same index shift as for A
+        # Limit V
+        corrCLimit = 0.5
+        V = np.maximum(np.minimum(V, corrCLimit), -corrCLimit)
         flx_SP = flux(np.roll(field_FP,1), field_FP, V)
         field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc                
 
     return field_FP_time
 
-def hybrid_MPDATA_BTBS(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
+def hybrid_MPDATA_BTBS(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16): # !!! next thing to do: rename hybrid_MPDATA_BTBS to implicitMPDATA as it can always be used and is simply MPDATA with an implicit BTBS first pass. Though the first-pass should be made upwind implicit still to properly match the upwind explicit regular MPDATA.
     """
     This functions assumes that c is high enough for implicit to be needed. It implements 
     First pass: BTBS with numpy direct elimination. This is the main difference with hybrid_MPDATA_BTBS1J above. 
