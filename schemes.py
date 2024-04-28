@@ -688,7 +688,7 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
 
     return field
 
-def hybrid_MPDATA_BTBS1J_fieldFP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
+def hybrid_MPDATA_BTBS1J_FP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
     """
     This functions implements the above hybrid_MPDATA_BTBS1J scheme, but outputs the field_FP at each timestep.
     """
@@ -743,7 +743,7 @@ def hybrid_MPDATA_BTBS1J_fieldFP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e
 
     return field_FP_time
 
-def implicitBTBSMPDATA(init, nt, dt, uf, dxc, eps=1e-16): # !!! next thing to do: Though the first-pass should be made upwind implicit still to properly match the upwind explicit regular MPDATA.
+def implBTBSMPDATA(init, nt, dt, uf, dxc, eps=1e-16): # !!! next thing to do: Though the first-pass should be made upwind implicit still to properly match the upwind explicit regular MPDATA.
     """
     Implements MPDATA with the first pass being implicit BTBS. 
     First pass: BTBS with numpy direct elimination on the whole matrix.
@@ -768,8 +768,19 @@ def implicitBTBSMPDATA(init, nt, dt, uf, dxc, eps=1e-16): # !!! next thing to do
 
     dxf = 0.5*(dxc + np.roll(dxc,1)) # dxf[i] is at i-1/2
 
+    do_beta = 'blend'
+    cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
+    if do_beta == 'switch':
+        beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1.)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit 
+    elif do_beta == 'blend':
+        beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
+    else:
+        print('Error: do_beta must be either "switch" or "blend"')
+    
+    print('beta:', beta)
+
     # Set beta to use implicit everywhere
-    beta = np.ones(len(init))
+    #beta = np.ones(len(init))
     # For stability, determine the amount of temporal MPDATA correction in V for use later
     chi = np.maximum(1 - 2*beta, np.zeros(len(init))) # chi[i] is at i-1/2
 
@@ -790,14 +801,21 @@ def implicitBTBSMPDATA(init, nt, dt, uf, dxc, eps=1e-16): # !!! next thing to do
 
         # Second pass
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
+        #dx_up = 0.5*flux(np.roll(dxc,1), dxc, np.roll(uf,1)/abs(np.roll(uf,1)))
         # Use the first-pass field for A. A[i] is at i-1/2
         A = (field_FP - np.roll(field_FP,1))\
             /(field_FP + np.roll(field_FP,1) + eps)
 
         # Calculate and limit the antidiffusive velocity V. Same index shift as for A
         V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf)
+        #V = A*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*chi*uf)
         corrCLimit = 0.5
         V = np.maximum(np.minimum(V, corrCLimit), -corrCLimit)
+       
+        # Smoothing
+        nSmooth = 1
+        for ismooth in range(nSmooth):
+            V = 0.5*V + 0.25*(np.roll(V,1) + np.roll(V,-1))
 
         # Calculate the flux and second-pass result
         flx_SP = flux(np.roll(field_FP,1), field_FP, V)
@@ -805,9 +823,9 @@ def implicitBTBSMPDATA(init, nt, dt, uf, dxc, eps=1e-16): # !!! next thing to do
 
     return field
 
-def implicitBTBSMPDATA_fieldFP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
+def implBTBSMPDATA_FP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
     """
-    This functions implements the above implicitBTBSMPDATA scheme, but outputs the field_FP at each timestep.
+    This functions implements the above implBTBSMPDATA scheme, but outputs the field_FP at each timestep.
     """
     # Initialisation
     field = np.zeros((nt+1, len(init)))
@@ -817,8 +835,19 @@ def implicitBTBSMPDATA_fieldFP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-1
 
     dxf = 0.5*(dxc + np.roll(dxc,1)) # dxf[i] is at i-1/2
 
+    do_beta = 'blend'
+    cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
+    if do_beta == 'switch':
+        beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1.)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit 
+    elif do_beta == 'blend':
+        beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
+    else:
+        print('Error: do_beta must be either "switch" or "blend"')
+    
+    print('beta:', beta)
+
     # Set beta to use implicit everywhere
-    beta = np.ones(len(init))
+    #beta = np.ones(len(init))
     # For stability, determine the amount of temporal MPDATA correction in V for use later
     chi = np.maximum(1 - 2*beta, np.zeros(len(init))) # chi[i] is at i-1/2
 
@@ -839,14 +868,21 @@ def implicitBTBSMPDATA_fieldFP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-1
 
         # Second pass
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
+        #dx_up = 0.5*flux(np.roll(dxc,1), dxc, np.roll(uf,1)/abs(np.roll(uf,1)))
         # Use the first-pass field for A. A[i] is at i-1/2
         A = (field_FP - np.roll(field_FP,1))\
             /(field_FP + np.roll(field_FP,1) + eps)
 
         # Calculate and limit the antidiffusive velocity V. Same index shift as for A
         V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf)
+        #V = A*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*chi*uf)
         corrCLimit = 0.5
         V = np.maximum(np.minimum(V, corrCLimit), -corrCLimit)
+       
+        # Smoothing
+        nSmooth = 1
+        for ismooth in range(nSmooth):
+            V = 0.5*V + 0.25*(np.roll(V,1) + np.roll(V,-1))
 
         # Calculate the flux and second-pass result
         flx_SP = flux(np.roll(field_FP,1), field_FP, V)

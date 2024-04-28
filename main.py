@@ -25,12 +25,12 @@ def main():
     """
 
     # Input booleans
-    schemenames = ['BTBS', 'implicitBTBSMPDATA', 'implicitBTBSMPDATA_fieldFP']
+    schemenames = ['BTBS', 'implBTBSMPDATA']#, 'implBTBSMPDATA_FP']
     predefined_output_file = True
     keep_model_stable = False
     create_animation = True
     check_orderofconvergence = False
-    do_beta = 'switch'          # 'switch' or 'blend'
+    do_beta = 'blend'          # 'switch' or 'blend'
     coords = 'uniform'       # 'uniform' or 'stretching'
     niter = 10                   # number of iterations (for Jacobi or Gauss-Seidel)
     # !!! implement criterion for convergence with Jacobi and Gauss-Seidel iterations?
@@ -44,14 +44,14 @@ def main():
 
     # Initial conditions
     dt = 0.1                    # time step
-    nt = 1                    # number of time steps
-    nx = 10                     # number of points in space
-    xmax = 1.0                  # physical domain parameters
-    uconstant = 2             # constant velocity
+    nt = 5                    # number of time steps
+    nx = 40                     # number of points in space
+    xmax = 2.0                  # physical domain parameters
+    uconstant = 1.             # constant velocity
 
     # Setup output
-    str_settings = '_t'+ f"{nt*dt:.2f}" + '_ks' + str(keep_model_stable)[0] + '_b' + do_beta[0] + '_g' + coords[0]
-    str_schemenames_settings = '_'#"-".join(schemenames) + str_settings
+    str_settings = '_t'+ f"{nt*dt:.2f}" + '_ks' + str(keep_model_stable)[0] + '_b' + do_beta[0] + '_g' + coords[0] + '_u' + f'{uconstant:.1f}'
+    str_schemenames_settings = "-".join(schemenames) + str_settings
     filebasename = [s  + str_settings for s in schemenames] # name of the directory to save the animation and its corresponding plots in
             # !!! To do: when option to include niter in hybrid scheme, add niter to the filebasename
     
