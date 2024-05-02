@@ -33,6 +33,7 @@ def main():
     do_beta = 'blend'          # 'switch' or 'blend'
     coords = 'uniform'       # 'uniform' or 'stretching'
     niter = 10                   # number of iterations (for Jacobi or Gauss-Seidel)
+    analytic = an.cosinebell
     # !!! implement criterion for convergence with Jacobi and Gauss-Seidel iterations?
 
     # Saving the reference of the standard output
@@ -45,9 +46,9 @@ def main():
     # Initial conditions
     dt = 0.01                    # time step
     nt = 100                    # number of time steps
-    nx = 10                     # number of points in space
+    nx = 40                     # number of points in space
     xmax = 1.#2.0                  # physical domain parameters
-    uconstant = 60#1.#0.4#1.25             # constant velocity
+    uconstant = 3.#6.25#1.#0.4#1.25             # constant velocity
 
     # Setup output
     str_settings = '_t'+ f"{nt*dt:.2f}" + '_ks' + str(keep_model_stable)[0] + '_b' + do_beta[0] + '_g' + coords[0] + '_u' + f'{uconstant:.1f}'
@@ -118,8 +119,8 @@ def main():
         # Calculate analytic solutions for each time step
         locals()[f'psi1_an_{l}'], locals()[f'psi2_an_{l}'] = np.zeros((nt+1, nx)), np.zeros((nt+1, nx))
         for it in range(nt+1):
-            locals()[f'psi1_an_{l}'][it] = an.analytic1(xc, xmax, uc, it*dt)
-            locals()[f'psi2_an_{l}'][it] = an.analytic2(xc, xmax, uc, it*dt)
+            locals()[f'psi1_an_{l}'][it] = analytic(xc, xmax, uc, it*dt)
+            locals()[f'psi2_an_{l}'][it] = an.tophat(xc, xmax, uc, it*dt)
 
         # Calculate initial functions
         psi1_in = locals()[f'psi1_an_{l}'][0]
@@ -382,9 +383,9 @@ def main():
         for i in range(len(nx_arr)):
             c_error = np.full(nx_arr[i], c[0])
             x_error = np.linspace(xmin, xmax, nx_arr[i], endpoint=False)
-            psi1_in_error = an.analytic1(x_error)
+            psi1_in_error = an.cosinebell(x_error)
             psi1_Upwind_error = fn(psi1_in_error.copy(), nt_arr[i], c_error)
-            psi1_an_error = an.analytic1(x_error, nt_arr[i], c_error)
+            psi1_an_error = an.cosinebell(x_error, nt_arr[i], c_error)
             rmse_arr[i] = epm.rmse(psi1_an_error, psi1_Upwind_error, dx_arr[i])
 
         # log-log plot of RMSE
