@@ -770,6 +770,8 @@ def implBTBSMPDATA(init, nt, dt, uf, dxc, eps=1e-16): # !!! next thing to do: Th
 
     do_beta = 'blend'
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
+    #print('Cell center C:', dt*uf/dxc)
+    #print('Courant number', cc)
     if do_beta == 'switch':
         beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1.)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit 
     elif do_beta == 'blend':
@@ -777,18 +779,19 @@ def implBTBSMPDATA(init, nt, dt, uf, dxc, eps=1e-16): # !!! next thing to do: Th
     else:
         print('Error: do_beta must be either "switch" or "blend"')
     
-    print('beta:', beta)
+    #print('beta iBM:', beta)
 
-    # Set beta to use implicit everywhere
-    #beta = np.ones(len(init))
     # For stability, determine the amount of temporal MPDATA correction in V for use later
     chi = np.maximum(1 - 2*beta, np.zeros(len(init))) # chi[i] is at i-1/2
+    print('c AW:', cc)
+    print('chi AW:', chi)
+    #print('chi iBM:', chi)
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
     for i in range(len(init)): 
         M[i,i] = 1 + dt*np.roll(beta*uf,-1)[i]/dxc[i]
-        M[i, i-1] = -dt*beta[i]*uf[i]/dxc[i]
+        M[i,(i-1)%len(init)] = -dt*beta[i]*uf[i]/dxc[i]
     
     # Time stepping
     for it in range(nt):
@@ -798,6 +801,7 @@ def implBTBSMPDATA(init, nt, dt, uf, dxc, eps=1e-16): # !!! next thing to do: Th
 
         # First pass: converged BTBS
         field_FP = np.linalg.solve(M, rhs)
+        #print('field_FP AW:', field_FP)
 
         # Second pass
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
@@ -807,19 +811,40 @@ def implBTBSMPDATA(init, nt, dt, uf, dxc, eps=1e-16): # !!! next thing to do: Th
             /(field_FP + np.roll(field_FP,1) + eps)
 
         # Calculate and limit the antidiffusive velocity V. Same index shift as for A
-        V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf)
+        V = A*uf*dt/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf)/dxc
+        print('type v AW:', type(V))
+        print('v before AW:', V)
+
         #V = A*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*chi*uf)
         corrCLimit = 0.5
         V = np.maximum(np.minimum(V, corrCLimit), -corrCLimit)
-       
+        print('V after lim AW:', V)
         # Smoothing
         nSmooth = 1
         for ismooth in range(nSmooth):
             V = 0.5*V + 0.25*(np.roll(V,1) + np.roll(V,-1))
+        print('V after lim+sm AW: ', V)
+
+
+
+                # Limit the anti-diffusive fluxes to obey the Courant limit
+        #v = np.maximum(np.minimum(v, corrCLimit), -corrCLimit)
+        
+        # Smoothing
+        #for ismooth in range(nSmooth):
+        #    v = 0.5*v + 0.25*(np.roll(v,1) + np.roll(v,-1))
+
+
+
+
+
+
+
 
         # Calculate the flux and second-pass result
         flx_SP = flux(np.roll(field_FP,1), field_FP, V)
-        field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc
+        field[it+1] = field_FP - np.roll(flx_SP,-1) + flx_SP#dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc
+        #print('field AW:', field[it+1])
 
     return field
 
@@ -837,6 +862,7 @@ def implBTBSMPDATA_FP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
 
     do_beta = 'blend'
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
+    print('Courant number', cc)
     if do_beta == 'switch':
         beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1.)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit 
     elif do_beta == 'blend':
@@ -844,8 +870,6 @@ def implBTBSMPDATA_FP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
     else:
         print('Error: do_beta must be either "switch" or "blend"')
     
-    print('beta:', beta)
-
     # Set beta to use implicit everywhere
     #beta = np.ones(len(init))
     # For stability, determine the amount of temporal MPDATA correction in V for use later
@@ -854,7 +878,7 @@ def implBTBSMPDATA_FP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
     for i in range(len(init)): 
-        M[i,i] = 1 + dt*np.roll(beta*uf,-1)[i]/dxc[i]
+        M[i,i] = 1 + dt*np.roll(beta*uf,-1)[i]/dxc[i] # !!! should i instead use cc here and the next line?
         M[i, i-1] = -dt*beta[i]*uf[i]/dxc[i]
     
     # Time stepping
@@ -890,6 +914,127 @@ def implBTBSMPDATA_FP(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
         field_FP_time[it+1] = field_FP.copy()
 
     return field_FP_time
+
+
+def HW_iBM(init, nt, dt, uf, dxc, do_beta='switch'):
+    nx = 40
+    carr = dt*uf/dxc # assumes uniform grid
+    c = carr[0].copy()
+
+    # Initialise and advect profile phi based on space, x
+    x = np.arange(0., 1., 1/nx)
+    
+    # Sets of parameter values to compare and output files for results
+    params = \
+    [{"beta":0, "gauge":0, "nCorr":1, "corrOption":"new", "corrCLimit":0.5}]
+        
+    # Advection time steps using MPDATA and plotting every time step
+    phi = np.zeros((nt+1, len(init)))
+    phi[0] = init.copy()
+    for it in range(nt):
+        phi[it+1] = HW_iMPDATA(phi[it], c, **params[0])
+
+    return phi
+
+def HW_iBM_g(init, nt, dt, uf, dxc, do_beta='switch'):
+    nx = 40
+    carr = dt*uf/dxc # assumes uniform grid
+    c = carr[0].copy()
+
+    # Initialise and advect profile phi based on space, x
+    x = np.arange(0., 1., 1/nx)
+    phiInit = init.copy()
+    
+    # Sets of parameter values to compare and output files for results
+    params = \
+    [{"beta":0, "gauge":1000, "nCorr":1, "corrOption":"new", "corrCLimit":0.5}]
+
+    # Advection time steps using MPDATA and plotting every time step
+    phi = np.zeros((nt+1, len(phiInit)))
+    phi[0] = phiInit.copy()
+    for it in range(nt):
+        phi[it+1] = HW_iMPDATA(phi[it], c, **params[0])
+
+    return phi
+
+def HW_iMPDATA(phi, c, beta = 0., gauge = 0., nCorr = 1, eps = 1e-16,
+          corrOption = "new", corrCLimit = 0.5, nSmooth = 0):
+    """
+    Advects 1d profile phi for one time step with Courant number c using MPDATA
+    with periodic boundary conditions and nCorr higher order corrections.
+    If beta = 0 and c<1 then the scheme uses standard, fully explicit MPDATA.
+    If beta>0 then the scheme is a correction on trapezoidal implicit with off
+    centering beta. If gauge>0 then a finite gauge is used.
+    --- Input ---
+    phi    : 1d array of floats to be advected
+    c      : float. Courant number = dt u/dx
+    beta   : float between 0 and one. Implicit off centering
+    gauge  : float
+    nCorr  : int >= 0
+    eps    : float. To prevent division by zero
+    corrOption : string. "old" to use old value to calculate the anti-diffusive
+                         flux and "new" to use the latest value.
+    corrCLimit : float. Courant limit for the anti-diffusive flux
+    nSmooth : int. Number of smoothing steps to apply to the anti-diffusive flux
+    --- Output ---
+    phiNew : modified 1d array phi after one time step
+    """
+    
+    nx = len(phi)
+    
+    # Set beta as needed for implicitness
+    if (abs(c) > 1) & (beta == 0):
+        beta = 1 - 1/abs(c)
+    chi = np.max(1 - 2*beta, 0)
+    print('c HW:', c)
+    print('chi HW:', chi)
+
+    # Set up the matrix for the trapezoidal implicit, first-order step
+    M = np.zeros([nx, nx])
+    for i in range(nx):
+        M[i,i] = 1 + beta*abs(c)
+        M[i,(i-1)%nx] = -beta*max(c,0)
+        M[i,(i+1)%nx] = beta*min(c,0)
+    
+    # RHS of the matrix equation
+    RHS = phi - (1-beta)*max(c,0)*(phi - np.roll(phi,1)) \
+              - (1-beta)*min(c,0)*(np.roll(phi,-1) - phi)
+    
+    # First-order step
+    phiNew = np.linalg.solve(M, RHS) + gauge
+    #print('phiNew HW:', phiNew)
+    # Values of phi to use for the anti-diffusive flux (no additional memory)
+    phiF = phiNew if (corrOption == "new") else phi
+    
+    # MPDATA correction steps
+    for icorr in range(nCorr):
+        # Anti-diffusive velocities (label i is at position i-1/2)
+        v = (c - chi*c**2)*(phiF - np.roll(phiF,1))\
+                      /(phiF + np.roll(phiF,1) + eps)
+        print('type v HW:', type(v))
+        print('v before HW:', v)
+                
+        # Limit the anti-diffusive fluxes to obey the Courant limit
+        v = np.maximum(np.minimum(v, corrCLimit), -corrCLimit)
+        print('v after lim HW:', v)
+        
+        nSmooth = 1
+        # Smoothing
+        for ismooth in range(nSmooth):
+            v = 0.5*v + 0.25*(np.roll(v,1) + np.roll(v,-1))
+        print('v after lim+sm HW:', v)
+
+        # Correction
+        phiNew -= np.maximum(np.roll(v,-1),0.)*phiNew \
+                + np.minimum(np.roll(v,-1),0.)*np.roll(phiNew,-1) \
+                - np.maximum(v,0)*np.roll(phiNew,1) \
+                - np.minimum(v,0)*phiNew
+        
+        # For any subsequent corrections, phiNew is to be used for v
+        phiF = phiNew
+    
+    #print('phi HW:', phiNew - gauge)
+    return phiNew - gauge
 
 def hybrid_Upwind_BTBS1J(init, nt, dt, uf, dxc, do_beta='switch'):
     """

@@ -25,7 +25,7 @@ def main():
     """
 
     # Input booleans
-    schemenames = ['BTBS', 'implBTBSMPDATA']#, 'implBTBSMPDATA_FP']
+    schemenames = ['implBTBSMPDATA', 'HW_iBM']#, 'HW_iBM_g']#['BTBS', 'implBTBSMPDATA']#, 'implBTBSMPDATA_FP']
     predefined_output_file = True
     keep_model_stable = False
     create_animation = True
@@ -43,11 +43,11 @@ def main():
     #######################
 
     # Initial conditions
-    dt = 0.1                    # time step
-    nt = 5                    # number of time steps
-    nx = 40                     # number of points in space
-    xmax = 2.0                  # physical domain parameters
-    uconstant = 1.             # constant velocity
+    dt = 0.01                    # time step
+    nt = 100                    # number of time steps
+    nx = 10                     # number of points in space
+    xmax = 1.#2.0                  # physical domain parameters
+    uconstant = 60#1.#0.4#1.25             # constant velocity
 
     # Setup output
     str_settings = '_t'+ f"{nt*dt:.2f}" + '_ks' + str(keep_model_stable)[0] + '_b' + do_beta[0] + '_g' + coords[0] + '_u' + f'{uconstant:.1f}'
