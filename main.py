@@ -25,7 +25,7 @@ def main():
     """
 
     # Input booleans
-    schemenames = ['implBTBSMPDATA', 'HW_iBM']#, 'HW_iBM_g']#['BTBS', 'implBTBSMPDATA']#, 'implBTBSMPDATA_FP']
+    schemenames = ['hybrid_MPDATA_BTBS1J', 'implBTBSMPDATA']#, 'HW_iBM']#'implBTBSMPDATA', 'HW_iBM']#, 'HW_iBM_g']#['BTBS', 'implBTBSMPDATA']#, 'implBTBSMPDATA_FP']
     predefined_output_file = True
     keep_model_stable = False
     create_animation = True
@@ -33,7 +33,7 @@ def main():
     do_beta = 'blend'          # 'switch' or 'blend'
     coords = 'uniform'       # 'uniform' or 'stretching'
     niter = 10                   # number of iterations (for Jacobi or Gauss-Seidel)
-    analytic = an.cosinebell
+    analytic = an.combi
     # !!! implement criterion for convergence with Jacobi and Gauss-Seidel iterations?
 
     # Saving the reference of the standard output
@@ -44,11 +44,11 @@ def main():
     #######################
 
     # Initial conditions
-    dt = 0.01                    # time step
-    nt = 100                    # number of time steps
+    dt = 0.1                    # time step
+    nt = 10                    # number of time steps
     nx = 40                     # number of points in space
     xmax = 1.#2.0                  # physical domain parameters
-    uconstant = 3.#6.25#1.#0.4#1.25             # constant velocity
+    uconstant = 100.#3.#6.25#1.#0.4#1.25             # constant velocity
 
     # Setup output
     str_settings = '_t'+ f"{nt*dt:.2f}" + '_ks' + str(keep_model_stable)[0] + '_b' + do_beta[0] + '_g' + coords[0] + '_u' + f'{uconstant:.1f}'
@@ -57,7 +57,7 @@ def main():
             # !!! To do: when option to include niter in hybrid scheme, add niter to the filebasename
     
     
-    outputdir = './output/' + str_schemenames_settings + '/'
+    outputdir = './output/test/' #+ str_schemenames_settings + 'test/'
     # Check if ./output/ and outputdir exist, if not create them, if so, !!! to do: if so give error message and choice to overwrite or n
     if not os.path.exists('./output/'):
         os.mkdir('./output/')

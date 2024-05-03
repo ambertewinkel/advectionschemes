@@ -6,7 +6,6 @@
 import numpy as np
 import utils as ut
 import solvers as sv
-import matplotlib.pyplot as plt
 
 def FTBS(init, nt, dt, uf, dxc):
     """
@@ -570,14 +569,13 @@ def MPDATA(init, nt, dt, uf, dxc, eps=1e-16):
         field_FP = field[it] - dt*(np.roll(flx_FP,-1) - flx_FP)/dxc
 
         # Second pass
-        dx_up = 0.5*flux(np.roll(dxc,1), dxc, np.roll(uf,1)/abs(np.roll(uf,1)))
+        dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
         A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps) # A[i] is at i-1/2
-        V = A*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*uf) # Same index shift as for A
+        V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*uf) # Same index shift as for A
         flx_SP = flux(np.roll(field_FP,1), field_FP, V)
         field[it+1] = field_FP - dt*(np.roll(flx_SP,-1) - flx_SP)/dxc
 
     return field
-
 
 def MPDATA_gauge(init, nt, dt, uf, dxc, eps=1e-16):
     """
@@ -612,8 +610,8 @@ def MPDATA_gauge(init, nt, dt, uf, dxc, eps=1e-16):
 
         # Second pass
         # Infinite gauge: multiply the pseudovelocity by 0.5 and do not divide by (field_FP + np.roll(field_FP,1) + eps), and set the first two arguments in flux() to 1.
-        dx_up = 0.5*flux(np.roll(dxc,1), dxc, np.roll(uf,1)/abs(np.roll(uf,1)))
-        V = 0.5*(field_FP - np.roll(field_FP,1))*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*uf)   # V[i] is at i-1/2
+        dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
+        V = 0.5*(field_FP - np.roll(field_FP,1))*uf/(0.5*dxf)*(dx_up - 0.5*dt*uf)   # V[i] is at i-1/2
         flx_SP = flux(1., 1., V)
         field[it+1] = field_FP - dt*(np.roll(flx_SP,-1) - flx_SP)/dxc
 
@@ -659,33 +657,48 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
 
     chi = np.maximum(1 - 2*beta, np.zeros(len(cc))) # chi[i] is at i-1/2
 
+    M = np.zeros((len(init), len(init))) #!
+    for i in range(len(init)):  #!
+        M[i,i] = 1 + dt*np.roll(beta*uf,-1)[i]/dxc[i] #!
+        M[i,(i-1)%len(init)] = -dt*beta[i]*uf[i]/dxc[i] #!
+    
     # Time stepping
     for it in range(nt):
         # First pass
         # flx_FP[i] is at i-1/2 # upwind
         flx_FP = flux(np.roll(field[it],1), field[it], uf)
         rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
-        # Determine whether implicit or explicit (or blend)
-        for i in range(len(cc)):
-            if beta[i] != 0. or np.roll(beta,-1)[i] != 0.: # BTBS1J
-                aii = 1 + np.roll(beta*uf,-1)[i]*dt/dxc[i]
-                aiim1 = -dt*beta[i]*uf[i]/dxc[i]
-                field_FP[i] = (rhs[i] - aiim1*np.roll(field[it],1)[i])/aii            
-            else:
-                field_FP[i] = rhs[i]
 
+        # Determine whether implicit or explicit (or blend)
+        #!for i in range(len(cc)):
+        #!    if beta[i] != 0. or np.roll(beta,-1)[i] != 0.: # BTBS1J
+        #!        aii = 1 + np.roll(beta*uf,-1)[i]*dt/dxc[i]
+        #!        aiim1 = -dt*beta[i]*uf[i]/dxc[i]
+        #!        field_FP[i] = (rhs[i] - aiim1*np.roll(field[it],1)[i])/aii            
+        #!    else:
+        #!        field_FP[i] = rhs[i]
+        field_FP = np.linalg.solve(M, rhs)
+        #field_FP = sv.Jacobi(M, rhs, field[it], 10) #!
+        
         # Second pass
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
         # A[i] is at i-1/2
         A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps)
         # Same index shift as for A
+        # V = #A*uf*dt/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf)/dxc #!
         V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf)
+        
         # Limit V
-        corrCLimit = 0.5
+        corrCLimit = 0.5*uf
         V = np.maximum(np.minimum(V, corrCLimit), -corrCLimit)
+
+        #!!! Smoothing
+        nSmooth = 1
+        for iSmooth in range(nSmooth):
+            V = 0.5*V + 0.25*(np.roll(V,1) + np.roll(V,-1)) #!
+
         flx_SP = flux(np.roll(field_FP,1), field_FP, V)
         field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc                
-
     return field
 
 def implBTBSMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='blend'): # !!! next thing to do: Though the first-pass should be made upwind implicit still to properly match the upwind explicit regular MPDATA.
@@ -741,18 +754,14 @@ def implBTBSMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='blend'): # !!! nex
 
         # Second pass
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
-        #dx_up = 0.5*flux(np.roll(dxc,1), dxc, np.roll(uf,1)/abs(np.roll(uf,1)))
         # Use the first-pass field for A. A[i] is at i-1/2
         A = (field_FP - np.roll(field_FP,1))\
             /(field_FP + np.roll(field_FP,1) + eps)
-
         # Calculate and limit the antidiffusive velocity V. Same index shift as for A
-        V = A*uf*dt/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf)/dxc
-
-        #V = A*np.roll(uf,1)/(0.5*np.roll(dxf,-1))*(dx_up - 0.5*dt*chi*uf)
-        corrCLimit = 0.5
+        V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf)
+        corrCLimit = 0.5*uf
         V = np.maximum(np.minimum(V, corrCLimit), -corrCLimit)
-
+        
         # Smoothing
         nSmooth = 1
         for ismooth in range(nSmooth):
@@ -760,11 +769,10 @@ def implBTBSMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='blend'): # !!! nex
 
         # Calculate the flux and second-pass result
         flx_SP = flux(np.roll(field_FP,1), field_FP, V)
-        field[it+1] = field_FP - np.roll(flx_SP,-1) + flx_SP#dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc
-
+        field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc
     return field
 
-def HW_iBM(init, nt, dt, uf, dxc, do_beta='switch'):
+def HW_iM(init, nt, dt, uf, dxc, do_beta='switch'):
     nx = 40
     carr = dt*uf/dxc # assumes uniform grid
     c = carr[0].copy()
@@ -780,11 +788,11 @@ def HW_iBM(init, nt, dt, uf, dxc, do_beta='switch'):
     phi = np.zeros((nt+1, len(init)))
     phi[0] = init.copy()
     for it in range(nt):
-        phi[it+1] = HW_iMPDATA(phi[it], c, **params[0])
+        phi[it+1] = HW_implMPDATA(phi[it], c, **params[0])
 
     return phi
 
-def HW_iBM_g(init, nt, dt, uf, dxc, do_beta='switch'):
+def HW_iM_g(init, nt, dt, uf, dxc, do_beta='switch'):
     nx = 40
     carr = dt*uf/dxc # assumes uniform grid
     c = carr[0].copy()
@@ -801,11 +809,11 @@ def HW_iBM_g(init, nt, dt, uf, dxc, do_beta='switch'):
     phi = np.zeros((nt+1, len(phiInit)))
     phi[0] = phiInit.copy()
     for it in range(nt):
-        phi[it+1] = HW_iMPDATA(phi[it], c, **params[0])
+        phi[it+1] = HW_implMPDATA(phi[it], c, **params[0])
 
     return phi
 
-def HW_iMPDATA(phi, c, beta = 0., gauge = 0., nCorr = 1, eps = 1e-16,
+def HW_implMPDATA(phi, c, beta = 0., gauge = 0., nCorr = 1, eps = 1e-16,
           corrOption = "new", corrCLimit = 0.5, nSmooth = 0):
     """
     Advects 1d profile phi for one time step with Courant number c using MPDATA
@@ -860,8 +868,8 @@ def HW_iMPDATA(phi, c, beta = 0., gauge = 0., nCorr = 1, eps = 1e-16,
         # Limit the anti-diffusive fluxes to obey the Courant limit
         v = np.maximum(np.minimum(v, corrCLimit), -corrCLimit)
         
-        nSmooth = 1
         # Smoothing
+        nSmooth = 1
         for ismooth in range(nSmooth):
             v = 0.5*v + 0.25*(np.roll(v,1) + np.roll(v,-1))
 
