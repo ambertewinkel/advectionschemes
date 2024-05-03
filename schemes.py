@@ -678,14 +678,12 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16):
         #!    else:
         #!        field_FP[i] = rhs[i]
         field_FP = np.linalg.solve(M, rhs)
-        #field_FP = sv.Jacobi(M, rhs, field[it], 10) #!
         
         # Second pass
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
         # A[i] is at i-1/2
         A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps)
         # Same index shift as for A
-        # V = #A*uf*dt/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf)/dxc #!
         V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf)
         
         # Limit V
