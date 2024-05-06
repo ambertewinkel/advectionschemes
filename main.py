@@ -25,12 +25,12 @@ def main():
     """
 
     # Input booleans
-    schemenames = ['hybrid_MPDATA_BTBS1J', 'implBTBSMPDATA']#, 'HW_iBM']#'implBTBSMPDATA', 'HW_iBM']#, 'HW_iBM_g']#['BTBS', 'implBTBSMPDATA']#, 'implBTBSMPDATA_FP']
+    schemenames = ['hybrid_MPDATA_BTBS1J', 'hb_imexMPDATA', 'imMPDATA']#, 'HW_iBM']#'implBTBSMPDATA', 'HW_iBM']#, 'HW_iBM_g']#['BTBS', 'implBTBSMPDATA']#, 'implBTBSMPDATA_FP']
     predefined_output_file = True
     keep_model_stable = False
     create_animation = True
     check_orderofconvergence = False
-    do_beta = 'blend'          # 'switch' or 'blend'
+    do_beta = 'switch'          # 'switch' or 'blend'
     coords = 'uniform'       # 'uniform' or 'stretching'
     niter = 10                   # number of iterations (for Jacobi or Gauss-Seidel)
     analytic = an.combi
@@ -44,11 +44,11 @@ def main():
     #######################
 
     # Initial conditions
-    dt = 0.1                    # time step
-    nt = 10                    # number of time steps
+    dt = 0.01                    # time step
+    nt = 100                    # number of time steps
     nx = 40                     # number of points in space
     xmax = 1.#2.0                  # physical domain parameters
-    uconstant = 100.#3.#6.25#1.#0.4#1.25             # constant velocity
+    uconstant = 1.#3.#6.25#1.#0.4#1.25             # constant velocity
 
     # Setup output
     str_settings = '_t'+ f"{nt*dt:.2f}" + '_ks' + str(keep_model_stable)[0] + '_b' + do_beta[0] + '_g' + coords[0] + '_u' + f'{uconstant:.1f}'
@@ -413,5 +413,11 @@ def main():
     # Reset the standard output
     sys.stdout = original_stdout 
     print('Done')
+
+def callscheme():
+    """Takes all the input variables and the scheme name and calls the scheme with the appropriate input arguments."""
+    #!!!
+
+
 
 if __name__ == "__main__": main()
