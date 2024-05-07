@@ -132,7 +132,7 @@ def create_single_animation_from_data(filebasename, field, analytic, nt, dt, xc,
         os.remove(filename)
     os.rmdir(plotdir)
 
-def create_animation_from_data(filebasename, fields, nfields, schemenames, analytic, nt, dt, xc, animdir, colors):
+def create_animation_from_data(filebasename, fields, nfields, schemenames, analytic, nt, dt, xc, animdir, plot_args):
     """This function creates an animation from a given data file of a single scheme. The input is a 2D field of a single scheme (shape = 1d time x 1d space), analytic solution (shape = 1d time x 1d space), nt, dx in the centers (dxc; shape 1d space) and ....
     This is a function that is to be called from other files, not from produce_standalone_animation()."""
 
@@ -149,9 +149,9 @@ def create_animation_from_data(filebasename, fields, nfields, schemenames, analy
         # Plot each timestep in a figure and save in the plots subdirectory
         plt.plot(xc, field_in, label='Initial', linestyle='-', color='grey')
         plt.plot(xc, analytic[it], label='Analytic', linestyle='-', color='k')
-        for s in range(nfields):   
-            field = fields[s]        
-            plt.plot(xc, field[it], label=schemenames[s], marker='x', linestyle='-', color=colors[s])
+        for si in range(nfields):   
+            field = fields[si]        
+            plt.plot(xc, field[it], label=schemenames[si], marker=plot_args[si]['marker'], linestyle=plot_args[si]['linestyle'], color=plot_args[si]['color'])
         ut.design_figure(f'{plotdir}fields_{it}.png', '', f'{filebasename} at t={it*dt:.2f}', \
                         'x', '$field$', True, -0.5, 1.5)
         filenames.append(f'{plotdir}fields_{it}.png')

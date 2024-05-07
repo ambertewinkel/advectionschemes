@@ -5,7 +5,7 @@
 
 import numpy as np
 
-def cosinebell(x, xmax, u=0., t=0., shift=0., ampl=1., a=0., b=0.5):
+def cosbell(x, xmax, u=0., t=0., shift=0., ampl=1., a=0., b=0.5):
     """
     This function returns an array from input array x and constants a and b advected 
     by velocity u for a time t. The initial condition has values from the function 
