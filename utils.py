@@ -1,6 +1,6 @@
 # Module file for utilities functions used in main.py, schemes.py and experiments.py
 # Author:   Amber te Winkel
-# Email:    ambertewinkel@gmail.com
+# Email:    a.j.tewinkel@pgr.reading.ac.uk
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -47,7 +47,6 @@ def to_vector(array, length):
 def plot_Courant(x, c, outputdir):
     plt.plot(x, c)
     plt.axhline(1.0, color='grey', linestyle=':')
-    plt.axvline(1.0)
     plt.title('Courant number')
     plt.xlabel('x')
     plt.ylabel('C')

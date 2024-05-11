@@ -43,8 +43,9 @@ def main():
 
     # Input cases
     cases = [\
-        {'scheme':'hybrid_MPDATA_BTBS1J', 'do_beta':'switch', 'solver':'Jacobi', 'niter':10},
-        {'scheme':'hb_imexMPDATA',        'do_beta':'switch', 'solver':'numpy'},
+        #{'scheme':'hybrid_MPDATA_BTBS1J', 'do_beta':'switch', 'solver':'Jacobi', 'niter':10},
+        {'scheme':'MPDATA'},
+        {'scheme':'hbMPDATA',        'do_beta':'switch', 'solver':'numpy'},
         {'scheme':'imMPDATA',                                 'solver':'numpy'}
         ]
     
@@ -64,10 +65,10 @@ def main():
     coords = 'uniform'          # 'uniform' or 'stretching
 
     schemenames = [case["scheme"] for case in cases]
-    str_settings = '_' + str(analytic.__name__) + '_t'+ f"{nt*dt:.2f}" + '_b' + cases[0]['do_beta'][0] + '_g' + coords + '_u' + f'{uconstant:.1f}' #!!!
+    str_settings = '_' + str(analytic.__name__) + '_t'+ f"{nt*dt:.2f}" + '_b' + cases[1]['do_beta'][0] + '_g' + coords + '_u' + f'{uconstant:.1f}' #!!!
     str_schemenames_settings = "-".join(schemenames) + str_settings
     filebasename = [s  + str_settings for s in schemenames] # name of the directory to save the animation and its corresponding plots in
-            # !!! To do: when option to include niter in hybrid scheme, add niter to the filebasename
+    # !!! To do: when option to include niter in hybrid scheme, add niter to the filebasename
     
     ##################################
     #### Setup output and logging ####
@@ -93,6 +94,11 @@ def main():
     if not os.path.exists(outputdir):
         os.mkdir(outputdir)
         print("Folder %s created!" % outputdir)
+    else:
+        # Check whether *.log exists, and remove it if so
+        if os.path.exists(filename):
+            os.remove(filename)
+            print("File %s removed!" % filename)
 
     # Set up logging
     print(f'See output file {filename}')    
@@ -100,12 +106,12 @@ def main():
     logging.info(f'Date and time: {datetime}')
     logging.info(f'Output directory: {outputdir}')
     logging.info('')
-    logging.info(f'Analytic function: {analytic}')
+    logging.info(f'Analytic function: {analytic.__name__}')
     logging.info(f'Number of grid points: {nx}')
     logging.info(f'Number of time steps: {nt}')
-    logging.info(f'Time step: {dt}')
+    logging.info(f'Time step: {dt} s')
     logging.info(f'Total runtime: {nt*dt:.2f} s')
-    logging.info(f'Velocity:, {uconstant}')     
+    logging.info(f'Velocity: {uconstant}')     
     logging.info(f'Schemes included are: {schemenames}')
     logging.info(f'Cases:')
     for case in cases:
@@ -165,7 +171,8 @@ def main():
         if gridlabels[xi] == 'reg':
             logging.info('The (cell center) points and Courant numbers are:')
             for i in range(nx):
-                logging.info(i, "%.2f" %xc[i], "%.2f" %cc[i]) #!!!
+                #logging.info(i, "%.2f" %xc[i], "%.2f" %cc[i]) #!!!
+                logging.info(f'{i}: {xc[i]:.2f} -- {cc[i]:.2f}')
             logging.info('')
             ut.plot_Courant(xc, cc, outputdir)
             ut.plot_grid(xc, dxc, outputdir)
@@ -181,7 +188,7 @@ def main():
         # Calculate numerical solutions for each scheme through time
         # Output is 2D field ([1d time, 1d space])
         for c in range(len(cases)):
-            locals()[f'psi_{cases[c]["scheme"]}_{l}'] = callscheme(case, nt, dt, uf, dxc, psi_in)
+            locals()[f'psi_{cases[c]["scheme"]}_{l}'] = callscheme(cases[c], nt, dt, uf, dxc, psi_in)
 
     ##########################
     #### Plotting schemes ####
@@ -193,7 +200,7 @@ def main():
     for s in schemenames:
         si = schemenames.index(s)
         if 'Jacobi' in s or 'GaussSeidel' in s:
-            slabel = f'{s}, it={case[si]['niter']}'
+            slabel = f'{s}, it={cases[si]['niter']}'
         elif s == 'BTBS':
             slabel = 'BTBS_numpy'
         else: 
@@ -212,9 +219,6 @@ def main():
     logging.info('')
     
     # Conservation, boundedness and total variation Psi
-    logging.info('')
-    logging.info('========== Conservation, boundedness and total variation ==========')
-    logging.info('')
     csv_psi_analytic = epm.check_conservation(psi_in, locals()['psi_an_reg'][nt], dxc)
     logging.info(f'Analytic - Mass gained: {csv_psi_analytic:.2E}')    
     bdn_psi_analytic = epm.check_boundedness(psi_in, locals()['psi_an_reg'][nt])
@@ -258,9 +262,8 @@ def main():
             minarr[it] = np.min(locals()[f'psi_{s}_reg'][it]) # !!! np max can perhaps introduce axis and for loop is not necessary?
             maxarr[it] = np.max(locals()[f'psi_{s}_reg'][it])
         logging.info('')
-        logging.info(f'Scheme - {s}')
-        logging.info(f'Minimum bound during the time integration: {np.min(minarr)}')
-        logging.info(f'Maximum bound during the time integration: {np.max(maxarr)}')
+        logging.info(f'{s} - Minimum during the time integration: {np.min(minarr)}')
+        logging.info(f'{s} - Maximum during the time integration: {np.max(maxarr)}')
         ax2.plot(np.arange(0,nt+1), minarr, label=f'Min {s}', **plot_args[si])
         ax2.plot(np.arange(0,nt+1), maxarr, label=f'Max {s}', **plot_args[si])
     ax2.set_title('Bounds')
@@ -274,8 +277,7 @@ def main():
         for it in range(nt+1):     
             rmse_time[it] = epm.rmse(locals()[f'psi_{s}_reg'][it], locals()['psi_an_reg'][it], dxc) 
         logging.info('')
-        logging.info(f'Scheme - {s}')
-        logging.info(f'Max RMSE during the time integration: {np.max(rmse_time)}')
+        logging.info(f'{s} - Max RMSE during the time integration: {np.max(rmse_time)}')
         ax3.plot(np.arange(0,nt+1), rmse_time, label=s, **plot_args[si])
     ax3.set_yscale('log')
     ax3.set_title('RMSE')
@@ -283,7 +285,7 @@ def main():
     ax3.legend()
 
     # Save plot for results (mass, min/max, RMSE) over time
-    plt.savefig(outputdir + f'epm_over_time_' + str_schemenames_settings + '.pdf')
+    plt.savefig(outputdir + f'epm_over_time.pdf')
     plt.tight_layout()
     plt.close()
 
@@ -358,12 +360,9 @@ def main():
     fields, colors = [], []
     # Create animation from the data
     if create_animation == True:
-        animdir = outputdir + 'animations/'
-        if not os.path.exists(animdir):
-            os.mkdir(animdir)
         for s in schemenames:
             fields.append(locals()[f'psi_{s}_reg'])
-        anim.create_animation_from_data('Psi', fields, len(schemenames), schemenames, locals()['psi_an_reg'], nt, dt, xc, animdir, plot_args)
+        anim.create_animation_from_data('Psi', fields, len(schemenames), schemenames, locals()['psi_an_reg'], nt, dt, xc, outputdir, plot_args)
 
     print('Done')
     logging.info('')
