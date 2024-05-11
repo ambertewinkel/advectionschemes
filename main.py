@@ -47,14 +47,14 @@ def main():
     cases = [\
         #{'scheme':'hybrid_MPDATA_BTBS1J', 'do_beta':'switch', 'solver':'Jacobi', 'niter':10},
         {'scheme':'MPDATA'},
-        {'scheme':'hbMPDATA',        'do_beta':'switch', 'solver':'numpy'},
-        {'scheme':'imMPDATA',                                 'solver':'numpy'}
+        {'scheme':'hbMPDATA',        'do_beta':'switch', 'solver':'NumPy'},
+        {'scheme':'imMPDATA',                                 'solver':'NumPy'}
         ]
     
     plot_args = [\
-        {'color':'red',    'marker':'o', 'linestyle':'-'},
-        {'color':'blue',   'marker':'x', 'linestyle':'-'},
-        {'color':'orange', 'marker':'+', 'linestyle':'-'}
+        {'label':'MPDATA', 'color':'red',    'marker':'o', 'linestyle':'-'},
+        {'label':'hbMPDATA', 'color':'blue',   'marker':'x', 'linestyle':'-'},
+        {'label':'imMPDATA', 'color':'orange', 'marker':'+', 'linestyle':'-'}
         ]
 
     # Initial conditions
@@ -77,7 +77,7 @@ def main():
     ##################################
 
     # Setup output directory
-    # Check if ./output/ and outputdir exist, if not create them, if so, !!! to do: if so give error message and choice to overwrite or n
+    # Check if ./output/ and outputdir exist, if not create them
     if not os.path.exists('./output/'):
         os.mkdir('./output/')
         print("Output folder created!")
@@ -117,6 +117,10 @@ def main():
     logging.info(f'Schemes included are: {schemenames}')
     logging.info(f'Cases:')
     for case in cases:
+        logging.info(case)
+    logging.info('')
+    logging.info('Plotting details:')
+    for case in plot_args:
         logging.info(case)
     logging.info('')
 
@@ -173,7 +177,6 @@ def main():
         if gridlabels[xi] == 'reg':
             logging.info('The (cell center) points and Courant numbers are:')
             for i in range(nx):
-                #logging.info(i, "%.2f" %xc[i], "%.2f" %cc[i]) #!!!
                 logging.info(f'{i}: {xc[i]:.2f} -- {cc[i]:.2f}')
             logging.info('')
             ut.plot_Courant(xc, cc, outputdir)
@@ -201,13 +204,7 @@ def main():
     plt.plot(xc, locals()['psi_an_reg'][nt], label='Analytic', linestyle='-', color='k')
     for s in schemenames:
         si = schemenames.index(s)
-        if 'Jacobi' in s or 'GaussSeidel' in s:
-            slabel = f'{s}, it={cases[si]['niter']}'
-        elif s == 'BTBS':
-            slabel = 'BTBS_numpy'
-        else: 
-            slabel = s
-        plt.plot(xc, locals()[f'psi_{s}_reg'][nt], label=f'{slabel}', **plot_args[si])
+        plt.plot(xc, locals()[f'psi_{s}_reg'][nt], **plot_args[si])
     ut.design_figure(plotname + '.pdf', outputdir, f'$\\Psi$ at t={nt*dt}', \
                      'x', '$\\Psi$', True, -1.5, 1.5)
 
@@ -251,23 +248,21 @@ def main():
         mass = np.zeros(nt+1)
         for it in range(nt+1):
             mass[it] = epm.totalmass(locals()[f'psi_{s}_reg'][it], dxc)
-        ax1.plot(np.arange(0,nt+1), mass, label=s, **plot_args[si])
+        ax1.plot(np.arange(0,nt+1), mass, **plot_args[si])
     ax1.set_title('Mass')
     ax1.set_xlabel('Time')
     ax1.legend()
 
     # Boundedness (min/max) over time (ax2)
     for s in schemenames:
-        si = schemenames.index(s)
-        minarr, maxarr = np.zeros(nt+1), np.zeros(nt+1)
-        for it in range(nt+1):     
-            minarr[it] = np.min(locals()[f'psi_{s}_reg'][it]) # !!! np max can perhaps introduce axis and for loop is not necessary?
-            maxarr[it] = np.max(locals()[f'psi_{s}_reg'][it])
+        si = schemenames.index(s)   
+        minarr = np.min(locals()[f'psi_{s}_reg'], axis=1)
+        maxarr = np.max(locals()[f'psi_{s}_reg'], axis=1)
         logging.info('')
         logging.info(f'{s} - Minimum during the time integration: {np.min(minarr)}')
         logging.info(f'{s} - Maximum during the time integration: {np.max(maxarr)}')
-        ax2.plot(np.arange(0,nt+1), minarr, label=f'Min {s}', **plot_args[si])
-        ax2.plot(np.arange(0,nt+1), maxarr, label=f'Max {s}', **plot_args[si])
+        ax2.plot(np.arange(0,nt+1), minarr, **plot_args[si])
+        ax2.plot(np.arange(0,nt+1), maxarr, **plot_args[si])
     ax2.set_title('Bounds')
     ax2.set_xlabel('Time')
     ax2.legend()
@@ -280,14 +275,14 @@ def main():
             rmse_time[it] = epm.rmse(locals()[f'psi_{s}_reg'][it], locals()['psi_an_reg'][it], dxc) 
         logging.info('')
         logging.info(f'{s} - Max RMSE during the time integration: {np.max(rmse_time)}')
-        ax3.plot(np.arange(0,nt+1), rmse_time, label=s, **plot_args[si])
+        ax3.plot(np.arange(0,nt+1), rmse_time, **plot_args[si])
     ax3.set_yscale('log')
     ax3.set_title('RMSE')
     ax3.set_xlabel('Time')
     ax3.legend()
 
     # Save plot for results (mass, min/max, RMSE) over time
-    plt.savefig(outputdir + f'epm_over_time.pdf')
+    plt.savefig(outputdir + f'experiments.pdf')
     plt.tight_layout()
     plt.close()
 
@@ -364,7 +359,7 @@ def main():
     if create_animation == True:
         for s in schemenames:
             fields.append(locals()[f'psi_{s}_reg'])
-        anim.create_animation_from_data('Psi', fields, len(schemenames), schemenames, locals()['psi_an_reg'], nt, dt, xc, outputdir, plot_args)
+        anim.create_animation_from_data(fields, len(schemenames), locals()['psi_an_reg'], nt, dt, xc, outputdir, plot_args)
 
     print('Done')
     logging.info('')
@@ -372,22 +367,20 @@ def main():
     logging.info('')
 
 
-def callscheme(case, nt, dt, uf, dxc, psi_in): #!!! Is this correct? Generalize this function
+def callscheme(case, nt, dt, uf, dxc, psi_in):
     """Takes all the input variables and the scheme name and calls the scheme with the appropriate input arguments."""
 
+    # Tranlate the scheme name to a function in schemes.py
     s = case["scheme"]
     fn = getattr(sch, f'{s}')
-    if 'Jacobi' in s or 'GaussSeidel' in s:
-        if 'hybrid' in s:
-            psi = fn(psi_in.copy(), nt, dt, uf, dxc, case['niter'], case['do_beta'])
-        else:
-            psi = fn(psi_in.copy(), nt, dt, uf, dxc, case['niter'])
-    else:
-        if 'hybrid' in s:
-            psi = fn(psi_in.copy(), nt, dt, uf, dxc, case['do_beta'])
-        else:
-            psi = fn(psi_in.copy(), nt, dt, uf, dxc)
-            
+
+    # Remove 'scheme' key from dictionary
+    exclude = {"scheme"}
+    params = ut.without_keys(case, exclude)
+
+    # Call the scheme
+    psi = fn(psi_in.copy(), nt, dt, uf, dxc, **params)
+
     return psi
 
     

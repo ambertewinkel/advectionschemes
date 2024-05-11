@@ -74,3 +74,9 @@ def plot_grid(x, dx, outputdir):
     plt.tight_layout()
     plt.savefig(outputdir + 'gridspacing.pdf')
     plt.clf()
+
+
+def without_keys(d, keys):
+    """Remove a list of keys from a dictionary."""
+
+    return {x: d[x] for x in d if x not in keys}

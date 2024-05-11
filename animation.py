@@ -134,12 +134,12 @@ def create_single_animation_from_data(filebasename, field, analytic, nt, dt, xc,
     os.rmdir(plotdir)
 
 
-def create_animation_from_data(filebasename, fields, nfields, schemenames, analytic, nt, dt, xc, animdir, plot_args):
+def create_animation_from_data(fields, nfields, analytic, nt, dt, xc, animdir, plot_args):
     """This function creates an animation from a given data file of a single scheme. The input is a 2D field of a single scheme (shape = 1d time x 1d space), analytic solution (shape = 1d time x 1d space), nt, dx in the centers (dxc; shape 1d space) and ....
     This is a function that is to be called from other files, not from produce_standalone_animation()."""
 
     # Directory to put animation and subdirectory for plots in
-    plotdir = animdir + 'plots_' + filebasename + '/'
+    plotdir = animdir + 'plots/'
     os.mkdir(plotdir)
 
     # Calculate initial functions
@@ -153,15 +153,15 @@ def create_animation_from_data(filebasename, fields, nfields, schemenames, analy
         plt.plot(xc, analytic[it], label='Analytic', linestyle='-', color='k')
         for si in range(nfields):   
             field = fields[si]        
-            plt.plot(xc, field[it], label=schemenames[si], marker=plot_args[si]['marker'], linestyle=plot_args[si]['linestyle'], color=plot_args[si]['color'])
-        ut.design_figure(f'{plotdir}fields_{it}.png', '', f'{filebasename} at t={it*dt:.2f}', \
-                        'x', '$field$', True, -0.5, 1.5)
+            plt.plot(xc, field[it], **plot_args[si])
+        ut.design_figure(f'{plotdir}fields_{it}.png', '', f'Psi at t={it*dt:.2f}', \
+                        'x', 'Psi', True, -0.5, 1.5)
         filenames.append(f'{plotdir}fields_{it}.png')
 
     # Create animation from plots in the plots subdirectory
     for filename in filenames:
         images.append(imageio.imread(filename))
-    anim_filename = f'{animdir}{filebasename}.gif'
+    anim_filename = f'{animdir}animation.gif'
     imageio.mimsave(anim_filename, images, duration=500)
 
     # Remove .png files used to create the animation

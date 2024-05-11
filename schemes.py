@@ -489,7 +489,7 @@ def BTCS_GaussSeidel(init, nt, dt, uf, dxc, niter=1):
     return field
 
 
-def CNBS(init, nt, dt, uf, dxc): # Crank-Nicolson (implicit)
+def CNBS(init, nt, dt, uf, dxc):
     """
     This functions implements the CNBS scheme (Crank-Nicolson in i.e. trapezoidal implicit, backward in 
     space), assuming a constant velocity (input through the Courant 
@@ -522,7 +522,7 @@ def CNBS(init, nt, dt, uf, dxc): # Crank-Nicolson (implicit)
     return field
 
 
-def CNCS(init, nt, dt, uf, dxc): # Crank-Nicolson (implicit)
+def CNCS(init, nt, dt, uf, dxc):
     """
     This functions implements the CNCS scheme (Crank-Nicolson in i.e. trapezoidal implicit, centered in 
     space), assuming a constant velocity (input through the Courant 
