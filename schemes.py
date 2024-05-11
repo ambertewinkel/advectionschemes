@@ -732,7 +732,7 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, do_beta='blend', eps=1e-16, nSmo
     return field
 
 
-def imMPDATA(init, nt, dt, uf, dxc, eps=1e-16, solver='NumPy', niter=0, do_limit=True, limit=0.5, nSmooth=1):
+def imMPDATA(init, nt, dt, uf, dxc, eps=1e-16, solver='NumPy', niter=0, do_limit=True, limit=0.5, nSmooth=1, gauge=0.):
     """
     Implements MPDATA with an implicit first pass. 
     First pass: implicit upwind with numpy direct elimination on the whole matrix.
@@ -750,6 +750,7 @@ def imMPDATA(init, nt, dt, uf, dxc, eps=1e-16, solver='NumPy', niter=0, do_limit
     do_limit: boolean, optional. If True, limit the antidiffusive velocity V
     limit   : float, optional. Assumed positive. Limiting value for V
     nSmooth : integer, optional. Number of smoothing iterations for V
+    gauge   : float, optional. Gauge term to add to the field
     --- Output --- 
     field   : 2D array of floats. Outputs each timestep of the field while advecting 
             the initial condition. Dimensions: nt+1 x length of init
@@ -785,7 +786,7 @@ def imMPDATA(init, nt, dt, uf, dxc, eps=1e-16, solver='NumPy', niter=0, do_limit
         rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
 
         # First pass: converged BTBS (implicit)
-        field_FP = solverfn(M, xi, rhs, niter)
+        field_FP = solverfn(M, xi, rhs, niter) + gauge
 
         # Second pass (explicit)
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
@@ -805,12 +806,12 @@ def imMPDATA(init, nt, dt, uf, dxc, eps=1e-16, solver='NumPy', niter=0, do_limit
 
         # Calculate the flux and second-pass result
         flx_SP = flux(np.roll(field_FP,1), field_FP, V)
-        field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc
+        field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc - gauge
 
     return field
 
 
-def hbMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', solver='NumPy', niter=0, do_limit=True, limit=0.5, nSmooth=1):
+def hbMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', solver='NumPy', niter=0, do_limit=True, limit=0.5, nSmooth=1, gauge=0.):
     """
     Implements a hybrid scheme with explicit MPDATA correction.  
     First pass: explicit or implicit (or both if do_beta='blend') upwind with numpy direct elimination on the whole matrix. beta determines the degree of im/ex - as trapezoidal implicit.
@@ -829,6 +830,7 @@ def hbMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', solver='NumPy',
     do_limit: boolean, optional. If True, limit the antidiffusive velocity V
     limit   : float, optional. Assumed positive. Limiting value for V
     nSmooth : integer, optional. Number of smoothing iterations for V
+    gauge   : float, optional. Gauge term to add to the field
     --- Output --- 
     field   : 2D array of floats. Outputs each timestep of the field while advecting 
             the initial condition. Dimensions: nt+1 x length of init
@@ -869,8 +871,8 @@ def hbMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', solver='NumPy',
         flx_FP = flux(np.roll(field[it],1), field[it], uf)
         rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
 
-        # First pass: converged BTBS - dependent on the Courant number and beta
-        field_FP = solverfn(M, xi, rhs, niter)
+        # First pass: converged BTBS - dependent on the Courant number and beta.
+        field_FP = solverfn(M, xi, rhs, niter) + gauge
 
         # Second pass
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
@@ -890,7 +892,7 @@ def hbMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', solver='NumPy',
 
         # Calculate the flux and second-pass result
         flx_SP = flux(np.roll(field_FP,1), field_FP, V)
-        field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc
+        field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc - gauge
 
     return field
 
