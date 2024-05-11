@@ -2,8 +2,10 @@
 # Author:   Amber te Winkel
 # Email:    a.j.tewinkel@pgr.reading.ac.uk
 
+
 import numpy as np
 import matplotlib.pyplot as plt
+
 
 def design_figure(filename, outputdir, title, xlabel, ylabel, bool_ylim = False, ylim1=0.0, ylim2=0.0):
     if bool_ylim == True: plt.ylim(ylim1, ylim2)
@@ -14,6 +16,7 @@ def design_figure(filename, outputdir, title, xlabel, ylabel, bool_ylim = False,
     plt.tight_layout()
     plt.savefig(outputdir + filename)
     plt.clf()
+
 
 def to_vector(array, length):
     """
@@ -44,6 +47,7 @@ def to_vector(array, length):
     
     return res
 
+
 def plot_Courant(x, c, outputdir):
     plt.plot(x, c)
     plt.axhline(1.0, color='grey', linestyle=':')
@@ -53,6 +57,7 @@ def plot_Courant(x, c, outputdir):
     plt.tight_layout()
     plt.savefig(outputdir + 'Courant.pdf')
     plt.clf()
+
 
 def plot_grid(x, dx, outputdir):
     plt.plot(x)

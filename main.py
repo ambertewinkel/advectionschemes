@@ -2,6 +2,7 @@
 # Author:   Amber te Winkel
 # Email:    a.j.tewinkel@pgr.reading.ac.uk
 
+
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
@@ -15,7 +16,9 @@ import os
 import datetime as dati
 import logging
 
+
 logger = logging.getLogger(__name__)
+
 
 def main():
     """
@@ -369,6 +372,7 @@ def main():
     logging.info('================================= Done ===================================')
     logging.info('')
 
+
 def callscheme(case, nt, dt, uf, dxc, psi_in): #!!! Is this correct? Generalize this function
     """Takes all the input variables and the scheme name and calls the scheme with the appropriate input arguments."""
 
@@ -386,5 +390,6 @@ def callscheme(case, nt, dt, uf, dxc, psi_in): #!!! Is this correct? Generalize 
             psi = fn(psi_in.copy(), nt, dt, uf, dxc)
             
     return psi
+
     
 if __name__ == "__main__": main()

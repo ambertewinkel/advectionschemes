@@ -3,9 +3,11 @@
 # Author:   Amber te Winkel
 # Email:    a.j.tewinkel@pgr.reading.ac.uk
 
+
 import numpy as np
 import utils as ut
 import solvers as sv
+
 
 def FTBS(init, nt, dt, uf, dxc):
     """
@@ -34,6 +36,7 @@ def FTBS(init, nt, dt, uf, dxc):
  
     return field
 
+
 def FTFS(init, nt, dt, uf, dxc):
     """
     This function computes the FTFS (forward in time, forward in space)
@@ -60,6 +63,7 @@ def FTFS(init, nt, dt, uf, dxc):
         field[it+1] = field[it] - dt*(np.roll(uf*field[it],-1) - uf*field[it])/dxc
 
     return field
+
 
 def CTCS(init, nt, dt, uf, dxc):
     """
@@ -91,6 +95,7 @@ def CTCS(init, nt, dt, uf, dxc):
         
     return field
 
+
 def Upwind(init, nt, dt, uf, dxc): # FTBS when u >= 0, FTFS when u < 0
     """
     This function computes the upwind (FTBS when u>=0, FTFS when u<0)
@@ -120,6 +125,7 @@ def Upwind(init, nt, dt, uf, dxc): # FTBS when u >= 0, FTFS when u < 0
         field[it+1] = field[it] - dt*spatial/dxc
     
     return field
+
 
 def BTBS(init, nt, dt, uf, dxc):
     """
@@ -151,6 +157,7 @@ def BTBS(init, nt, dt, uf, dxc):
         field[it+1] = np.linalg.solve(M, field[it])
 
     return field
+
 
 def BTBS_Jacobi(init, nt, dt, uf, dxc, niter=1):
     """
@@ -184,6 +191,7 @@ def BTBS_Jacobi(init, nt, dt, uf, dxc, niter=1):
 
     return field
 
+
 def BTBS_GaussSeidel(init, nt, dt, uf, dxc, niter=1):
     """
     This functions implements the BTBS scheme (backward in time, backward in 
@@ -215,6 +223,7 @@ def BTBS_GaussSeidel(init, nt, dt, uf, dxc, niter=1):
         field[it+1] = sv.GaussSeidel(M, field[it], field[it], niter)
 
     return field
+
 
 def BTBS_SymmetricGaussSeidel(init, nt, dt, uf, dxc, niter=1):
     """
@@ -248,6 +257,7 @@ def BTBS_SymmetricGaussSeidel(init, nt, dt, uf, dxc, niter=1):
 
     return field
 
+
 def BTFS(init, nt, dt, uf, dxc):
     """
     This functions implements the BTFS scheme (backward in time, forward in 
@@ -278,6 +288,7 @@ def BTFS(init, nt, dt, uf, dxc):
         field[it+1] = np.linalg.solve(M, field[it])
     
     return field
+
 
 def BTFS_Jacobi(init, nt, dt, uf, dxc, niter=1):
     """
@@ -311,6 +322,7 @@ def BTFS_Jacobi(init, nt, dt, uf, dxc, niter=1):
 
     return field
 
+
 def BTFS_GaussSeidel(init, nt, dt, uf, dxc, niter=1):
     """
     This functions implements the BTFS scheme (backward in time, forward in 
@@ -342,6 +354,7 @@ def BTFS_GaussSeidel(init, nt, dt, uf, dxc, niter=1):
         field[it+1] = sv.BackwardGaussSeidel(M, field[it], field[it], niter)
 
     return field
+
 
 def BTFS_SymmetricGaussSeidel(init, nt, dt, uf, dxc, niter=1):
     """
@@ -375,6 +388,7 @@ def BTFS_SymmetricGaussSeidel(init, nt, dt, uf, dxc, niter=1):
 
     return field
 
+
 def BTCS(init, nt, dt, uf, dxc):
     """
     This functions implements the BTCS scheme (backward in time, centered in 
@@ -406,6 +420,7 @@ def BTCS(init, nt, dt, uf, dxc):
         field[it+1] = np.linalg.solve(M, field[it])
 
     return field
+
 
 def BTCS_Jacobi(init, nt, dt, uf, dxc, niter=1):
     """
@@ -440,6 +455,7 @@ def BTCS_Jacobi(init, nt, dt, uf, dxc, niter=1):
 
     return field
 
+
 def BTCS_GaussSeidel(init, nt, dt, uf, dxc, niter=1):
     """
     This functions implements the BTCS scheme (backward in time, centered in 
@@ -473,6 +489,7 @@ def BTCS_GaussSeidel(init, nt, dt, uf, dxc, niter=1):
 
     return field
 
+
 def CNBS(init, nt, dt, uf, dxc): # Crank-Nicolson (implicit)
     """
     This functions implements the CNBS scheme (Crank-Nicolson in i.e. trapezoidal implicit, backward in 
@@ -505,6 +522,7 @@ def CNBS(init, nt, dt, uf, dxc): # Crank-Nicolson (implicit)
 
     return field
 
+
 def CNCS(init, nt, dt, uf, dxc): # Crank-Nicolson (implicit)
     """
     This functions implements the CNCS scheme (Crank-Nicolson in i.e. trapezoidal implicit, centered in 
@@ -536,6 +554,7 @@ def CNCS(init, nt, dt, uf, dxc): # Crank-Nicolson (implicit)
         field[it+1] = np.linalg.solve(M, rhs)
 
     return field
+
 
 def MPDATA(init, nt, dt, uf, dxc, eps=1e-16):
     """
@@ -577,6 +596,7 @@ def MPDATA(init, nt, dt, uf, dxc, eps=1e-16):
 
     return field
 
+
 def MPDATA_infgauge(init, nt, dt, uf, dxc):
     """
     This functions implements the MPDATA scheme with an infinite gauge, assuming a 
@@ -616,6 +636,7 @@ def MPDATA_infgauge(init, nt, dt, uf, dxc):
         field[it+1] = field_FP - dt*(np.roll(flx_SP,-1) - flx_SP)/dxc
 
     return field
+
 
 def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, do_beta='blend', eps=1e-16, nSmooth=1):
     """

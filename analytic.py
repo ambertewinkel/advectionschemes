@@ -1,9 +1,11 @@
 # Module file with various analytic function to initialise and 
 # compare with FD solutions in main.py
 # Author:   Amber te Winkel
-# Email:    ambertewinkel@gmail.com
+# Email:    a.j.tewinkel@pgr.reading.ac.uk
+
 
 import numpy as np
+
 
 def cosbell(x, xmax, u=0., t=0., shift=0., ampl=1., a=0., b=0.5):
     """
@@ -31,7 +33,9 @@ def cosbell(x, xmax, u=0., t=0., shift=0., ampl=1., a=0., b=0.5):
         psi = shift + ampl*np.where((x0 >= a) & (x0 <= b), 0.5*(1 - np.cos(2*np.pi*(x0-a)/(b-a))), 0.)
     else:
         psi = shift + ampl*np.where((x0 >= a) | (x0 <= b), 0.5*(1 - np.cos(2*np.pi*(x0-a+xmax)/(b-a+xmax))), 0.)
+
     return psi
+
 
 def tophat(x, xmax, u=0., t=0., shift=0., ampl=1., a=0.6, b=0.8):
     """
@@ -60,7 +64,9 @@ def tophat(x, xmax, u=0., t=0., shift=0., ampl=1., a=0.6, b=0.8):
         psi = shift + ampl*np.where((x0 >= a + 1.E-6) & (x0 <= b - 1.E-6), 1., 0.)
     else:
         psi = shift + ampl*np.where((x0 >= a + 1.E-6) | (x0 <= b - 1.E-6), 1., 0.)
+
     return psi
+
 
 def combi(x, xmax, u=0., t=0., shift=0., ampl=1., a=0., b=0.5, c=0.6, d=0.8):
     """
@@ -96,4 +102,5 @@ def combi(x, xmax, u=0., t=0., shift=0., ampl=1., a=0., b=0.5, c=0.6, d=0.8):
         psi = shift + ampl*np.where((x0 >= c) & (x0 <= d), 1., psi)
     else:
         psi = shift + ampl*np.where((x0 >= c) | (x0 <= d), 1., psi)
+
     return psi

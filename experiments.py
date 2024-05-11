@@ -1,9 +1,13 @@
 # Module file with various experiments to analyze the schemes in schemes.py with
 # Called in main.py
+# Author:   Amber te Winkel
+# Email:    a.j.tewinkel@pgr.reading.ac.uk
+
 
 import numpy as np
 import matplotlib.pyplot as plt
  
+
 def totalvariation(field):
     """
     This function computes the total variation of a periodic input field.
@@ -18,7 +22,9 @@ def totalvariation(field):
     for i in range(len(field)-1):
         TV += abs(field[i+1] - field[i])
     TV += abs(field[0] - field[-1])
+
     return TV
+
 
 def rmse(field, analytic, dx):
     """
@@ -37,6 +43,7 @@ def rmse(field, analytic, dx):
 
     return rmse
 
+
 def totalmass(field, dx):
     """
     This function computes the total mass of the input field.
@@ -49,6 +56,7 @@ def totalmass(field, dx):
     TM = np.sum(field*dx)
 
     return TM
+
 
 def check_conservation(init, field, dx):
     """
@@ -63,6 +71,7 @@ def check_conservation(init, field, dx):
     diff = totalmass(init, dx) - totalmass(field, dx)
     
     return diff
+
 
 def check_boundedness(init, field):
     """

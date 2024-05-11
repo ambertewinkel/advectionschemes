@@ -1,6 +1,6 @@
 Code repository with various schemes for the advection equation
 Author: Amber te Winkel
-Email: ambertewinkel@gmail.com
+Email: a.j.tewinkel@pgr.reading.ac.uk
 
 Instructions: run
 python main.py

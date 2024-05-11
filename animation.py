@@ -1,9 +1,7 @@
-"""
-This file calculates data for and produces animations. It can be called from other files (make_animation(...) -- input is a single scheme and various timestepping, grid, and velocity info) but also executed itself. 
-Author: ambertewinkel
-Email:  ambertewinkel@gmail.com
-Date:   February 2024
-"""
+# This file calculates data for and produces animations. It can be called from other files (make_animation(...) -- input is a single scheme and various timestepping, grid, and velocity info) but also executed itself. 
+# Author:   Amber te Winkel
+# Email:    a.j.tewinkel@pgr.reading.ac.uk
+
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,6 +14,7 @@ import utils as ut
 import grid as gr
 import analytic as an
 import schemes as sch
+
 
 def make_animation(fn, filebasename, nt, dt, uf, dxc, xc, xmax, uc, niter=1):
     # Script to create animation from set of pdf files, based on create_gif.py from FVM/PMAP data analysis
@@ -77,6 +76,7 @@ def make_animation(fn, filebasename, nt, dt, uf, dxc, xc, xmax, uc, niter=1):
         images2.append(imageio.imread(filename))
     imageio.mimsave(f'{dirname}{filebasename}_2.gif', images2, duration=500)
 
+
 def produce_standalone_animation():
     # Initial conditions
     dt = 0.1                    # time step
@@ -98,6 +98,7 @@ def produce_standalone_animation():
     niter = 1                   # number of iterations (for Jacobi or Gauss-Seidel)
     
     make_animation('hybrid_MPDATA_BTBS1J', 'hybrid_MPDATA_BTBS1J_notkeptstable', nt, dt, uf, dxc, xc, xmax, uc)
+
 
 def create_single_animation_from_data(filebasename, field, analytic, nt, dt, xc, animdir):
     """This function creates an animation from a given data file of a single scheme. The input is a 2D field of a single scheme (shape = 1d time x 1d space), analytic solution (shape = 1d time x 1d space), nt, dx in the centers (dxc; shape 1d space) and ....
@@ -131,6 +132,7 @@ def create_single_animation_from_data(filebasename, field, analytic, nt, dt, xc,
     for filename in filenames:
         os.remove(filename)
     os.rmdir(plotdir)
+
 
 def create_animation_from_data(filebasename, fields, nfields, schemenames, analytic, nt, dt, xc, animdir, plot_args):
     """This function creates an animation from a given data file of a single scheme. The input is a 2D field of a single scheme (shape = 1d time x 1d space), analytic solution (shape = 1d time x 1d space), nt, dx in the centers (dxc; shape 1d space) and ....
@@ -166,5 +168,6 @@ def create_animation_from_data(filebasename, fields, nfields, schemenames, analy
     for filename in filenames:
         os.remove(filename)
     os.rmdir(plotdir)
+
 
 if __name__ == "__main__": produce_standalone_animation()
