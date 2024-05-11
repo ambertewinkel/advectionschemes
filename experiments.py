@@ -6,7 +6,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
- 
+import logging
 
 def totalvariation(field):
     """
@@ -88,9 +88,9 @@ def check_boundedness(init, field):
     minbound, maxbound = np.min(init), np.max(init)
     minfield, maxfield = np.min(field), np.max(field)
     if minfield < minbound or maxfield > maxbound:
-        print('The below field is unbounded.')
-        print(f'The (init) bounds are {minbound:.3f}, {maxbound:.3f}')
-        print(f'The field has bounds: {minfield:.3f}, {maxfield:.3f}')
+        logging.info('The below field is unbounded.')
+        logging.info(f'The (init) bounds are {minbound:.3f}, {maxbound:.3f}')
+        logging.info(f'The field has bounds: {minfield:.3f}, {maxfield:.3f}')
     else:
         bounded = True
 

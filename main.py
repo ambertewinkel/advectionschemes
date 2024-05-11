@@ -38,7 +38,6 @@ def main():
     
     # Input booleans
     limitCto1 = False
-    plot_timesteps = False #!!!
     create_animation = True
     check_orderofconvergence = False
     date = dati.date.today().strftime("%d%m%Y")                   # date of the run
@@ -64,7 +63,7 @@ def main():
     nt = 100                    # number of time steps
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 1.              # constant velocity
+    uconstant = 3.#1.              # constant velocity
     coords = 'uniform'          # 'uniform' or 'stretching
 
     schemenames = [case["scheme"] for case in cases]

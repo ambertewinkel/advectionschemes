@@ -148,8 +148,9 @@ def SymmetricGaussSeidel(A, xi, b, ni):
     return x
 
 
-def NumPy(A, b):
-    """Calls the numpy matrix solver. This is a wrapper function. The numpy matrix solver uses direct elimination."""
+def NumPy(A, xi, b, ni):
+    """Calls the numpy matrix solver. This is a wrapper function. The numpy matrix solver uses direct elimination.
+    xi and ni are dummy variables. They are included for compatibility with the other solvers."""
     x = np.linalg.solve(A, b)
 
     return x

@@ -5,7 +5,6 @@
 
 
 import numpy as np
-import utils as ut
 import solvers as sv
 
 
@@ -556,7 +555,7 @@ def CNCS(init, nt, dt, uf, dxc): # Crank-Nicolson (implicit)
     return field
 
 
-def MPDATA(init, nt, dt, uf, dxc, eps=1e-16):
+def MPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_limit=True, limit=0.5, nSmooth=1):
     """
     This functions implements the MPDATA scheme without a gauge, assuming a 
     constant velocity (input through the Courant number) and a 
@@ -570,6 +569,9 @@ def MPDATA(init, nt, dt, uf, dxc, eps=1e-16):
     uf      : array of floats, velocity defined at faces
     dxc     : array of floats, spacing between cell faces
     eps     : float, optional. Small number to avoid division by zero.
+    do_limit: boolean, optional. If True, V is limited. Default is True.
+    limit   : float, optional. Limiting value. Default is 0.5.
+    nSmooth : integer, optional. Number of smoothing steps for V. Default is 1.
     --- Output --- 
     field   : 2D array of floats. Outputs each timestep of the field while advecting 
             the initial condition. Dimensions: nt+1 x length of init
@@ -591,6 +593,15 @@ def MPDATA(init, nt, dt, uf, dxc, eps=1e-16):
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
         A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps) # A[i] is at i-1/2
         V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*uf) # Same index shift as for A
+        
+        if do_limit == True: # Limit V
+            corrCLimit = limit*uf
+            V = np.maximum(np.minimum(V, corrCLimit), -corrCLimit)  
+        
+        # Smooth V
+        for ismooth in range(nSmooth):
+            V = 0.5*V + 0.25*(np.roll(V,1) + np.roll(V,-1))
+
         flx_SP = flux(np.roll(field_FP,1), field_FP, V)
         field[it+1] = field_FP - dt*(np.roll(flx_SP,-1) - flx_SP)/dxc
 
@@ -721,13 +732,13 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, do_beta='blend', eps=1e-16, nSmo
     return field
 
 
-def imMPDATA(init, nt, dt, uf, dxc, eps=1e-16, limit=True, nSmooth=1):
+def imMPDATA(init, nt, dt, uf, dxc, eps=1e-16, solver='NumPy', niter=0, do_limit=True, limit=0.5, nSmooth=1):
     """
-    Implements MPDATA with the first pass being implicit upwind. 
+    Implements MPDATA with an implicit first pass. 
     First pass: implicit upwind with numpy direct elimination on the whole matrix.
-    Second pass: MPDATA correction. For this:
+    Second pass: explicit MPDATA correction. For this:
     A is calculated with field_FP (first-pass) and not field[it]. The upwind direction is determined with the pseudovelocity V.
-    V is limited to +-corrClimit. Another difference is the option (i.e., commented out) of smoothing V. 
+    Optional: smooth and limit V. 
     --- Input ---
     init : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
@@ -735,6 +746,10 @@ def imMPDATA(init, nt, dt, uf, dxc, eps=1e-16, limit=True, nSmooth=1):
     uf      : array of floats, velocity defined at faces
     dxc     : array of floats, spacing between cell faces
     eps     : float, optional. Small number to avoid division by zero.
+    solver  : string, optional. If 'NumPy', use numpy's linalg.solve. If 'Jacobi', use Jacobi iteration.
+    do_limit: boolean, optional. If True, limit the antidiffusive velocity V
+    limit   : float, optional. Assumed positive. Limiting value for V
+    nSmooth : integer, optional. Number of smoothing iterations for V
     --- Output --- 
     field   : 2D array of floats. Outputs each timestep of the field while advecting 
             the initial condition. Dimensions: nt+1 x length of init
@@ -743,6 +758,10 @@ def imMPDATA(init, nt, dt, uf, dxc, eps=1e-16, limit=True, nSmooth=1):
     field = np.zeros((nt+1, len(init)))
     field[0] = init.copy()
     field_FP = np.zeros(len(init))
+
+    solverfn = getattr(sv, solver)
+    xi = 0 # dummy variable for NumPy solver
+    # !!! if Jacobi, redefine xi
 
     dxf = 0.5*(dxc + np.roll(dxc,1)) # dxf[i] is at i-1/2
     ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
@@ -766,7 +785,7 @@ def imMPDATA(init, nt, dt, uf, dxc, eps=1e-16, limit=True, nSmooth=1):
         rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
 
         # First pass: converged BTBS (implicit)
-        field_FP = np.linalg.solve(M, rhs)
+        field_FP = solverfn(M, xi, rhs, niter)
 
         # Second pass (explicit)
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
@@ -776,8 +795,8 @@ def imMPDATA(init, nt, dt, uf, dxc, eps=1e-16, limit=True, nSmooth=1):
         
         # Calculate and limit the antidiffusive velocity V. Same index shift as for A
         V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf)        
-        if limit == True: # Limit V
-            corrCLimit = 0.5*uf
+        if do_limit == True: # Limit V
+            corrCLimit = limit*uf
             V = np.maximum(np.minimum(V, corrCLimit), -corrCLimit)  
         
         # Smooth V
@@ -791,11 +810,11 @@ def imMPDATA(init, nt, dt, uf, dxc, eps=1e-16, limit=True, nSmooth=1):
     return field
 
 
-def hbMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', limit=True, nSmooth=1):
+def hbMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', solver='NumPy', niter=0, do_limit=True, limit=0.5, nSmooth=1):
     """
     Implements a hybrid scheme with explicit MPDATA correction.  
     First pass: explicit or implicit (or both if do_beta='blend') upwind with numpy direct elimination on the whole matrix. beta determines the degree of im/ex - as trapezoidal implicit.
-    Second pass: MPDATA correction. For this:
+    Second pass: explicit MPDATA correction. For this:
     A is calculated with field_FP (first-pass) and not field[it]. The upwind direction is determined with the pseudovelocity V.
     V is limited to +-corrClimit. Another difference is the option (i.e., commented out) of smoothing V. 
     --- Input ---
@@ -805,6 +824,11 @@ def hbMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', limit=True, nSm
     uf      : array of floats, velocity defined at faces
     dxc     : array of floats, spacing between cell faces
     eps     : float, optional. Small number to avoid division by zero.
+    do_beta : string, optional. If 'switch', beta is 0 for explicit and 1 for implicit. If 'blend', beta is a blend between 0 and 1.
+    solver  : string, optional. If 'NumPy', use numpy's linalg.solve. If 'Jacobi', use Jacobi iteration.
+    do_limit: boolean, optional. If True, limit the antidiffusive velocity V
+    limit   : float, optional. Assumed positive. Limiting value for V
+    nSmooth : integer, optional. Number of smoothing iterations for V
     --- Output --- 
     field   : 2D array of floats. Outputs each timestep of the field while advecting 
             the initial condition. Dimensions: nt+1 x length of init
@@ -814,6 +838,10 @@ def hbMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', limit=True, nSm
     field[0] = init.copy()
     field_FP = np.zeros(len(init))
 
+    solverfn = getattr(sv, solver)
+    xi = 0 # dummy variable for NumPy solver
+    # !!! if Jacobi, redefine xi
+
     dxf = 0.5*(dxc + np.roll(dxc,1)) # dxf[i] is at i-1/2
     ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
     ufm = 0.5*(uf - abs(uf))
@@ -822,10 +850,8 @@ def hbMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', limit=True, nSm
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
     if do_beta == 'switch':
         beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1.)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit
-        print('switch') 
     elif do_beta == 'blend':
         beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
-        print('blend')
     else:
         print('Error: do_beta must be either "switch" or "blend"')
     chi = np.maximum(1 - 2*beta, np.zeros(len(init))) # chi[i] is at i-1/2
@@ -844,7 +870,7 @@ def hbMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', limit=True, nSm
         rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
 
         # First pass: converged BTBS - dependent on the Courant number and beta
-        field_FP = np.linalg.solve(M, rhs)
+        field_FP = solverfn(M, xi, rhs, niter)
 
         # Second pass
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
@@ -854,8 +880,8 @@ def hbMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', limit=True, nSm
         
         # Calculate and limit the antidiffusive velocity V. Same index shift as for A
         V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf)
-        if limit == True: # Limit V
-            corrCLimit = 0.5*uf
+        if do_limit == True: # Limit V
+            corrCLimit = limit*uf
             V = np.maximum(np.minimum(V, corrCLimit), -corrCLimit)  
         
         # Smooth V
@@ -871,6 +897,7 @@ def hbMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', limit=True, nSm
 
 def HW_hbMPDATA(init, nt, dt, uf, dxc):
     """Code from Hilary Weller (April 2024) for a hybrid MPDATA scheme. Based on implicitMPDATA.py.
+    It assumes the grid is uniform.
     This version is gaugefree."""
     nx = 40
     carr = dt*uf/dxc # assumes uniform grid
@@ -894,6 +921,7 @@ def HW_hbMPDATA(init, nt, dt, uf, dxc):
 
 def HW_hbMPDATA_gauge(init, nt, dt, uf, dxc):
     """Code from Hilary Weller (April 2024) for a hybrid MPDATA scheme. Based on implicitMPDATA.py.
+    It assumes the grid is uniform.
     This version has a finite-gauge."""
     nx = 40
     carr = dt*uf/dxc # assumes uniform grid
