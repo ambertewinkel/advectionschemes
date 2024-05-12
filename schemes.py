@@ -761,8 +761,6 @@ def imMPDATA(init, nt, dt, uf, dxc, eps=1e-16, solver='NumPy', niter=0, do_limit
     field_FP = np.zeros(len(init))
 
     solverfn = getattr(sv, solver)
-    xi = 0 # dummy variable for NumPy solver
-    # !!! if Jacobi, redefine xi
 
     dxf = 0.5*(dxc + np.roll(dxc,1)) # dxf[i] is at i-1/2
     ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
@@ -786,7 +784,7 @@ def imMPDATA(init, nt, dt, uf, dxc, eps=1e-16, solver='NumPy', niter=0, do_limit
         rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
 
         # First pass: converged BTBS (implicit)
-        field_FP = solverfn(M, xi, rhs, niter) + gauge
+        field_FP = solverfn(M, field[it], rhs, niter) + gauge
 
         # Second pass (explicit)
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
@@ -807,6 +805,7 @@ def imMPDATA(init, nt, dt, uf, dxc, eps=1e-16, solver='NumPy', niter=0, do_limit
         # Calculate the flux and second-pass result
         flx_SP = flux(np.roll(field_FP,1), field_FP, V)
         field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc - gauge
+
 
     return field
 
@@ -841,8 +840,6 @@ def hbMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', solver='NumPy',
     field_FP = np.zeros(len(init))
 
     solverfn = getattr(sv, solver)
-    xi = 0 # dummy variable for NumPy solver
-    # !!! if Jacobi, redefine xi
 
     dxf = 0.5*(dxc + np.roll(dxc,1)) # dxf[i] is at i-1/2
     ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
@@ -872,7 +869,7 @@ def hbMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', solver='NumPy',
         rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
 
         # First pass: converged BTBS - dependent on the Courant number and beta.
-        field_FP = solverfn(M, xi, rhs, niter) + gauge
+        field_FP = solverfn(M, field[it], rhs, niter) + gauge
 
         # Second pass
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))

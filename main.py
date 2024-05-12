@@ -45,16 +45,21 @@ def main():
 
     # Input cases
     cases = [\
-        #{'scheme':'hybrid_MPDATA_BTBS1J', 'do_beta':'switch', 'solver':'Jacobi', 'niter':10},
-        {'scheme':'MPDATA', 'do_limit':False, 'nSmooth':0},
-        {'scheme':'hbMPDATA', 'do_beta':'switch', 'solver':'NumPy', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
-        {'scheme':'imMPDATA', 'solver':'NumPy', 'do_limit':False, 'nSmooth':0, 'gauge':0.}
+        #{'scheme':'MPDATA', 'do_limit':False, 'nSmooth':0},
+        #{'scheme':'hbMPDATA', 'do_beta':'switch', 'solver':'Jacobi', 'niter':10, 'do_limit':False, 'nSmooth':0, 'gauge':0.},
+        #{'scheme':'hbMPDATA', 'solver':'NumPy', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
+        {'scheme':'imMPDATA', 'solver':'NumPy', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
+        {'scheme':'imMPDATA', 'solver':'Jacobi', 'niter':10, 'do_limit':False, 'nSmooth':0, 'gauge':0.},
+        {'scheme':'hbMPDATA', 'solver':'Jacobi', 'niter':10, 'do_limit':False, 'nSmooth':0, 'gauge':0.}
         ]
     
     plot_args = [\
-        {'label':'MPDATA', 'color':'red',    'marker':'o', 'linestyle':'-'},
-        {'label':'hbMPDATA', 'color':'blue',   'marker':'x', 'linestyle':'-'},
-        {'label':'imMPDATA', 'color':'orange', 'marker':'+', 'linestyle':'-'}
+        #{'label':'MPDATA', 'color':'red',    'marker':'o', 'linestyle':'-'},
+        #{'label':'hbMPDATA', 'color':'blue',   'marker':'x', 'linestyle':'-'},
+        #{'label':'hbMPDATA_NumPy', 'color':'orange', 'marker':'+', 'linestyle':'-'},
+        {'label':'imMPDATA_NumPy', 'color':'blue', 'marker':'o', 'linestyle':'--'},
+        {'label':'imMPDATA_Jacobi10', 'color':'green', 'marker':'x', 'linestyle':'--'},
+        {'label':'hbMPDATA_Jacobi10', 'color':'purple', 'marker':'+', 'linestyle':'--'}
         ]
 
     # Initial conditions
@@ -68,7 +73,6 @@ def main():
 
     schemenames = [case["scheme"] for case in cases]
     schemenames_settings = str(analytic.__name__) + f'_t{nt*dt:.2f}_u{uconstant:.2f}_' + "-".join(schemenames)
-    print(schemenames_settings)
     
     ##################################
     #### Setup output and logging ####
@@ -85,23 +89,22 @@ def main():
         filename = outputdir + 'out.log'
         if not os.path.exists(outputdir):
             os.mkdir(outputdir)
-            print("Folder %s created!" % outputdir)
+            print("Folder %s created" % outputdir)
         else:
             filename = outputdir + 'out.log'
             os.remove(filename)
-            print("File %s removed!" % filename)
     elif save_as == 'store':
         if not os.path.exists('./output/' + date + '/'):
             os.mkdir('./output/' + date + '/')
-            print("Folder %s created!" % date)
+            print("Folder %s created" % date)
         outputdir = f'./output/{date}/{schemenames_settings}/' 
         i = 0 
         while os.path.exists(outputdir):
-            print("Folder %s already exists!" % outputdir)
+            print("Folder %s already exists" % outputdir)
             i += 1
             outputdir = f'./output/{date}/{schemenames_settings}_{i}/'
         os.mkdir(outputdir)
-        print("Folder %s created!" % outputdir)
+        print("Folder %s created" % outputdir)
         filename = outputdir + 'out.log'
     plotname = outputdir + 'final.pdf'
 
@@ -201,7 +204,8 @@ def main():
         # Calculate numerical solutions for each scheme through time
         # Output is 2D field ([1d time, 1d space])
         for c in range(len(cases)):
-            locals()[f'psi_{cases[c]["scheme"]}_{l}'] = callscheme(cases[c], nt, dt, uf, dxc, psi_in)
+            s = plot_args[c]['label']
+            locals()[f'psi_{s}_{l}'] = callscheme(cases[c], nt, dt, uf, dxc, psi_in)
 
     ##########################
     #### Plotting schemes ####
@@ -210,9 +214,9 @@ def main():
     # Plotting the final time step for each scheme in the same plot
     plt.plot(xc, psi_in, label='Initial', linestyle='-', color='grey')
     plt.plot(xc, locals()['psi_an_reg'][nt], label='Analytic', linestyle='-', color='k')
-    for s in schemenames:
-        si = schemenames.index(s)
-        plt.plot(xc, locals()[f'psi_{s}_reg'][nt], **plot_args[si])
+    for c in range(len(cases)):        
+        s = plot_args[c]['label']
+        plt.plot(xc, locals()[f'psi_{s}_reg'][nt], **plot_args[c])
     ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt}', \
                      'x', '$\\Psi$', True, -1.5, 1.5)
 
@@ -231,13 +235,14 @@ def main():
     bdn_psi_analytic = epm.check_boundedness(psi_in, locals()['psi_an_reg'][nt])
     logging.info(f'Analytic - Boundedness: {bdn_psi_analytic}')    
     logging.info('')
-    for s in schemenames:
+    for c in range(len(cases)):        
+        s = plot_args[c]['label']
         locals()[f'csv_psi_{s}'] = epm.check_conservation(psi_in, locals()[f'psi_{s}_reg'][nt], dxc)
-        logging.info(f"{s} - Mass gained: {locals()[f'csv_psi_{s}']:.2E}")
+        logging.info(f"{plot_args[c]['label']} - Mass gained: {locals()[f'csv_psi_{s}']:.2E}")
         locals()[f'bdn_psi_{s}'] = epm.check_boundedness(psi_in, locals()[f'psi_{s}_reg'][nt])
-        logging.info(f"{s} - Boundedness: {locals()[f'bdn_psi_{s}']}")         
+        logging.info(f"{plot_args[c]['label']} - Boundedness: {locals()[f'bdn_psi_{s}']}")         
         locals()[f'TV_psi_{s}'] = epm.totalvariation(locals()[f'psi_{s}_reg'][nt])
-        logging.info(f"{s} - Variation: {locals()[f'TV_psi_{s}']:.2E}")
+        logging.info(f"{plot_args[c]['label']} - Variation: {locals()[f'TV_psi_{s}']:.2E}")
         logging.info('')
 
     ##########################
@@ -251,39 +256,39 @@ def main():
     fig, ((ax1, ax2, ax3)) = plt.subplots(1, 3, figsize=(17, 7))
 
     # Mass over time (ax1)
-    for s in schemenames:
-        si = schemenames.index(s)
+    for c in range(len(cases)):        
+        s = plot_args[c]['label']
         mass = np.zeros(nt+1)
         for it in range(nt+1):
             mass[it] = epm.totalmass(locals()[f'psi_{s}_reg'][it], dxc)
-        ax1.plot(np.arange(0,nt+1), mass, **plot_args[si])
+        ax1.plot(np.arange(0,nt+1), mass, **plot_args[c])
     ax1.set_title('Mass')
     ax1.set_xlabel('Time')
     ax1.legend()
 
     # Boundedness (min/max) over time (ax2)
-    for s in schemenames:
-        si = schemenames.index(s)   
+    for c in range(len(cases)):        
+        s = plot_args[c]['label']
         minarr = np.min(locals()[f'psi_{s}_reg'], axis=1)
         maxarr = np.max(locals()[f'psi_{s}_reg'], axis=1)
         logging.info('')
-        logging.info(f'{s} - Minimum during the time integration: {np.min(minarr)}')
-        logging.info(f'{s} - Maximum during the time integration: {np.max(maxarr)}')
-        ax2.plot(np.arange(0,nt+1), minarr, **plot_args[si])
-        ax2.plot(np.arange(0,nt+1), maxarr, **plot_args[si])
+        logging.info(f'{plot_args[c]['label']} - Minimum during the time integration: {np.min(minarr)}')
+        logging.info(f'{plot_args[c]['label']} - Maximum during the time integration: {np.max(maxarr)}')
+        ax2.plot(np.arange(0,nt+1), minarr, **plot_args[c])
+        ax2.plot(np.arange(0,nt+1), maxarr, **plot_args[c])
     ax2.set_title('Bounds')
     ax2.set_xlabel('Time')
     ax2.legend()
         
     # Error over time (ax3)
-    for s in schemenames:
-        si = schemenames.index(s)
+    for c in range(len(cases)):        
+        s = plot_args[c]['label']
         rmse_time = np.zeros(nt+1)
         for it in range(nt+1):     
             rmse_time[it] = epm.rmse(locals()[f'psi_{s}_reg'][it], locals()['psi_an_reg'][it], dxc) 
         logging.info('')
-        logging.info(f'{s} - Max RMSE during the time integration: {np.max(rmse_time)}')
-        ax3.plot(np.arange(0,nt+1), rmse_time, **plot_args[si])
+        logging.info(f'{plot_args[c]['label']} - Max RMSE during the time integration: {np.max(rmse_time)}')
+        ax3.plot(np.arange(0,nt+1), rmse_time, **plot_args[c])
     ax3.set_yscale('log')
     ax3.set_title('RMSE')
     ax3.set_xlabel('Time')
@@ -298,8 +303,8 @@ def main():
     if check_orderofconvergence == True:
         # Setup plot
         fig, ax1 = plt.subplots(1, 1, figsize=(10, 5))
-        for s in schemenames:
-            si = schemenames.index(s)
+        for c in range(len(cases)):        
+            s = plot_args[c]['label']
             # Calculate error for each grid spacing (one or three)
             rmse_x = np.zeros(len(nx_arr))
             dxc_arr = np.zeros(len(nx_arr))
@@ -317,7 +322,7 @@ def main():
                 dxc_arr[xi] = np.mean(dxc)
 
             # Plot error over grid spacing
-            ax1.scatter(dxc_arr, rmse_x, marker='+', label=f'Psi {s}')
+            ax1.scatter(dxc_arr, rmse_x, marker='+', label=f'Psi {plot_args[c]['label']}')
 
         # Plot details
         ax1.set_xscale('log')
@@ -365,7 +370,8 @@ def main():
     fields, colors = [], []
     # Create animation from the data
     if create_animation == True:
-        for s in schemenames:
+        for c in range(len(cases)):        
+            s = plot_args[c]['label']
             fields.append(locals()[f'psi_{s}_reg'])
         anim.create_animation_from_data(fields, len(schemenames), locals()['psi_an_reg'], nt, dt, xc, outputdir, plot_args)
 
@@ -379,8 +385,8 @@ def callscheme(case, nt, dt, uf, dxc, psi_in):
     """Takes all the input variables and the scheme name and calls the scheme with the appropriate input arguments."""
 
     # Tranlate the scheme name to a function in schemes.py
-    s = case["scheme"]
-    fn = getattr(sch, f'{s}')
+    sc = case["scheme"]
+    fn = getattr(sch, f'{sc}')
 
     # Remove 'scheme' key from dictionary
     exclude = {"scheme"}
