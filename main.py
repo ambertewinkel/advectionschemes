@@ -15,6 +15,7 @@ import animation as anim
 import os
 import datetime as dati
 import logging
+import inspect
 
 
 logger = logging.getLogger(__name__)
@@ -118,6 +119,11 @@ def main():
     logging.info(f'Cases:')
     for case in cases:
         logging.info(case)
+    logging.info('')
+    logging.info('Default values:')
+    for case in cases:
+        fn = getattr(sch, f'{case["scheme"]}')
+        logging.info(f'{fn.__name__}: {inspect.signature(fn)}')
     logging.info('')
     logging.info('Plotting details:')
     for case in plot_args:
