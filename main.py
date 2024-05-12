@@ -46,20 +46,20 @@ def main():
     # Input cases
     cases = [\
         #{'scheme':'MPDATA', 'do_limit':False, 'nSmooth':0},
-        #{'scheme':'hbMPDATA', 'do_beta':'switch', 'solver':'Jacobi', 'niter':10, 'do_limit':False, 'nSmooth':0, 'gauge':0.},
-        #{'scheme':'hbMPDATA', 'solver':'NumPy', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
-        {'scheme':'imMPDATA', 'solver':'NumPy', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
-        {'scheme':'imMPDATA', 'solver':'Jacobi', 'niter':10, 'do_limit':False, 'nSmooth':0, 'gauge':0.},
-        {'scheme':'hbMPDATA', 'solver':'Jacobi', 'niter':10, 'do_limit':False, 'nSmooth':0, 'gauge':0.}
+        {'scheme':'hbMPDATA', 'do_beta':'blend', 'solver':'NumPy', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
+        #{'scheme':'hbMPDATA', 'solver':'NumPy', 'do_limit':True, 'nSmooth':0, 'gauge':0.},
+        #{'scheme':'hbMPDATA', 'solver':'NumPy', 'do_limit':True, 'nSmooth':1, 'gauge':0.},
+        #{'scheme':'imMPDATA', 'solver':'NumPy', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
+        {'scheme':'HW_hbMPDATA', 'do_beta':'blend'}
         ]
     
     plot_args = [\
         #{'label':'MPDATA', 'color':'red',    'marker':'o', 'linestyle':'-'},
-        #{'label':'hbMPDATA', 'color':'blue',   'marker':'x', 'linestyle':'-'},
-        #{'label':'hbMPDATA_NumPy', 'color':'orange', 'marker':'+', 'linestyle':'-'},
-        {'label':'imMPDATA_NumPy', 'color':'blue', 'marker':'o', 'linestyle':'--'},
-        {'label':'imMPDATA_Jacobi10', 'color':'green', 'marker':'x', 'linestyle':'--'},
-        {'label':'hbMPDATA_Jacobi10', 'color':'purple', 'marker':'+', 'linestyle':'--'}
+        {'label':'hbMPDATA_NumPy', 'color':'blue',   'marker':'x', 'linestyle':'-'},
+        #{'label':'hbMPDATA_NumPy_lim', 'color':'orange', 'marker':'+', 'linestyle':'-'},
+        #{'label':'hbMPDATA_NumPy_limsm', 'color':'green', 'marker':'', 'linestyle':'--'},
+        #{'label':'imMPDATA_NumPy', 'color':'blue', 'marker':'o', 'linestyle':'--'},
+        {'label':'HW_hbMPDATA', 'color':'green', 'marker':'+', 'linestyle':'-'}
         ]
 
     # Initial conditions
@@ -68,7 +68,7 @@ def main():
     nt = 100                    # number of time steps
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 3.#1.              # constant velocity
+    uconstant = 6.25#3.125              # constant velocity
     coords = 'uniform'          # 'uniform' or 'stretching
 
     schemenames = [case["scheme"] for case in cases]

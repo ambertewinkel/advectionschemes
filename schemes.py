@@ -894,10 +894,9 @@ def hbMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', solver='NumPy',
     return field
 
 
-def HW_hbMPDATA(init, nt, dt, uf, dxc):
+def HW_hbMPDATA(init, nt, dt, uf, dxc, do_beta='switch', do_limit=False, limit=0.5, nSmooth=0, gauge=0.):
     """Code from Hilary Weller (April 2024) for a hybrid MPDATA scheme. Based on implicitMPDATA.py.
-    It assumes the grid is uniform.
-    This version is gaugefree."""
+    It assumes the grid is uniform."""
     nx = 40
     carr = dt*uf/dxc # assumes uniform grid
     c = carr[0].copy()
@@ -907,7 +906,7 @@ def HW_hbMPDATA(init, nt, dt, uf, dxc):
     
     # Sets of parameter values to compare and output files for results
     params = \
-    [{"beta":0, "gauge":0, "nCorr":1, "corrOption":"new", "corrCLimit":0.5}]
+    [{"beta":0, "gauge":gauge, "nCorr":1, "corrOption":"new", 'do_beta': do_beta, 'do_limit':do_limit, "limit":limit, 'nSmooth':nSmooth}]
         
     # Advection time steps using MPDATA and plotting every time step
     phi = np.zeros((nt+1, len(init)))
@@ -918,39 +917,15 @@ def HW_hbMPDATA(init, nt, dt, uf, dxc):
     return phi
 
 
-def HW_hbMPDATA_gauge(init, nt, dt, uf, dxc):
-    """Code from Hilary Weller (April 2024) for a hybrid MPDATA scheme. Based on implicitMPDATA.py.
-    It assumes the grid is uniform.
-    This version has a finite-gauge."""
-    nx = 40
-    carr = dt*uf/dxc # assumes uniform grid
-    c = carr[0].copy()
-
-    # Initialise and advect profile phi based on space, x
-    x = np.arange(0., 1., 1/nx)
-    phiInit = init.copy()
-    
-    # Sets of parameter values to compare and output files for results
-    params = \
-    [{"beta":0, "gauge":1000, "nCorr":1, "corrOption":"new", "corrCLimit":0.5}]
-
-    # Advection time steps using MPDATA and plotting every time step
-    phi = np.zeros((nt+1, len(phiInit)))
-    phi[0] = phiInit.copy()
-    for it in range(nt):
-        phi[it+1] = HW_hbMPDATA_timestepping(phi[it], c, **params[0])
-
-    return phi
-
-
-def HW_hbMPDATA_timestepping(phi, c, beta = 0., gauge = 0., nCorr = 1, eps = 1e-16,
-          corrOption = "new", corrCLimit = 0.5, nSmooth = 0):
+def HW_hbMPDATA_timestepping(phi, c, beta = 0., do_beta = 'switch', gauge = 0., nCorr = 1, eps = 1e-16,
+          corrOption = "new", do_limit = False, limit = 0.5, nSmooth = 0):
     """
     Advects 1d profile phi for one time step with Courant number c using MPDATA
     with periodic boundary conditions and nCorr higher order corrections.
     If beta = 0 and c<1 then the scheme uses standard, fully explicit MPDATA.
     If beta>0 then the scheme is a correction on trapezoidal implicit with off
     centering beta. If gauge>0 then a finite gauge is used.
+    This scheme assumes do_beta='blend'.
     --- Input ---
     phi    : 1d array of floats to be advected
     c      : float. Courant number = dt u/dx
@@ -969,8 +944,14 @@ def HW_hbMPDATA_timestepping(phi, c, beta = 0., gauge = 0., nCorr = 1, eps = 1e-
     nx = len(phi)
     
     # Set beta as needed for implicitness
-    if (abs(c) > 1) & (beta == 0):
-        beta = 1 - 1/abs(c)
+    if do_beta == 'switch':
+        if (abs(c) > 1) & (beta == 0):
+            beta = 1. 
+    elif do_beta == 'blend':
+        if (abs(c) > 1) & (beta == 0):
+            beta = 1 - 1/abs(c) 
+    else:
+        print('Error: do_beta must be either "switch" or "blend"')
     chi = max(1 - 2*beta, 0)
 
     # Set up the matrix for the trapezoidal implicit, first-order step
@@ -983,9 +964,10 @@ def HW_hbMPDATA_timestepping(phi, c, beta = 0., gauge = 0., nCorr = 1, eps = 1e-
     # RHS of the matrix equation
     RHS = phi - (1-beta)*max(c,0)*(phi - np.roll(phi,1)) \
               - (1-beta)*min(c,0)*(np.roll(phi,-1) - phi)
-    
+
     # First-order step
     phiNew = np.linalg.solve(M, RHS) + gauge
+
     # Values of phi to use for the anti-diffusive flux (no additional memory)
     phiF = phiNew if (corrOption == "new") else phi
     
@@ -996,10 +978,10 @@ def HW_hbMPDATA_timestepping(phi, c, beta = 0., gauge = 0., nCorr = 1, eps = 1e-
                       /(phiF + np.roll(phiF,1) + eps)
                 
         # Limit the anti-diffusive fluxes to obey the Courant limit
-        v = np.maximum(np.minimum(v, corrCLimit), -corrCLimit)
+        if do_limit==True:
+            v = np.maximum(np.minimum(v, limit), -limit)
         
         # Smoothing
-        nSmooth = 1
         for ismooth in range(nSmooth):
             v = 0.5*v + 0.25*(np.roll(v,1) + np.roll(v,-1))
 
