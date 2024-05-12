@@ -46,9 +46,9 @@ def main():
     # Input cases
     cases = [\
         #{'scheme':'hybrid_MPDATA_BTBS1J', 'do_beta':'switch', 'solver':'Jacobi', 'niter':10},
-        {'scheme':'MPDATA'},
-        {'scheme':'hbMPDATA',        'do_beta':'switch', 'solver':'NumPy'},
-        {'scheme':'imMPDATA',                                 'solver':'NumPy'}
+        {'scheme':'MPDATA', 'do_limit':False, 'nSmooth':0},
+        {'scheme':'hbMPDATA', 'do_beta':'switch', 'solver':'NumPy', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
+        {'scheme':'imMPDATA', 'solver':'NumPy', 'do_limit':False, 'nSmooth':0, 'gauge':0.}
         ]
     
     plot_args = [\

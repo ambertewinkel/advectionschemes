@@ -555,7 +555,7 @@ def CNCS(init, nt, dt, uf, dxc):
     return field
 
 
-def MPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_limit=True, limit=0.5, nSmooth=1):
+def MPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_limit=False, limit=0.5, nSmooth=0):
     """
     This functions implements the MPDATA scheme without a gauge, assuming a 
     constant velocity (input through the Courant number) and a 
@@ -649,7 +649,7 @@ def MPDATA_infgauge(init, nt, dt, uf, dxc):
     return field
 
 
-def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, do_beta='blend', eps=1e-16, nSmooth=1):
+def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16, nSmooth=0):
     """
     This functions implements 
     Explicit: MPDATA scheme (without a gauge, assuming a 
@@ -732,7 +732,7 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, do_beta='blend', eps=1e-16, nSmo
     return field
 
 
-def imMPDATA(init, nt, dt, uf, dxc, eps=1e-16, solver='NumPy', niter=0, do_limit=True, limit=0.5, nSmooth=1, gauge=0.):
+def imMPDATA(init, nt, dt, uf, dxc, eps=1e-16, solver='NumPy', niter=0, do_limit=False, limit=0.5, nSmooth=0, gauge=0.):
     """
     Implements MPDATA with an implicit first pass. 
     First pass: implicit upwind with numpy direct elimination on the whole matrix.
@@ -811,7 +811,7 @@ def imMPDATA(init, nt, dt, uf, dxc, eps=1e-16, solver='NumPy', niter=0, do_limit
     return field
 
 
-def hbMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', solver='NumPy', niter=0, do_limit=True, limit=0.5, nSmooth=1, gauge=0.):
+def hbMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', solver='NumPy', niter=0, do_limit=False, limit=0.5, nSmooth=0, gauge=0.):
     """
     Implements a hybrid scheme with explicit MPDATA correction.  
     First pass: explicit or implicit (or both if do_beta='blend') upwind with numpy direct elimination on the whole matrix. beta determines the degree of im/ex - as trapezoidal implicit.
