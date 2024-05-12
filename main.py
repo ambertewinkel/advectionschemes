@@ -5,7 +5,6 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
 import schemes as sch
 import experiments as epm
 import utils as ut
@@ -68,10 +67,8 @@ def main():
     coords = 'uniform'          # 'uniform' or 'stretching
 
     schemenames = [case["scheme"] for case in cases]
-    str_settings = '_' + str(analytic.__name__) + '_t'+ f"{nt*dt:.2f}" + '_b' + cases[1]['do_beta'][0] + '_g' + coords + '_u' + f'{uconstant:.1f}' #!!!
-    str_schemenames_settings = "-".join(schemenames) + str_settings
-    filebasename = [s  + str_settings for s in schemenames] # name of the directory to save the animation and its corresponding plots in
-    # !!! To do: when option to include niter in hybrid scheme, add niter to the filebasename
+    schemenames_settings = str(analytic.__name__) + f'_t{nt*dt:.2f}_u{uconstant:.2f}_' + "-".join(schemenames)
+    print(schemenames_settings)
     
     ##################################
     #### Setup output and logging ####
@@ -81,27 +78,32 @@ def main():
     # Check if ./output/ and outputdir exist, if not create them
     if not os.path.exists('./output/'):
         os.mkdir('./output/')
-        print("Output folder created!")
+        print("./output/ created")
     # Determine where to save the output
     if save_as == 'test':
-        outputdir = './output/test/' #
+        outputdir = './output/test/'
         filename = outputdir + 'out.log'
-        plotname = 'final'
+        if not os.path.exists(outputdir):
+            os.mkdir(outputdir)
+            print("Folder %s created!" % outputdir)
+        else:
+            filename = outputdir + 'out.log'
+            os.remove(filename)
+            print("File %s removed!" % filename)
     elif save_as == 'store':
         if not os.path.exists('./output/' + date + '/'):
             os.mkdir('./output/' + date + '/')
             print("Folder %s created!" % date)
-        outputdir = './output/' + date + '/' + str_schemenames_settings + '/' 
-        filename = outputdir + 'out_' + str_schemenames_settings + '.out' 
-        plotname = 'final_' + str_schemenames_settings
-    if not os.path.exists(outputdir):
+        outputdir = f'./output/{date}/{schemenames_settings}/' 
+        i = 0 
+        while os.path.exists(outputdir):
+            print("Folder %s already exists!" % outputdir)
+            i += 1
+            outputdir = f'./output/{date}/{schemenames_settings}_{i}/'
         os.mkdir(outputdir)
         print("Folder %s created!" % outputdir)
-    else:
-        # Check whether *.log exists, and remove it if so
-        if os.path.exists(filename):
-            os.remove(filename)
-            print("File %s removed!" % filename)
+        filename = outputdir + 'out.log'
+    plotname = outputdir + 'final.pdf'
 
     # Set up logging
     print(f'See output file {filename}')    
@@ -211,14 +213,14 @@ def main():
     for s in schemenames:
         si = schemenames.index(s)
         plt.plot(xc, locals()[f'psi_{s}_reg'][nt], **plot_args[si])
-    ut.design_figure(plotname + '.pdf', outputdir, f'$\\Psi$ at t={nt*dt}', \
+    ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt}', \
                      'x', '$\\Psi$', True, -1.5, 1.5)
 
     #####################
     #### Experiments ####
     #####################
 
-    # Print experiment results in .out
+    # Print experiment results in .log
     logging.info('')
     logging.info('========== Data at the final time step ==========')
     logging.info('')
@@ -325,7 +327,7 @@ def main():
         ax1.legend()
 
         # Save plot of error over grid spacing
-        plt.savefig(outputdir + f'RMSE_over_dx_' + str_schemenames_settings + '.pdf')
+        plt.savefig(outputdir + f'RMSE_over_dx_' + schemenames_settings + '.pdf')
         plt.tight_layout()
         plt.close()
 
