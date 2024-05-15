@@ -1,8 +1,9 @@
 # Module file with various solvers to use for the implicit schemes in schemes.py
 # Author:   Amber te Winkel
-# Email:    ambertewinkel@gmail.com
+# Email:    a.j.tewinkel@pgr.reading.ac.uk
 
 import numpy as np
+
 
 def Jacobi(A, xi, b, ni):
     """
@@ -38,6 +39,7 @@ def Jacobi(A, xi, b, ni):
 
     return x
 
+
 def GaussSeidel(A, xi, b, ni):
     """
     This function computes the solution x of the Ax=b linear matrix equation
@@ -70,6 +72,7 @@ def GaussSeidel(A, xi, b, ni):
 
     return x
 
+
 def BackwardGaussSeidel(A, xi, b, ni):
     """
     This function computes the solution x of the Ax=b linear matrix equation
@@ -101,6 +104,7 @@ def BackwardGaussSeidel(A, xi, b, ni):
             x[i] = (b[i] - ax)/A[i,i]
 
     return x
+
 
 def SymmetricGaussSeidel(A, xi, b, ni):
     """
@@ -140,5 +144,13 @@ def SymmetricGaussSeidel(A, xi, b, ni):
                 if j != i:
                     ax += A[i,j]*x[j] # x is really xhalf
             x[i] = (b[i] - ax)/A[i,i]
+
+    return x
+
+
+def NumPy(A, xi, b, ni):
+    """Calls the numpy matrix solver. This is a wrapper function. The numpy matrix solver uses direct elimination.
+    xi and ni are dummy variables. They are included for compatibility with the other solvers."""
+    x = np.linalg.solve(A, b)
 
     return x

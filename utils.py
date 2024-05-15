@@ -1,19 +1,22 @@
 # Module file for utilities functions used in main.py, schemes.py and experiments.py
 # Author:   Amber te Winkel
-# Email:    ambertewinkel@gmail.com
+# Email:    a.j.tewinkel@pgr.reading.ac.uk
+
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-def design_figure(filename, outputdir, title, xlabel, ylabel, bool_ylim = False, ylim1=0.0, ylim2=0.0):
+
+def design_figure(filename, title, xlabel, ylabel, bool_ylim = False, ylim1=0.0, ylim2=0.0):
     if bool_ylim == True: plt.ylim(ylim1, ylim2)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.title(title)
     plt.legend()
     plt.tight_layout()
-    plt.savefig(outputdir + filename)
+    plt.savefig(filename)
     plt.clf()
+
 
 def to_vector(array, length):
     """
@@ -44,16 +47,17 @@ def to_vector(array, length):
     
     return res
 
+
 def plot_Courant(x, c, outputdir):
     plt.plot(x, c)
     plt.axhline(1.0, color='grey', linestyle=':')
-    plt.axvline(1.0)
     plt.title('Courant number')
     plt.xlabel('x')
     plt.ylabel('C')
     plt.tight_layout()
     plt.savefig(outputdir + 'Courant.pdf')
     plt.clf()
+
 
 def plot_grid(x, dx, outputdir):
     plt.plot(x)
@@ -70,3 +74,9 @@ def plot_grid(x, dx, outputdir):
     plt.tight_layout()
     plt.savefig(outputdir + 'gridspacing.pdf')
     plt.clf()
+
+
+def without_keys(d, keys):
+    """Remove a list of keys from a dictionary."""
+
+    return {x: d[x] for x in d if x not in keys}

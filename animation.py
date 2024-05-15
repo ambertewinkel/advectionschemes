@@ -1,9 +1,7 @@
-"""
-This file calculates data for and produces animations. It can be called from other files (make_animation(...) -- input is a single scheme and various timestepping, grid, and velocity info) but also executed itself. 
-Author: ambertewinkel
-Email:  ambertewinkel@gmail.com
-Date:   February 2024
-"""
+# This file calculates data for and produces animations. It can be called from other files (make_animation(...) -- input is a single scheme and various timestepping, grid, and velocity info) but also executed itself. 
+# Author:   Amber te Winkel
+# Email:    a.j.tewinkel@pgr.reading.ac.uk
+
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,6 +14,7 @@ import utils as ut
 import grid as gr
 import analytic as an
 import schemes as sch
+
 
 def make_animation(fn, filebasename, nt, dt, uf, dxc, xc, xmax, uc, niter=1):
     # Script to create animation from set of pdf files, based on create_gif.py from FVM/PMAP data analysis
@@ -77,6 +76,7 @@ def make_animation(fn, filebasename, nt, dt, uf, dxc, xc, xmax, uc, niter=1):
         images2.append(imageio.imread(filename))
     imageio.mimsave(f'{dirname}{filebasename}_2.gif', images2, duration=500)
 
+
 def produce_standalone_animation():
     # Initial conditions
     dt = 0.1                    # time step
@@ -99,7 +99,8 @@ def produce_standalone_animation():
     
     make_animation('hybrid_MPDATA_BTBS1J', 'hybrid_MPDATA_BTBS1J_notkeptstable', nt, dt, uf, dxc, xc, xmax, uc)
 
-def create_animation_from_data(filebasename, field, analytic, nt, dt, xc, animdir):
+
+def create_single_animation_from_data(filebasename, field, analytic, nt, dt, xc, animdir):
     """This function creates an animation from a given data file of a single scheme. The input is a 2D field of a single scheme (shape = 1d time x 1d space), analytic solution (shape = 1d time x 1d space), nt, dx in the centers (dxc; shape 1d space) and ....
     This is a function that is to be called from other files, not from produce_standalone_animation()."""
 
@@ -117,7 +118,7 @@ def create_animation_from_data(filebasename, field, analytic, nt, dt, xc, animdi
         plt.plot(xc, field_in, label='Initial', linestyle='-', color='grey')
         plt.plot(xc, analytic[it], label='Analytic', linestyle='-', color='k')
         plt.plot(xc, field[it], label='Numerical', marker='x', linestyle='-', color='blue')
-        ut.design_figure(f'{plotdir}field_{it}.png', '', f'{filebasename} at t={it*dt:.2f}', \
+        ut.design_figure(f'{plotdir}field_{it}.png', f'{filebasename} at t={it*dt:.2f}', \
                         'x', '$field$', True, -0.5, 1.5)
         filenames.append(f'{plotdir}field_{it}.png')
 
@@ -131,5 +132,42 @@ def create_animation_from_data(filebasename, field, analytic, nt, dt, xc, animdi
     for filename in filenames:
         os.remove(filename)
     os.rmdir(plotdir)
+
+
+def create_animation_from_data(fields, nfields, analytic, nt, dt, xc, outputdir, plot_args):
+    """This function creates an animation from a given data file of a single scheme. The input is a 2D field of a single scheme (shape = 1d time x 1d space), analytic solution (shape = 1d time x 1d space), nt, dx in the centers (dxc; shape 1d space) and ....
+    This is a function that is to be called from other files, not from produce_standalone_animation()."""
+
+    # Directory to put animation and subdirectory for plots in
+    plotdir = outputdir + 'plots/'
+    os.mkdir(plotdir)
+
+    # Calculate initial functions
+    field_in = analytic[0]
+
+    # Timestepping loop to create plots and save filenames
+    filenames, images = [], []
+    for it in range(nt+1):   
+        # Plot each timestep in a figure and save in the plots subdirectory
+        plt.plot(xc, field_in, label='Initial', linestyle='-', color='grey')
+        plt.plot(xc, analytic[it], label='Analytic', linestyle='-', color='k')
+        for si in range(nfields):   
+            field = fields[si]        
+            plt.plot(xc, field[it], **plot_args[si])
+        ut.design_figure(f'{plotdir}timestep_{it}.png', f'Psi at t={it*dt:.2f}', \
+                        'x', 'Psi', True, -0.5, 1.5)
+        filenames.append(f'{plotdir}timestep_{it}.png')
+
+    # Create animation from plots in the plots subdirectory
+    for filename in filenames:
+        images.append(imageio.imread(filename))
+    anim_filename = f'{outputdir}animation.gif'
+    imageio.mimsave(anim_filename, images, duration=500)
+
+    # Remove .png files used to create the animation
+    for filename in filenames:
+        os.remove(filename)
+    os.rmdir(plotdir)
+
 
 if __name__ == "__main__": produce_standalone_animation()

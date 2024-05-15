@@ -1,8 +1,10 @@
 # Module file to define the grid used in main.py
 # Author:   Amber te Winkel
-# Email:    ambertewinkel@gmail.com
+# Email:    a.j.tewinkel@pgr.reading.ac.uk
+
 
 import numpy as np
+
 
 def coords_stretching(xmax, imax, i_maxC=0., dxcmin=0.):
     """
@@ -38,6 +40,7 @@ def coords_stretching(xmax, imax, i_maxC=0., dxcmin=0.):
 
     return  xf, dxc, xc, dxf
 
+
 def coords_uniform(xmax, imax):
     """
     This function implements a uniform grid spacing.
@@ -66,6 +69,7 @@ def coords_uniform(xmax, imax):
    
     return  xf, dxc, xc, dxf
 
+
 def cubLag(x_int, x, f):
     """
     Calculate the cubic Lagrange interpolation to a point.
@@ -82,7 +86,9 @@ def cubLag(x_int, x, f):
         xother = np.delete(x, np.where(x == x[i]))
         xfrac[i] = np.prod((x_int - xother)/(x[i] - xother))
     f_int = np.dot(f, xfrac)
+
     return f_int
+
 
 def linear(x_int, x, f):
     """
