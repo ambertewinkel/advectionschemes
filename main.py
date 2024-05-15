@@ -46,26 +46,34 @@ def main():
     # Input cases
     cases = [\
         #{'scheme':'MPDATA', 'do_limit':False, 'nSmooth':0},
-        {'scheme':'hbMPDATA', 'do_beta':'blend', 'solver':'NumPy', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
+        {'scheme':'hbMPDATA', 'do_beta':'switch', 'solver':'NumPy', 'do_limit':False, 'nSmooth':0, 'gauge':1000.},
+        {'scheme':'hbMPDATA', 'do_beta':'blend', 'solver':'NumPy', 'do_limit':False, 'nSmooth':0, 'gauge':1000.},
+        {'scheme':'hbMPDATA', 'do_beta':'blend', 'solver':'NumPy', 'do_limit':True, 'nSmooth':1, 'gauge':1000.},
+        {'scheme':'hbMPDATA', 'do_beta':'blend', 'solver':'NumPy', 'do_limit':True, 'nSmooth':1, 'gauge':1000.},
+        {'scheme':'hbMPDATA', 'do_beta':'blend', 'solver':'NumPy', 'do_limit':False, 'nSmooth':1, 'gauge':1000.},
         #{'scheme':'hbMPDATA', 'solver':'NumPy', 'do_limit':True, 'nSmooth':0, 'gauge':0.},
         #{'scheme':'hbMPDATA', 'solver':'NumPy', 'do_limit':True, 'nSmooth':1, 'gauge':0.},
         #{'scheme':'imMPDATA', 'solver':'NumPy', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
-        {'scheme':'HW_hbMPDATA', 'do_beta':'blend'}
+        #{'scheme':'HW_hbMPDATA', 'do_beta':'blend'}
         ]
     
     plot_args = [\
         #{'label':'MPDATA', 'color':'red',    'marker':'o', 'linestyle':'-'},
-        {'label':'hbMPDATA_NumPy', 'color':'blue',   'marker':'x', 'linestyle':'-'},
+        {'label':'hbMPDATA_g_bs', 'color':'blue',   'marker':'o', 'linestyle':'-'},
+        {'label':'hbMPDATA_g_bb', 'color':'green',   'marker':'x', 'linestyle':'-'},
+        {'label':'hbMPDATA_g_bb_lim', 'color':'red',   'marker':'+', 'linestyle':'-'},
+        {'label':'hbMPDATA_g_bb_limsm', 'color':'purple',   'marker':'x', 'linestyle':'--'},
+        {'label':'hbMPDATA_g_bb_sm', 'color':'orange',   'marker':'+', 'linestyle':'--'},
         #{'label':'hbMPDATA_NumPy_lim', 'color':'orange', 'marker':'+', 'linestyle':'-'},
         #{'label':'hbMPDATA_NumPy_limsm', 'color':'green', 'marker':'', 'linestyle':'--'},
         #{'label':'imMPDATA_NumPy', 'color':'blue', 'marker':'o', 'linestyle':'--'},
-        {'label':'HW_hbMPDATA', 'color':'green', 'marker':'+', 'linestyle':'-'}
+        #{'label':'HW_hbMPDATA', 'color':'green', 'marker':'+', 'linestyle':'-'}
         ]
 
     # Initial conditions
     analytic = an.combi         # initial condition, options: cosbell, tophat, or combi
     dt = 0.01                   # time step
-    nt = 100                    # number of time steps
+    nt = 16                    # number of time steps
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
     uconstant = 6.25#3.125              # constant velocity
@@ -218,7 +226,7 @@ def main():
         s = plot_args[c]['label']
         plt.plot(xc, locals()[f'psi_{s}_reg'][nt], **plot_args[c])
     ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt}', \
-                     'x', '$\\Psi$', True, -1.5, 1.5)
+                     'x', '$\\Psi$', True, -0.5, 1.5)
 
     #####################
     #### Experiments ####
