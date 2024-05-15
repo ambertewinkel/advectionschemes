@@ -649,13 +649,14 @@ def MPDATA_gauge(init, nt, dt, uf, dxc):
     return field
 
 
-def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16, nSmooth=0):
+def hbMPDATA1J(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16, do_limit=False, limit=0.5, nSmooth=0, gauge=0.):
     """
     This functions implements 
     Explicit: MPDATA scheme (without a gauge, assuming a 
     constant velocity and a 
     periodic spatial domain)
-    Implicit: BTBS with 1 Jacobi iteration
+    Implicit: Upwind with 1 Jacobi iteration
+    Optional limit and smoothing for V for the explicit second pass of MPDATA.
     Reference (1): P. Smolarkiewicz and L. Margolin. MPDATA: A finite-difference 
     solver for geophysical flows. J. Comput. Phys., 140:459-480, 1998.
     --- Input ---
@@ -665,6 +666,11 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16, nSm
     uf      : array of floats, velocity defined at faces
     dxc     : array of floats, spacing between cell faces
     eps     : float, optional. Small number to avoid division by zero.
+    do_beta : string, optional. If 'switch', beta is 0 for explicit and 1 for implicit. If 'blend', beta is a blend between 0 and 1. Default is 'switch'.
+    do_limit: boolean, optional. If True, V is limited. Default is True.
+    limit   : float, optional. Limiting value. Default is 0.5.
+    nSmooth : integer, optional. Number of smoothing steps for V. Default is 0.
+    gauge   : float, optional. Gauge term. Default is 0.
     --- Output --- 
     field   : 2D array of floats. Outputs each timestep of the field while advecting 
             the initial condition. Dimensions: nt+1 x length of init
@@ -675,6 +681,8 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16, nSm
     field_FP = np.zeros(len(init))
 
     dxf = 0.5*(dxc + np.roll(dxc,1)) # dxf[i] is at i-1/2
+    ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
+    ufm = 0.5*(uf - abs(uf))
 
     # Criterion explicit/implicit
     cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
@@ -686,13 +694,7 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16, nSm
         beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)])
     else:
         print('Error: do_beta must be either "switch" or "blend"')
-
     chi = np.maximum(1 - 2*beta, np.zeros(len(cc))) # chi[i] is at i-1/2
-
-    M = np.zeros((len(init), len(init))) #!
-    for i in range(len(init)):  #!
-        M[i,i] = 1 + dt*np.roll(beta*uf,-1)[i]/dxc[i] #!
-        M[i,(i-1)%len(init)] = -dt*beta[i]*uf[i]/dxc[i] #!
     
     # Time stepping
     for it in range(nt):
@@ -702,15 +704,17 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16, nSm
         rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
 
         # Determine whether implicit or explicit (or blend)
-        #!for i in range(len(cc)):
-        #!    if beta[i] != 0. or np.roll(beta,-1)[i] != 0.: # BTBS1J
-        #!        aii = 1 + np.roll(beta*uf,-1)[i]*dt/dxc[i]
-        #!        aiim1 = -dt*beta[i]*uf[i]/dxc[i]
-        #!        field_FP[i] = (rhs[i] - aiim1*np.roll(field[it],1)[i])/aii            
-        #!    else:
-        #!        field_FP[i] = rhs[i]
-        field_FP = np.linalg.solve(M, rhs)
-        
+        for i in range(len(cc)):
+            if beta[i] != 0. or np.roll(beta,-1)[i] != 0.: # Upwind implicit with 1 Jacobi iteration
+                aii = 1. + (np.roll(beta*ufp,-1)[i] - beta[i]*ufm[i])*dt/dxc[i]
+                aiim1 = -dt*beta[i]*ufp[i]/dxc[i]
+                aiip1 = dt*np.roll(beta*ufm,-1)[i]/dxc[i]
+                field_FP[i] = (rhs[i] - aiim1*np.roll(field[it],1)[i] - aiip1*np.roll(field[it],-1)[i])/aii           
+            else:
+                field_FP[i] = rhs[i]
+
+        field_FP = field_FP + gauge
+
         # Second pass
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
         # A[i] is at i-1/2
@@ -719,15 +723,16 @@ def hybrid_MPDATA_BTBS1J(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16, nSm
         V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf)
         
         # Limit V
-        corrCLimit = 0.5*uf
-        V = np.maximum(np.minimum(V, corrCLimit), -corrCLimit)
+        if do_limit == True:
+            corrCLimit = limit*uf
+            V = np.maximum(np.minimum(V, corrCLimit), -corrCLimit)
 
         # Smoothing
         for iSmooth in range(nSmooth):
-            V = 0.5*V + 0.25*(np.roll(V,1) + np.roll(V,-1)) #!
+            V = 0.5*V + 0.25*(np.roll(V,1) + np.roll(V,-1))
 
         flx_SP = flux(np.roll(field_FP,1), field_FP, V)
-        field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc        
+        field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc - gauge      
                 
     return field
 

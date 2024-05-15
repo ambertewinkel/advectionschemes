@@ -34,7 +34,7 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     limitCto1 = False
@@ -46,11 +46,11 @@ def main():
     # Input cases
     cases = [\
         #{'scheme':'MPDATA', 'do_limit':False, 'nSmooth':0},
-        {'scheme':'hbMPDATA', 'do_beta':'switch', 'solver':'NumPy', 'do_limit':False, 'nSmooth':0, 'gauge':1000.},
-        {'scheme':'hbMPDATA', 'do_beta':'blend', 'solver':'NumPy', 'do_limit':False, 'nSmooth':0, 'gauge':1000.},
-        {'scheme':'hbMPDATA', 'do_beta':'blend', 'solver':'NumPy', 'do_limit':True, 'nSmooth':1, 'gauge':1000.},
-        {'scheme':'hbMPDATA', 'do_beta':'blend', 'solver':'NumPy', 'do_limit':True, 'nSmooth':1, 'gauge':1000.},
-        {'scheme':'hbMPDATA', 'do_beta':'blend', 'solver':'NumPy', 'do_limit':False, 'nSmooth':1, 'gauge':1000.},
+        #{'scheme':'hbMPDATA1J', 'do_beta':'switch', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
+        #{'scheme':'hbMPDATA1J', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
+        {'scheme':'hbMPDATA1J', 'do_beta':'blend', 'do_limit':True, 'nSmooth':0, 'gauge':0.},
+        {'scheme':'hbMPDATA1J', 'do_beta':'blend', 'do_limit':True, 'nSmooth':1, 'gauge':0.},
+        #{'scheme':'hbMPDATA1J', 'do_beta':'blend', 'do_limit':False, 'nSmooth':1, 'gauge':0.},
         #{'scheme':'hbMPDATA', 'solver':'NumPy', 'do_limit':True, 'nSmooth':0, 'gauge':0.},
         #{'scheme':'hbMPDATA', 'solver':'NumPy', 'do_limit':True, 'nSmooth':1, 'gauge':0.},
         #{'scheme':'imMPDATA', 'solver':'NumPy', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
@@ -59,11 +59,11 @@ def main():
     
     plot_args = [\
         #{'label':'MPDATA', 'color':'red',    'marker':'o', 'linestyle':'-'},
-        {'label':'hbMPDATA_g_bs', 'color':'blue',   'marker':'o', 'linestyle':'-'},
-        {'label':'hbMPDATA_g_bb', 'color':'green',   'marker':'x', 'linestyle':'-'},
-        {'label':'hbMPDATA_g_bb_lim', 'color':'red',   'marker':'+', 'linestyle':'-'},
-        {'label':'hbMPDATA_g_bb_limsm', 'color':'purple',   'marker':'x', 'linestyle':'--'},
-        {'label':'hbMPDATA_g_bb_sm', 'color':'orange',   'marker':'+', 'linestyle':'--'},
+        #{'label':'hbMPDATA1J_bs', 'color':'blue',   'marker':'o', 'linestyle':'-'},
+        #{'label':'hbMPDATA1J_bb', 'color':'green',   'marker':'x', 'linestyle':'-'},
+        {'label':'hbMPDATA1J_bb_lim', 'color':'red',   'marker':'+', 'linestyle':'-'},
+        {'label':'hbMPDATA1J_bb_limsm', 'color':'purple',   'marker':'x', 'linestyle':'--'},
+        #{'label':'hbMPDATA1J_bb_sm', 'color':'orange',   'marker':'+', 'linestyle':'--'},
         #{'label':'hbMPDATA_NumPy_lim', 'color':'orange', 'marker':'+', 'linestyle':'-'},
         #{'label':'hbMPDATA_NumPy_limsm', 'color':'green', 'marker':'', 'linestyle':'--'},
         #{'label':'imMPDATA_NumPy', 'color':'blue', 'marker':'o', 'linestyle':'--'},
