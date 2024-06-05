@@ -38,7 +38,7 @@ def main():
     
     # Input booleans
     limitCto1 = False
-    create_animation = True
+    create_animation = False
     check_orderofconvergence = False
     date = dati.date.today().strftime("%d%m%Y")                   # date of the run
     datetime = dati.datetime.now().strftime("%d%m%Y-%H%M%S")      # date and time of the run
@@ -46,34 +46,44 @@ def main():
     # Input cases
     cases = [\
         #{'scheme':'MPDATA', 'do_limit':False, 'nSmooth':0},
-        #{'scheme':'hbMPDATA1J', 'do_beta':'switch', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
-        #{'scheme':'hbMPDATA1J', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
-        {'scheme':'hbMPDATA1J', 'do_beta':'blend', 'do_limit':True, 'nSmooth':0, 'gauge':0.},
-        {'scheme':'hbMPDATA1J', 'do_beta':'blend', 'do_limit':True, 'nSmooth':1, 'gauge':0.},
-        #{'scheme':'hbMPDATA1J', 'do_beta':'blend', 'do_limit':False, 'nSmooth':1, 'gauge':0.},
+        {'scheme':'hbMPDATA', 'do_beta':'switch', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
+        {'scheme':'hbMPDATA', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
+        ##{'scheme':'hbMPDATA', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
+        ##{'scheme':'hbMPDATA', 'do_beta':'blend', 'do_limit':True, 'nSmooth':0, 'gauge':0.},
+        ##{'scheme':'hbMPDATA', 'do_beta':'blend', 'do_limit':True, 'nSmooth':1, 'gauge':0.},
+        ##{'scheme':'hbMPDATA', 'do_beta':'blend', 'do_limit':False, 'nSmooth':1, 'gauge':0.},
+        {'scheme':'hbMPDATA', 'do_beta':'blend', 'do_limit':True, 'nSmooth':0, 'gauge':0.},
+        {'scheme':'hbMPDATA', 'do_beta':'blend', 'do_limit':False, 'nSmooth':1, 'gauge':0.},
+        {'scheme':'hbMPDATA', 'do_beta':'blend', 'do_limit':True, 'nSmooth':1, 'gauge':0.},
         #{'scheme':'hbMPDATA', 'solver':'NumPy', 'do_limit':True, 'nSmooth':0, 'gauge':0.},
         #{'scheme':'hbMPDATA', 'solver':'NumPy', 'do_limit':True, 'nSmooth':1, 'gauge':0.},
         #{'scheme':'imMPDATA', 'solver':'NumPy', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
         #{'scheme':'HW_hbMPDATA', 'do_beta':'blend'}
+        ###{'scheme':'hbMPDATA_gauge'}
         ]
     
     plot_args = [\
         #{'label':'MPDATA', 'color':'red',    'marker':'o', 'linestyle':'-'},
-        #{'label':'hbMPDATA1J_bs', 'color':'blue',   'marker':'o', 'linestyle':'-'},
-        #{'label':'hbMPDATA1J_bb', 'color':'green',   'marker':'x', 'linestyle':'-'},
-        {'label':'hbMPDATA1J_bb_lim', 'color':'red',   'marker':'+', 'linestyle':'-'},
-        {'label':'hbMPDATA1J_bb_limsm', 'color':'purple',   'marker':'x', 'linestyle':'--'},
-        #{'label':'hbMPDATA1J_bb_sm', 'color':'orange',   'marker':'+', 'linestyle':'--'},
+        {'label':'aiMPDATA_impl', 'color':'red',   'marker':'x', 'linestyle':'-'},
+        {'label':'aiMPDATA_trap', 'color':'blue',   'marker':'+', 'linestyle':'-'},
+        ##{'label':'hbMPDATA_bb', 'color':'green',   'marker':'x', 'linestyle':'-'},
+        ##{'label':'hbMPDATA_bb_lim', 'color':'red',   'marker':'+', 'linestyle':'-'},
+        ##{'label':'hbMPDATA_bb_limsm', 'color':'purple',   'marker':'x', 'linestyle':'--'},
+        ##{'label':'hbMPDATA_bb_sm', 'color':'orange',   'marker':'+', 'linestyle':'--'},
+        {'label':'aiMPDATA_trap_lim', 'color':'darkturquoise',   'marker':'', 'linestyle':':'},
+        {'label':'aiMPDATA_trap_sm', 'color':'darkturquoise',   'marker':'', 'linestyle':'-'},
+        {'label':'aiMPDATA_trap_limsm', 'color':'green',   'marker':'', 'linestyle':'-'},
         #{'label':'hbMPDATA_NumPy_lim', 'color':'orange', 'marker':'+', 'linestyle':'-'},
         #{'label':'hbMPDATA_NumPy_limsm', 'color':'green', 'marker':'', 'linestyle':'--'},
         #{'label':'imMPDATA_NumPy', 'color':'blue', 'marker':'o', 'linestyle':'--'},
         #{'label':'HW_hbMPDATA', 'color':'green', 'marker':'+', 'linestyle':'-'}
+        ###{'label':'hbMPDATA_gauge', 'color':'blue', 'marker':'o', 'linestyle':'-'}
         ]
 
     # Initial conditions
-    analytic = an.combi         # initial condition, options: cosbell, tophat, or combi
+    analytic = an.tophat         # initial condition, options: cosbell, tophat, or combi
     dt = 0.01                   # time step
-    nt = 16                    # number of time steps
+    nt = 160                    # number of time steps
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
     uconstant = 6.25#3.125              # constant velocity
@@ -219,14 +229,15 @@ def main():
     #### Plotting schemes ####
     ##########################
     
+    plt.figure(figsize=(7,4))
     # Plotting the final time step for each scheme in the same plot
-    plt.plot(xc, psi_in, label='Initial', linestyle='-', color='grey')
+    #plt.plot(xc, psi_in, label='Initial', linestyle='-', color='grey') #!!!
     plt.plot(xc, locals()['psi_an_reg'][nt], label='Analytic', linestyle='-', color='k')
     for c in range(len(cases)):        
         s = plot_args[c]['label']
         plt.plot(xc, locals()[f'psi_{s}_reg'][nt], **plot_args[c])
     ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt}', \
-                     'x', '$\\Psi$', True, -0.5, 1.5)
+                     'x', '$\\Psi$', 0., xmax, True, -0.1, 1.1)
 
     #####################
     #### Experiments ####
