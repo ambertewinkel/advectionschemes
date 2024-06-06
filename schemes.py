@@ -649,7 +649,7 @@ def MPDATA_gauge(init, nt, dt, uf, dxc):
     return field
 
 
-def hbMPDATA1J(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16, do_limit=False, limit=0.5, nSmooth=0, gauge=0.):
+def aiMPDATA1J(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16, do_limit=False, limit=0.5, nSmooth=0, gauge=0.):
     """
     This functions implements 
     Explicit: MPDATA scheme (without a gauge, assuming a 
@@ -893,7 +893,7 @@ def imMPDATA_gauge(init, nt, dt, uf, dxc, eps=1e-16, solver='NumPy', niter=0, do
     return field
 
 
-def hbMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', solver='NumPy', niter=0, do_limit=False, limit=0.5, nSmooth=0, gauge=0.):
+def aiMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', solver='NumPy', niter=0, do_limit=False, limit=0.5, nSmooth=0, gauge=0.):
     """
     Implements a hybrid scheme with explicit MPDATA correction.  
     First pass: explicit or implicit (or both if do_beta='blend') upwind with numpy direct elimination on the whole matrix. beta determines the degree of im/ex - as trapezoidal implicit.
@@ -977,7 +977,7 @@ def hbMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', solver='NumPy',
     return field
 
 
-def hbMPDATA_gauge(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', solver='NumPy', niter=0, do_limit=False, limit=0.5, nSmooth=0):
+def aiMPDATA_gauge(init, nt, dt, uf, dxc, do_beta='switch', solver='NumPy', niter=0, do_limit=False, limit=0.5, nSmooth=0):
     """
     Implements a hybrid scheme with explicit infinite-gauge MPDATA correction.  
     First pass: explicit or implicit (or both if do_beta='blend') upwind with numpy direct elimination on the whole matrix. beta determines the degree of im/ex - as trapezoidal implicit.
@@ -1061,7 +1061,7 @@ def hbMPDATA_gauge(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', solver='N
     return field
 
 
-def HW_hbMPDATA(init, nt, dt, uf, dxc, do_beta='switch', do_limit=False, limit=0.5, nSmooth=0, gauge=0.):
+def HW_aiMPDATA(init, nt, dt, uf, dxc, do_beta='switch', do_limit=False, limit=0.5, nSmooth=0, gauge=0.):
     """Code from Hilary Weller (April 2024) for a hybrid MPDATA scheme. Based on implicitMPDATA.py.
     It assumes the grid is uniform."""
     nx = 40
@@ -1079,12 +1079,12 @@ def HW_hbMPDATA(init, nt, dt, uf, dxc, do_beta='switch', do_limit=False, limit=0
     phi = np.zeros((nt+1, len(init)))
     phi[0] = init.copy()
     for it in range(nt):
-        phi[it+1] = HW_hbMPDATA_timestepping(phi[it], c, **params[0])
+        phi[it+1] = HW_aiMPDATA_timestepping(phi[it], c, **params[0])
 
     return phi
 
 
-def HW_hbMPDATA_timestepping(phi, c, beta = 0., do_beta = 'switch', gauge = 0., nCorr = 1, eps = 1e-16,
+def HW_aiMPDATA_timestepping(phi, c, beta = 0., do_beta = 'switch', gauge = 0., nCorr = 1, eps = 1e-16,
           corrOption = "new", do_limit = False, limit = 0.5, nSmooth = 0):
     """
     Advects 1d profile phi for one time step with Courant number c using MPDATA
