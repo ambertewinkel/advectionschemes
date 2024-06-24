@@ -34,7 +34,7 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     limitCto1 = False
@@ -45,23 +45,29 @@ def main():
 
     # Input cases
     cases = [\
-        {'scheme':'aiMPDATA', 'do_beta':'switch', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
-        {'scheme':'aiMPDATA_gauge', 'do_beta':'switch', 'do_limit':False, 'nSmooth':0},
+        #{'scheme':'aiMPDATA', 'do_beta':'switch', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
+        {'scheme':'aiMPDATA', 'do_beta':'switch', 'do_limit':True, 'limit':0.5, 'nSmooth':0, 'gauge':0.},
+        #{'scheme':'aiMPDATA', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
+        {'scheme':'aiMPDATA', 'do_beta':'blend', 'do_limit':True, 'limit':0.5, 'nSmooth':0, 'gauge':0.},
+        #{'scheme':'aiMPDATA', 'do_beta':'blend', 'do_limit':True, 'limit':0.5, 'nSmooth':1, 'gauge':0.},
         ]
     
     plot_args = [\
-        {'label':'aiMPDATA_impl', 'color':'red', 'marker':'x', 'linestyle':'-'},
-        {'label':'aiMPDATA_gauge', 'color':'blue', 'marker':'', 'linestyle':'-'}
+        #{'label':'aiMPDATA_impl', 'color':'red', 'marker':'x', 'linestyle':'-'},
+        {'label':'aiMPDATA_impl_lim', 'color':'green', 'marker':'x', 'linestyle':'-'},
+        #{'label':'aiMPDATA_trap', 'color':'magenta', 'marker':'x', 'linestyle':'-'},
+        {'label':'aiMPDATA_trap_lim', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        #{'label':'aiMPDATA_trap_limsm', 'color':'orange', 'marker':'x', 'linestyle':'-'},
         ]
 
     # Initial conditions
-    analytic = an.tophat         # initial condition, options: cosbell, tophat, or combi
+    analytic = an.combi         # initial condition, options: cosbell, tophat, or combi
     dt = 0.01                   # time step
-    nt = 16                    # number of time steps
+    nt = 1                    # number of time steps
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
     uconstant = 6.25#3.125              # constant velocity
-    coords = 'uniform'          # 'uniform' or 'stretching
+    coords = 'weller'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]
     schemenames_settings = str(analytic.__name__) + f'_t{nt*dt:.2f}_u{uconstant:.2f}_' + "-".join(schemenames)
@@ -164,6 +170,8 @@ def main():
             xf, dxc, xc, dxf = gr.coords_stretching(xmax, nx, nx/2, dxcmin=dxcmin) # points in space, length of spatial step
         elif coords == 'uniform':
             xf, dxc, xc, dxf = gr.coords_uniform(xmax, nx) # points in space, length of spatial step
+        elif coords == 'weller':
+            xf, dxc, xc, dxf = gr.coords_welleretal2022(xmax, nx) # points in space, length of spatial step
         else: 
             logging.info('Error: invalid coordinates')
 
@@ -386,6 +394,8 @@ def callscheme(case, nt, dt, uf, dxc, psi_in):
     params = ut.without_keys(case, exclude)
 
     # Call the scheme
+    print()
+    print(f'Running {sc} with parameters {params}')
     psi = fn(psi_in.copy(), nt, dt, uf, dxc, **params)
 
     return psi

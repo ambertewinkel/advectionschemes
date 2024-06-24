@@ -944,12 +944,24 @@ def aiMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', solver='NumPy',
         M[i,i] = 1. + dt*(np.roll(beta*ufp,-1)[i] - beta[i]*ufm[i])/dxc[i]
         M[i,(i-1)%len(init)] = -dt*beta[i]*ufp[i]/dxc[i]
         M[i,(i+1)%len(init)] = dt*np.roll(beta*ufm,-1)[i]/dxc[i]
+        #!!!
+        #a = (dt*beta[i]*ufp[i]/dxc[i])/(1. + dt*(np.roll(beta*ufp,-1)[i])/dxc[i])
+        #print('a', a)
+
     
     # Time stepping
     for it in range(nt):
         # First pass: upwind. flx_FP[i] is at i-1/2
         flx_FP = flux(np.roll(field[it],1), field[it], uf)
         rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
+
+        #!!!
+        #b =  1 - dt*(np.roll((1. - beta)*uf,-1))/dxc
+        #c =  - dt*(- (1. - beta)*uf)/dxc
+        #print()
+        #print('b', b)
+        #print()
+        #print('c', c)
 
         # First pass: converged BTBS - dependent on the Courant number and beta.
         field_FP = solverfn(M, field[it], rhs, niter) + gauge
@@ -962,10 +974,27 @@ def aiMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', solver='NumPy',
         
         # Calculate and limit the antidiffusive velocity V. Same index shift as for A
         V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf)
+
+        #print('We check the ratio of the sum of velocities')
+        #for i in range(len(V)-1):
+        #    print('cell ', i, (V[i+1]+V[i])/(uf[i+1]+uf[i]))
+
+
         if do_limit == True: # Limit V
-            corrCLimit = limit*uf
+            corrCLimit = np.absolute(limit*uf) # !!! this does need to be fixed in the next version of the code
+            #print('limit', corrCLimit)
             V = np.maximum(np.minimum(V, corrCLimit), -corrCLimit)  
+            print('less or equal than 1/2?:', V/uf)
+        for i in range(len(V)):
+            if V[i]/uf[i] >= 0.5 - 1e-6:
+                #print(i, V[i]/uf[i])
+                store_i = i
+                #print('field', i, field)
         
+        #print('We check the ratio of the sum of velocities AFTER LIMITING')
+        #for i in range(len(V)-1):
+            #print('cell ', i, (V[i+1]+V[i])/(uf[i+1]+uf[i]))
+
         # Smooth V
         for ismooth in range(nSmooth):
             V = 0.5*V + 0.25*(np.roll(V,1) + np.roll(V,-1))
@@ -973,6 +1002,12 @@ def aiMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', solver='NumPy',
         # Calculate the flux and second-pass result
         flx_SP = flux(np.roll(field_FP,1), field_FP, V)
         field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc - gauge
+        #field[it+1] = field_FP - gauge #!!!
+        print('field stored i-1', store_i-1, field[it+1][store_i-1])
+        print('field stored i', store_i, field[it+1][store_i])
+        print('field stored i+1', store_i+1, field[it+1][store_i+1])
+
+        #print()
 
     return field
 

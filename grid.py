@@ -40,6 +40,41 @@ def coords_stretching(xmax, imax, i_maxC=0., dxcmin=0.):
 
     return  xf, dxc, xc, dxf
 
+# !!! edit doc string below
+def coords_stretching_weller(xmax, imax, i_maxC=0., dxcmin=0.): 
+    """
+    This function implements a varying grid spacing, with stretching (default, determined by dxcmin) in the center: dx_center = 10*dx_boundary.
+    We use a cosine function to define the grid spacing: dx[i] = dx0(6-5cos(2pi*(i-i_maxC)/imax)) for i ranging from 0 to imax.
+    From integration we know that dx0 = xmax/(6*imax).
+    We assume a periodic domain that ranges from 0 to xmax in size. xmax is not included in x-array
+    --- Input:
+    xmax    : float, domain size
+    imax    : int, number of grid points
+    i_maxC  : int, index where the Courant number is maximised/where dx is minimised for constant u throughout the domain
+    dxcmin  : float, minimum dxc (connected to max Courant number allowed in the domain)
+    --- Output:
+    xf       : array of floats, spatial points of cell faces
+    dxc      : array of floats, grid spacing between cell faces (dxc[i] = xf[i+1] - xf[i]), i.e., grid box size
+    xc       : array of floats, spatial points of cell centers (xc[i+1] = 0.5*(xf[i+1] + xf[i]))
+    dxf      : array of floats, grid spacing between cell centers (dxf[i] = xc[i] - xc[i-1])
+    """
+    # Initialisation
+    xf, dxc, xc, dxf = np.zeros(imax), np.zeros(imax), np.zeros(imax), np.zeros(imax)
+    
+    # Setting grid values
+    dx0 = xmax/(6*imax)
+    dxc = [dx0*(6. - 4.5*np.cos(2.*np.pi*(i-i_maxC)/imax)) for i in range(imax)] # define the grid spacing
+    dxc = [dxc[i] if dxc[i] > dxcmin else dxcmin for i in range(imax)]
+
+    # Calculating other grid quantities
+    for i in range(len(dxc)-1):
+        xf[i+1] = xf[i] + dxc[i]
+    xc = 0.5*(np.roll(xf,-1) + xf)
+    xc[-1] = 0.5*(xmax + xf[-1]) # periodic
+    dxf = 0.5*(dxc + np.roll(dxc,1))
+
+    return  xf, dxc, xc, dxf
+
 
 def coords_uniform(xmax, imax):
     """
@@ -69,6 +104,37 @@ def coords_uniform(xmax, imax):
    
     return  xf, dxc, xc, dxf
 
+def coords_welleretal2022(xmax, imax, R=10): # !!! not working properly at the moment. Probably just remove it later and not fix it.
+    """This function specific the grid and thus Courant number as used in 1D advection in Weller et al. 2022, eq. 45."""
+
+
+    # Initialisation
+    xf, dxc, xc, dxf = np.zeros(imax), np.zeros(imax), np.zeros(imax), np.zeros(imax)
+    
+    # Setting grid values
+    r = R**(2/(imax-2))
+    for i in range(int(imax/2)-1):
+        print(i)
+        dxc[i] = 0.5*R*r**(-i)*(1-r)/(1-r*R)
+    print()
+    for i in range(int(imax/2)-1, imax):
+        print(i)
+        dxc[i] = 0.5*r**(-int(imax/2)+i)*(1-r)/(1-r*R)
+
+    print('dxc=', dxc)
+    print('done')
+
+    # Calculating other grid quantities
+    for i in range(len(dxc)-1):
+        xf[i+1] = xf[i] + dxc[i]
+    xc = 0.5*(np.roll(xf,-1) + xf)
+    xc[-1] = 0.5*(xmax + xf[-1]) # periodic
+    dxf = 0.5*(dxc + np.roll(dxc,1))
+
+
+    print(dxc, dxf, xc, xf) # !!! x domain is unbounded by xmax
+
+    return  xf, dxc, xc, dxf
 
 def cubLag(x_int, x, f):
     """
