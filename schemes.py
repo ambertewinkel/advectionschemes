@@ -978,7 +978,7 @@ def aiMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', solver='NumPy',
     return field
 
 
-def aiMPDATA_gauge(init, nt, dt, uf, dxc, do_beta='switch', solver='NumPy', niter=0, do_limit=False, limit=0.5, nSmooth=0):
+def aiMPDATA_gauge(init, nt, dt, uf, dxc, do_beta='switch', solver='NumPy', niter=0, do_limit=False, limit=0.5, nSmooth=0, third_order=False):
     """
     Implements a hybrid scheme with explicit infinite-gauge MPDATA correction.  
     First pass: explicit or implicit (or both if do_beta='blend') upwind with numpy direct elimination on the whole matrix. beta determines the degree of im/ex - as trapezoidal implicit.
@@ -1058,6 +1058,8 @@ def aiMPDATA_gauge(init, nt, dt, uf, dxc, do_beta='switch', solver='NumPy', nite
         # Calculate the flux and second-pass result
         flx_SP = flux(1., 1., V)
         field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc
+        if third_order == True:
+            field[it+1] += thirdorder(field_FP, uf, dxc, dt)
 
     return field
 
@@ -1283,3 +1285,37 @@ def flux(Psi_L, Psi_R, U):
     F = U_p*Psi_L + U_m*Psi_R
 
     return F
+
+def d2dx2(field, dxc):
+    """
+    This function computes the second derivative of a field with respect to x
+    using a second-order central difference scheme.
+    --- Input ---
+    field   : 1D array of floats, field to take the derivative of
+    dxc     : 1D array of floats, spacing between cell faces
+    --- Output --- 
+    d2dx2   : 1D array of floats, second derivative of field with respect to x
+    """
+    d2dx2 = (np.roll(field,-1) - 2*field + np.roll(field,1))/(dxc*dxc)
+
+    return d2dx2
+
+
+def thirdorder(field, dxc, uf, dt):
+    """This function includes the third-order spatial correction to MPDATA from Smolarkiewicz and Margolin (1998, specifically Eq.36) and Waruszewski et al. (2018).
+    Input:
+    field: 1D array of floats, field to advect
+    dxc: 1D array of floats, spacing between cell faces
+    uf: 1D array of floats, velocity defined at faces
+    dt: float, timestep
+    Output:
+    dU: 1D array of floats, third-order spatial correction to MPDATA
+    """
+    # Initialisation
+    G = 1 # Jacobian, 1 for a uniform grid
+
+    # Assume uniform grid, i.e., u @cells = u @faces
+    C = uf*dt/dxc # Courant number
+    dU = dxc*dxc/6.*(3*C*np.absolute(C) - 2*C*C*C/(G*G) - C)*d2dx2(field, dxc) # has units of [field]
+
+    return dU
