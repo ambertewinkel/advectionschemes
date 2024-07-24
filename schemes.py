@@ -1043,7 +1043,8 @@ def aiMPDATA_gauge(init, nt, dt, uf, dxc, do_beta='switch', solver='NumPy', nite
         # Infinite gauge: multiply the pseudovelocity by 0.5 and do not divide by (field_FP + np.roll(field_FP,1) + eps), and set the first two arguments in flux() to 1.
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
         # Use the first-pass field for A. A[i] is at i-1/2
-        A = (field_FP - np.roll(field_FP,1))/2.
+        ###A = (field_FP - np.roll(field_FP,1))/2.
+        A = (field[it] - np.roll(field[it],1))/2.
         
         # Calculate and limit the antidiffusive velocity V. Same index shift as for A
         V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf)
@@ -1059,7 +1060,94 @@ def aiMPDATA_gauge(init, nt, dt, uf, dxc, do_beta='switch', solver='NumPy', nite
         flx_SP = flux(1., 1., V)
         field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc
         if third_order == True:
-            field[it+1] += thirdorder(field_FP, uf, dxc, dt)
+            field[it+1] += thirdorder(field[it], uf, dxc, dt)
+
+    return field
+
+
+def aiMPDATA_gauge_solverlast(init, nt, dt, uf, dxc, do_beta='switch', solver='NumPy', niter=0, do_limit=False, limit=0.5, nSmooth=0, third_order=False): # !!! 24072024, check for stability as this matches the stability derivation
+    """
+    Implements a hybrid scheme with explicit infinite-gauge MPDATA correction.  
+    First pass: explicit or implicit (or both if do_beta='blend') upwind with numpy direct elimination on the whole matrix. beta determines the degree of im/ex - as trapezoidal implicit.
+    Second pass: explicit MPDATA correction with an infinite-gauge. For this:
+    A is calculated with field_FP (first-pass) and not field[it]. The upwind direction is determined with the pseudovelocity V.
+    V is limited to +-corrClimit. Another difference is the option (i.e., commented out) of smoothing V. 
+    --- Input ---
+    init : array of floats, initial field to advect
+    nt      : integer, total number of time steps to take
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
+    eps     : float, optional. Small number to avoid division by zero.
+    do_beta : string, optional. If 'switch', beta is 0 for explicit and 1 for implicit. If 'blend', beta is a blend between 0 and 1.
+    solver  : string, optional. If 'NumPy', use numpy's linalg.solve. If 'Jacobi', use Jacobi iteration.
+    do_limit: boolean, optional. If True, limit the antidiffusive velocity V
+    limit   : float, optional. Assumed positive. Limiting value for V
+    nSmooth : integer, optional. Number of smoothing iterations for V
+    gauge   : float, optional. Gauge term to add to the field
+    --- Output --- 
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init    
+    """
+    # Initialisation
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
+    field_FP = np.zeros(len(init))
+
+    solverfn = getattr(sv, solver)
+
+    dxf = 0.5*(dxc + np.roll(dxc,1)) # dxf[i] is at i-1/2
+    ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
+    ufm = 0.5*(uf - abs(uf))
+
+    # For stability, determine the amount of temporal MPDATA correction in V for use later
+    cc = 0.5*dt*(np.roll(uf,-1) + uf)/dxc
+    if do_beta == 'switch':
+        beta = np.invert((np.roll(cc,1) <= 1.)*(cc <= 1.)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit
+    elif do_beta == 'blend':
+        beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
+    else:
+        print('Error: do_beta must be either "switch" or "blend"')
+    chi = np.maximum(1 - 2*beta, np.zeros(len(init))) # chi[i] is at i-1/2
+
+    # Define the matrix to solve
+    M = np.zeros((len(init), len(init)))
+    for i in range(len(init)): 
+        M[i,i] = 1. + dt*(np.roll(beta*ufp,-1)[i] - beta[i]*ufm[i])/dxc[i]
+        M[i,(i-1)%len(init)] = -dt*beta[i]*ufp[i]/dxc[i]
+        M[i,(i+1)%len(init)] = dt*np.roll(beta*ufm,-1)[i]/dxc[i]
+    
+    # Time stepping
+    for it in range(nt):
+        # First pass: upwind. flx_FP[i] is at i-1/2
+        flx_FP = flux(np.roll(field[it],1), field[it], uf)
+        rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
+
+        # First pass: converged BTBS - dependent on the Courant number and beta.
+
+        # Second pass
+        # Infinite gauge: multiply the pseudovelocity by 0.5 and do not divide by (field_FP + np.roll(field_FP,1) + eps), and set the first two arguments in flux() to 1.
+        dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
+        # Use the first-pass field for A. A[i] is at i-1/2
+        ###A = (field_FP - np.roll(field_FP,1))/2.
+        A = (field[it] - np.roll(field[it],1))/2.
+        
+        # Calculate and limit the antidiffusive velocity V. Same index shift as for A
+        V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf)
+        if do_limit == True: # Limit V
+            corrCLimit = limit*uf
+            V = np.maximum(np.minimum(V, corrCLimit), -corrCLimit)  
+        
+        # Smooth V
+        for ismooth in range(nSmooth):
+            V = 0.5*V + 0.25*(np.roll(V,1) + np.roll(V,-1))
+
+        # Calculate the flux and second-pass result
+        flx_SP = flux(1., 1., V)
+        rhs += dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc
+        #if third_order == True:
+        #    field[it+1] += thirdorder(field[it], uf, dxc, dt)
+        field[it+1] = solverfn(M, field[it], rhs, niter)
 
     return field
 
@@ -1316,6 +1404,6 @@ def thirdorder(field, dxc, uf, dt):
 
     # Assume uniform grid, i.e., u @cells = u @faces
     C = uf*dt/dxc # Courant number
-    dU = dxc*dxc/6.*(3*C*np.absolute(C) - 2*C*C*C/(G*G) - C)*d2dx2(field, dxc) # has units of [field]
+    TOC = - (C*np.absolute(C)/G - 2*C*C*C/(G*G) - C)*(np.roll(field,-2) - 2*field + np.roll(field,2))/12
 
-    return dU
+    return TOC

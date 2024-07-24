@@ -38,39 +38,29 @@ def main():
     
     # Input booleans
     limitCto1 = False
-    create_animation = True
+    create_animation = False#True
     check_orderofconvergence = False
     date = dati.date.today().strftime("%d%m%Y")                   # date of the run
     datetime = dati.datetime.now().strftime("%d%m%Y-%H%M%S")      # date and time of the run
 
     # Input cases
     cases = [\
-        #{'scheme':'aiMPDATA', 'do_beta':'switch', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
-        ##{'scheme':'aiMPDATA', 'do_beta':'switch', 'do_limit':True, 'limit':0.5, 'nSmooth':0, 'gauge':0.},
-        #{'scheme':'aiMPDATA', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'gauge':0.},
-        ##{'scheme':'aiMPDATA', 'do_beta':'blend', 'do_limit':True, 'limit':0.5, 'nSmooth':0, 'gauge':0.},
-        #{'scheme':'aiMPDATA', 'do_beta':'blend', 'do_limit':True, 'limit':0.5, 'nSmooth':1, 'gauge':0.},
-        {'scheme':'aiMPDATA_gauge', 'do_beta':'switch', 'do_limit':False, 'nSmooth':0},
-        {'scheme':'aiMPDATA_gauge', 'do_beta':'switch', 'do_limit':False, 'nSmooth':0, 'third_order':True},
+        {'scheme':'aiMPDATA_gauge_solverlast', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0},
+        #{'scheme':'aiMPDATA_gauge', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'third_order':True},
         ]
     
     plot_args = [\
-        #{'label':'aiMPDATA_impl', 'color':'red', 'marker':'x', 'linestyle':'-'},
-        ##{'label':'aiMPDATA_impl_lim', 'color':'green', 'marker':'x', 'linestyle':'-'},
-        #{'label':'aiMPDATA_trap', 'color':'magenta', 'marker':'x', 'linestyle':'-'},
-        ##{'label':'aiMPDATA_trap_lim', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        #{'label':'aiMPDATA_trap_limsm', 'color':'orange', 'marker':'x', 'linestyle':'-'},
-        {'label':'aiMPDATA_gauge', 'color':'red', 'marker':'x', 'linestyle':'-'},
-        {'label':'aiMPDATA_gauge_3oc', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        {'label':'aiMPDATA_gauge_solverlast', 'color':'red', 'marker':'+', 'linestyle':'-'},
+        #{'label':'aiMPDATA_gauge_3oc', 'color':'blue', 'marker':'x', 'linestyle':'-'},
         ]
 
     # Initial conditions
     analytic = an.combi         # initial condition, options: cosbell, tophat, or combi
     dt = 0.01                   # time step
-    nt = 100                    # number of time steps
+    nt = 1000                    # number of time steps
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 6.25#3.125              # constant velocity
+    uconstant = 40.#6.25#3.125              # constant velocity
     coords = 'uniform'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]
