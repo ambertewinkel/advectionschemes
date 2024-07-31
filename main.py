@@ -38,29 +38,38 @@ def main():
     
     # Input booleans
     limitCto1 = False
-    create_animation = False#True
-    check_orderofconvergence = False
+    create_animation = False
+    check_orderofconvergence = True
+    accuracy_in = 'space with time' # 'space', 'time', 'space with time'; (relevant only if check_orderofconvergence == True)
     date = dati.date.today().strftime("%d%m%Y")                   # date of the run
     datetime = dati.datetime.now().strftime("%d%m%Y-%H%M%S")      # date and time of the run
 
     # Input cases
     cases = [\
-        {'scheme':'aiMPDATA_gauge_solverlast', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0},
+        {'scheme':'LW3rd'},
+        ###{'scheme':'aiMPDATA_gauge', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0},
+        ###{'scheme':'aiMPDATA_gauge', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'third_order':True},
+        ##{'scheme':'aiMPDATA_gauge_solverlast', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0},
+        ##{'scheme':'aiMPDATA_gauge_solverlast', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'third_order':True},
         #{'scheme':'aiMPDATA_gauge', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'third_order':True},
         ]
     
     plot_args = [\
-        {'label':'aiMPDATA_gauge_solverlast', 'color':'red', 'marker':'+', 'linestyle':'-'},
+        {'label':'LW3rd', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        ###{'label':'aiMPDATA_gauge', 'color':'red', 'marker':'+', 'linestyle':'-'},
+        ###{'label':'aiMPDATA_gauge_3oc', 'color':'green', 'marker':'x', 'linestyle':'-'},
+        ##{'label':'aiMPDATA_gauge_solverlast', 'color':'red', 'marker':'+', 'linestyle':'-'},
+        ##{'label':'aiMPDATA_gauge_solverlast_3oc', 'color':'green', 'marker':'x', 'linestyle':'-'},
         #{'label':'aiMPDATA_gauge_3oc', 'color':'blue', 'marker':'x', 'linestyle':'-'},
         ]
 
     # Initial conditions
-    analytic = an.combi         # initial condition, options: cosbell, tophat, or combi
+    analytic = an.sine         # initial condition, options: sine, cosbell, tophat, or combi
     dt = 0.01                   # time step
-    nt = 1000                    # number of time steps
+    nt = 100                    # number of time steps
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 40.#6.25#3.125              # constant velocity
+    uconstant = 1.#6.25#3.125              # constant velocity
     coords = 'uniform'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]
@@ -134,9 +143,35 @@ def main():
     # Setup: run schemes for one or three grid spacings (nx*factor, nx/factor, nx)
     if check_orderofconvergence == True: # Run schemes for two extra grid spacings
         factor = 2
-        nx_arr = np.array([nx*factor, nx/factor, nx], dtype=int)
-        dt_arr = np.array([dt/factor, dt*factor, dt], dtype=float)
-        nt_arr = np.array([nt*factor, nt/factor, nt], dtype=int)
+        if accuracy_in == 'space': # 'space' or 'time' or 'space with time'
+            nx_arr = np.array([nx*factor, nx/factor, nx], dtype=int)
+            dx_arr = np.array([xmax/nx_arr[0], xmax/nx_arr[1], xmax/nx_arr[2]], dtype=float)
+            nt_arr = np.full(len(nx_arr), nt)
+            dt_arr = np.full(len(nx_arr), dt)
+            c_arr = np.array([uconstant*dt_arr[0]/dx_arr[0], uconstant*dt_arr[1]/dx_arr[1], uconstant*dt_arr[2]/dx_arr[2]], dtype=float)
+            resolution = dx_arr.copy()
+            print('Courant numbers for the [fine, coarse, reg] grid spacings:', c_arr)
+            var_acc = 'dx'
+        elif accuracy_in == 'time':
+            nt_arr = np.array([nt*factor, nt/factor, nt], dtype=int)
+            dt_arr = np.array([dt/factor, dt*factor, dt], dtype=float)
+            nx_arr = np.full(len(nt_arr), nx)
+            dx_arr = np.full(len(nt_arr), xmax/nx)
+            c_arr = np.array([uconstant*dt_arr[0]/dx_arr[0], uconstant*dt_arr[1]/dx_arr[1], uconstant*dt_arr[2]/dx_arr[2]], dtype=float)
+            resolution = dt_arr.copy()
+            print('Courant numbers for the [fine, coarse, reg] grid spacings:', c_arr)
+            var_acc = 'dt'
+        elif accuracy_in == 'space with time': # dx and dt vary keeping Courant number constant
+            nx_arr = np.array([nx*factor, nx/factor, nx], dtype=int)
+            dx_arr = np.array([xmax/nx_arr[0], xmax/nx_arr[1], xmax/nx_arr[2]], dtype=float)
+            nt_arr = np.array([nt*factor, nt/factor, nt], dtype=int)
+            dt_arr = np.array([dt/factor, dt*factor, dt], dtype=float)
+            c_arr = np.array([uconstant*dt_arr[0]/dx_arr[0], uconstant*dt_arr[1]/dx_arr[1], uconstant*dt_arr[2]/dx_arr[2]], dtype=float)
+            resolution = dx_arr.copy()
+            print('Courant numbers for the [fine, coarse, reg] grid spacings:', c_arr)
+            var_acc = 'dxwdt'
+        else:
+            logging.info('Error: invalid accuracy_in')
         gridlabels = ['fine', 'coarse', 'reg']
     else: # Run schemes for only the one grid spacing defined above
         nx_arr = np.array([nx], dtype=int)
@@ -207,7 +242,6 @@ def main():
     
     plt.figure(figsize=(7,4))
     # Plotting the final time step for each scheme in the same plot
-    #plt.plot(xc, psi_in, label='Initial', linestyle='-', color='grey') #!!!
     plt.plot(xc, locals()['psi_an_reg'][nt], label='Analytic', linestyle='-', color='k')
     for c in range(len(cases)):        
         s = plot_args[c]['label']
@@ -301,38 +335,39 @@ def main():
         for c in range(len(cases)):        
             s = plot_args[c]['label']
             # Calculate error for each grid spacing (one or three)
-            rmse_x = np.zeros(len(nx_arr))
+            rmse = np.zeros(len(nx_arr))
             dxc_arr = np.zeros(len(nx_arr))
             for xi in range(len(nx_arr)):
                 l = gridlabels[xi]
                 nx = nx_arr[xi]
                 nt = nt_arr[xi]                
-                if coords == 'stretching':
-                    xf, dxc, xc, dxf = gr.coords_stretching(xmax, nx, nx/2, dxcmin=dxcmin) # points in space, length of spatial step
-                elif coords == 'uniform':
-                    xf, dxc, xc, dxf = gr.coords_uniform(xmax, nx) # points in space, length of spatial step
-                else: 
-                    print('Error: invalid coordinates')
-                rmse_x[xi] = epm.rmse(locals()[f'psi_{s}_{l}'][nt], locals()[f'psi_an_{l}'][nt], dxc) # Calculate RMSE for each grid spacing at the final time
-                dxc_arr[xi] = np.mean(dxc)
+                # Calculate RMSE for each grid spacing at the final time, assume uniform grid
+                rmse[xi] = epm.rmse(locals()[f'psi_{s}_{l}'][nt], locals()[f'psi_an_{l}'][nt], resolution[xi]) # Calculate RMSE for each grid spacing at the final time            
 
             # Plot error over grid spacing
-            ax1.scatter(dxc_arr, rmse_x, marker='+', label=f'Psi {plot_args[c]['label']}')
+            ax1.scatter(resolution, rmse, marker=plot_args[c]['marker'], label=f'Psi {plot_args[c]['label']}')
 
+        # Order of accuracy lines in the plot for reference
+        gridscale = np.logspace(0, np.log10(2*factor), num=10)
+        gridsizes = resolution[0]*gridscale
+        firstorder = rmse[0]*gridscale
+        secondorder = rmse[0]*gridscale*gridscale
+        thirdorder = rmse[0]*gridscale*gridscale*gridscale
+        ax1.plot(gridsizes, firstorder, color='black', linestyle=':', label=f'O({var_acc})')
+        ax1.plot(gridsizes, secondorder, color='black', linestyle=':', label=f'O({var_acc}^2)')
+        ax1.plot(gridsizes, thirdorder, color='black', linestyle=':', label=f'O({var_acc}^3)')
+        
         # Plot details
         ax1.set_xscale('log')
         ax1.set_yscale('log')
         ax1.set_title(f'RMSE at t_final')
-        ax1.set_xlabel('Mean dx')
+        ax1.set_xlabel(var_acc)
         ax1.legend()
 
         # Save plot of error over grid spacing
-        plt.savefig(outputdir + f'RMSE_over_dx_' + schemenames_settings + '.pdf')
+        plt.savefig(outputdir + f'RMSE_{var_acc}_' + schemenames_settings + '.pdf')
         plt.tight_layout()
         plt.close()
-
-        # Calculate order of convergence
-        # !!! To do: calculate order of convergence
 
     """
     #### Error analysis for a single scheme

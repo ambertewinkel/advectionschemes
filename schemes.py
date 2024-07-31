@@ -1060,7 +1060,7 @@ def aiMPDATA_gauge(init, nt, dt, uf, dxc, do_beta='switch', solver='NumPy', nite
         flx_SP = flux(1., 1., V)
         field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc
         if third_order == True:
-            field[it+1] += thirdorder(field[it], uf, dxc, dt)
+            field[it+1] += thirdorder(field[it], uf, dxc, dt) # check where the minus/plus comes from
 
     return field
 
@@ -1123,13 +1123,10 @@ def aiMPDATA_gauge_solverlast(init, nt, dt, uf, dxc, do_beta='switch', solver='N
         flx_FP = flux(np.roll(field[it],1), field[it], uf)
         rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
 
-        # First pass: converged BTBS - dependent on the Courant number and beta.
-
         # Second pass
         # Infinite gauge: multiply the pseudovelocity by 0.5 and do not divide by (field_FP + np.roll(field_FP,1) + eps), and set the first two arguments in flux() to 1.
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
         # Use the first-pass field for A. A[i] is at i-1/2
-        ###A = (field_FP - np.roll(field_FP,1))/2.
         A = (field[it] - np.roll(field[it],1))/2.
         
         # Calculate and limit the antidiffusive velocity V. Same index shift as for A
@@ -1145,9 +1142,39 @@ def aiMPDATA_gauge_solverlast(init, nt, dt, uf, dxc, do_beta='switch', solver='N
         # Calculate the flux and second-pass result
         flx_SP = flux(1., 1., V)
         rhs += dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc
-        #if third_order == True:
-        #    field[it+1] += thirdorder(field[it], uf, dxc, dt)
+        if third_order == True:
+            toc = thirdorder(field[it], uf, dxc, dt)
+            rhs += toc
         field[it+1] = solverfn(M, field[it], rhs, niter)
+
+    return field
+
+def LW3rd(init, nt, dt, uf, dxc): # Only explicit and uniform grid and velocity # previously called thirdorderinfgaugeLWMPDATA
+    """This scheme is based on MPDATA_LW3 derivation from Hilary from 29-07-2024. Third-order Lax-Wendroff.
+    It assumes the grid is uniform.
+    --- Input ---
+    init    : array of floats, initial field to advect
+    nt      : integer, total number of time steps to take
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
+    --- Output ---
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
+    """    
+    c = dt*uf/dxc # assumes uniform grid
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+
+    for it in range(nt):
+        field_FP = field[it] - c*(field[it] - np.roll(field[it],1))
+        
+        #field_SP = field_FP -0.5*c*(1-c)*(np.roll(field_FP, -1) - 2*field_FP + np.roll(field_FP, 1))
+        field_SP = field_FP -0.5*c*(1-c)*(np.roll(field[it], -1) - 2*field[it] + np.roll(field[it], 1))
+
+        #field[it+1] = field_SP + c*(1-c*c)/6*(np.roll(field_SP, -1) - 3*field_SP + 3*np.roll(field_SP, 1) - np.roll(field_SP, 2))
+        field[it+1] = field_SP + c*(1-c*c)/6*(np.roll(field[it], -1) - 3*field[it] + 3*np.roll(field[it], 1) - np.roll(field[it], 2))
 
     return field
 
@@ -1404,6 +1431,7 @@ def thirdorder(field, dxc, uf, dt):
 
     # Assume uniform grid, i.e., u @cells = u @faces
     C = uf*dt/dxc # Courant number
-    TOC = - (C*np.absolute(C)/G - 2*C*C*C/(G*G) - C)*(np.roll(field,-2) - 2*field + np.roll(field,2))/12
+    #TOC = - (3*C*np.absolute(C)/G - 2*C*C*C/(G*G) - C)*(np.roll(field,-2) - 2*field + np.roll(field,2))/12
+    TOC = (3*C*np.absolute(C)/G - 2*C*C*C/(G*G) - C)*(2*np.roll(field,-1) - 2*np.roll(field,1) + np.roll(field,2) - np.roll(field,-2))/12
 
     return TOC
