@@ -1149,6 +1149,62 @@ def aiMPDATA_gauge_solverlast(init, nt, dt, uf, dxc, do_beta='switch', solver='N
 
     return field
 
+def aiMPDATA_gauge_clt1(init, nt, dt, u, dx, solver='NumPy', do_beta='', do_limit='', nSmooth=0, solver_location='first-pass', niter=1):
+    """
+    Implements a hybrid scheme with explicit infinite-gauge MPDATA correction.  
+    First pass: explicit or implicit (or both if do_beta='blend') upwind with numpy direct elimination on the whole matrix. beta determines the degree of im/ex - as trapezoidal implicit.
+    Second pass: explicit MPDATA correction with an infinite-gauge. For this:
+    A is calculated with field_FP (first-pass) and not field[it]. The upwind direction is determined with the pseudovelocity V.
+    V is limited to +-corrClimit. Another difference is the option (i.e., commented out) of smoothing V. 
+    --- Input ---
+    init : array of floats, initial field to advect
+    nt      : integer, total number of time steps to take
+    dt      : float, timestep
+    u      : array of floats, velocity defined at faces
+    dx     : array of floats, spacing between cell faces
+    eps     : float, optional. Small number to avoid division by zero.
+    do_beta : string, optional. If 'switch', beta is 0 for explicit and 1 for implicit. If 'blend', beta is a blend between 0 and 1.
+    solver  : string, optional. If 'NumPy', use numpy's linalg.solve. If 'Jacobi', use Jacobi iteration.
+    niter   : integer, optional. Number of iterations for Jacobi solver.
+    --- Output --- 
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init    
+    """
+    # Initialisation
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
+    field_FP = np.zeros(len(init))
+    solverfn = getattr(sv, solver)
+    
+    # For stability, determine the amount of temporal MPDATA correction in V for use later
+    c = 0.5*dt*(np.roll(u,-1) + u)/dx
+    #beta = np.maximum.reduce([np.zeros(len(c)), 1 - 1/c, 1 - 1/np.roll(c,1)])
+    chi = 2./c - 1.
+
+    # Define the matrix to solve
+    M = np.zeros((len(init), len(init)))
+    for i in range(len(init)): 
+        M[i,i] = 1. + (c[i]-1)
+        M[i,(i-1)%len(init)] = -(c[i]-1)
+    
+    # Time stepping
+    for it in range(nt):
+        # First pass: upwind. flx_FP[i] is at i-1/2
+        rhs = np.roll(field[it],1)
+        if solver_location == 'first-pass':
+            field_FP = solverfn(M, field[it], rhs, niter)
+
+        # Second pass, calculate the antidiffusive velocity V. Same index shift as for A
+        V = 0.5*u/(0.5*dx)*(0.5*dx - 0.5*dt*chi*u)*(field[it] - np.roll(field[it],1))
+        # Calculate the flux and second-pass result
+        if solver_location =='first-pass':
+            field[it+1] = field_FP + dt*(-np.roll(V,-1) + V)/dx
+        elif solver_location == 'second-pass':
+            rhs += dt*(-np.roll(V,-1) + V)/dx
+            field[it+1] = solver(M, field[it], rhs, niter)
+
+    return field
+
 def LW3rd(init, nt, dt, uf, dxc): # Only explicit and uniform grid and velocity # previously called thirdorderinfgaugeLWMPDATA
     """This scheme is based on MPDATA_LW3 derivation from Hilary from 29-07-2024. Third-order Lax-Wendroff.
     It assumes the grid is uniform.

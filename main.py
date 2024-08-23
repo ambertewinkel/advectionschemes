@@ -40,14 +40,14 @@ def main():
     limitCto1 = False
     create_animation = False
     check_orderofconvergence = True
-    accuracy_in = 'space with time' # 'space', 'time', 'space with time'; (relevant only if check_orderofconvergence == True)
+    accuracy_in = 'space with C const' # 'space with dt const' or 'time with dx const' or 'space with C const'; (relevant only if check_orderofconvergence == True)
     date = dati.date.today().strftime("%d%m%Y")                   # date of the run
     datetime = dati.datetime.now().strftime("%d%m%Y-%H%M%S")      # date and time of the run
 
     # Input cases
     cases = [\
-        {'scheme':'LW3rd'},
-        ###{'scheme':'aiMPDATA_gauge', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0},
+        #{'scheme':'LW3rd'},
+        {'scheme':'aiMPDATA_gauge_clt1', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0},
         ###{'scheme':'aiMPDATA_gauge', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'third_order':True},
         ##{'scheme':'aiMPDATA_gauge_solverlast', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0},
         ##{'scheme':'aiMPDATA_gauge_solverlast', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'third_order':True},
@@ -55,8 +55,8 @@ def main():
         ]
     
     plot_args = [\
-        {'label':'LW3rd', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        ###{'label':'aiMPDATA_gauge', 'color':'red', 'marker':'+', 'linestyle':'-'},
+        #{'label':'LW3rd', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        {'label':'aiMPDATA_gauge_clt1', 'color':'red', 'marker':'+', 'linestyle':'-'},
         ###{'label':'aiMPDATA_gauge_3oc', 'color':'green', 'marker':'x', 'linestyle':'-'},
         ##{'label':'aiMPDATA_gauge_solverlast', 'color':'red', 'marker':'+', 'linestyle':'-'},
         ##{'label':'aiMPDATA_gauge_solverlast_3oc', 'color':'green', 'marker':'x', 'linestyle':'-'},
@@ -69,7 +69,7 @@ def main():
     nt = 100                    # number of time steps
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 1.#6.25#3.125              # constant velocity
+    uconstant = 6.25#3.125#31.25#3.125#1.#6.25#3.125              # constant velocity
     coords = 'uniform'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]
@@ -143,7 +143,7 @@ def main():
     # Setup: run schemes for one or three grid spacings (nx*factor, nx/factor, nx)
     if check_orderofconvergence == True: # Run schemes for two extra grid spacings
         factor = 2
-        if accuracy_in == 'space': # 'space' or 'time' or 'space with time'
+        if accuracy_in == 'space with dt const': # 'space with dt const' or 'time with dx const' or 'space with C const'
             nx_arr = np.array([nx*factor, nx/factor, nx], dtype=int)
             dx_arr = np.array([xmax/nx_arr[0], xmax/nx_arr[1], xmax/nx_arr[2]], dtype=float)
             nt_arr = np.full(len(nx_arr), nt)
@@ -151,8 +151,8 @@ def main():
             c_arr = np.array([uconstant*dt_arr[0]/dx_arr[0], uconstant*dt_arr[1]/dx_arr[1], uconstant*dt_arr[2]/dx_arr[2]], dtype=float)
             resolution = dx_arr.copy()
             print('Courant numbers for the [fine, coarse, reg] grid spacings:', c_arr)
-            var_acc = 'dx'
-        elif accuracy_in == 'time':
+            var_acc = 'dx with dt const'
+        elif accuracy_in == 'time with dx const':
             nt_arr = np.array([nt*factor, nt/factor, nt], dtype=int)
             dt_arr = np.array([dt/factor, dt*factor, dt], dtype=float)
             nx_arr = np.full(len(nt_arr), nx)
@@ -160,8 +160,8 @@ def main():
             c_arr = np.array([uconstant*dt_arr[0]/dx_arr[0], uconstant*dt_arr[1]/dx_arr[1], uconstant*dt_arr[2]/dx_arr[2]], dtype=float)
             resolution = dt_arr.copy()
             print('Courant numbers for the [fine, coarse, reg] grid spacings:', c_arr)
-            var_acc = 'dt'
-        elif accuracy_in == 'space with time': # dx and dt vary keeping Courant number constant
+            var_acc = 'dt with dx const'
+        elif accuracy_in == 'space with C const': # dx and dt vary keeping Courant number constant
             nx_arr = np.array([nx*factor, nx/factor, nx], dtype=int)
             dx_arr = np.array([xmax/nx_arr[0], xmax/nx_arr[1], xmax/nx_arr[2]], dtype=float)
             nt_arr = np.array([nt*factor, nt/factor, nt], dtype=int)
@@ -169,7 +169,7 @@ def main():
             c_arr = np.array([uconstant*dt_arr[0]/dx_arr[0], uconstant*dt_arr[1]/dx_arr[1], uconstant*dt_arr[2]/dx_arr[2]], dtype=float)
             resolution = dx_arr.copy()
             print('Courant numbers for the [fine, coarse, reg] grid spacings:', c_arr)
-            var_acc = 'dxwdt'
+            var_acc = 'dx with C const'
         else:
             logging.info('Error: invalid accuracy_in')
         gridlabels = ['fine', 'coarse', 'reg']
@@ -360,7 +360,8 @@ def main():
         # Plot details
         ax1.set_xscale('log')
         ax1.set_yscale('log')
-        ax1.set_title(f'RMSE at t_final')
+        ax1.set_title(f'RMSE vs {var_acc}')
+        ax1.set_ylabel('RMSE')
         ax1.set_xlabel(var_acc)
         ax1.legend()
 
