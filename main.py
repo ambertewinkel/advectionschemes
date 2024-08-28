@@ -47,20 +47,29 @@ def main():
     # Input cases
     cases = [\
         #{'scheme':'LW3rd'},
-        {'scheme':'aiMPDATA_gauge_clt1', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0},
-        ###{'scheme':'aiMPDATA_gauge', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'third_order':True},
-        ##{'scheme':'aiMPDATA_gauge_solverlast', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0},
+        #{'scheme':'aiMPDATA_gauge_clt1', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0},
+        #!{'scheme':'aiMPDATA_gauge', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0},
+        {'scheme':'aiMPDATA_gauge_solverlast', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0},
         ##{'scheme':'aiMPDATA_gauge_solverlast', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'third_order':True},
         #{'scheme':'aiMPDATA_gauge', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'third_order':True},
+        #{'scheme':'implicitLW'},
+        ####{'scheme':'LW_aicorrection'},
+        #!!{'scheme': 'aiUpwind', 'do_beta':'blend'},
+        #!!{'scheme': 'aiUpwind', 'do_beta':'switch'},
         ]
     
     plot_args = [\
         #{'label':'LW3rd', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        {'label':'aiMPDATA_gauge_clt1', 'color':'red', 'marker':'+', 'linestyle':'-'},
-        ###{'label':'aiMPDATA_gauge_3oc', 'color':'green', 'marker':'x', 'linestyle':'-'},
-        ##{'label':'aiMPDATA_gauge_solverlast', 'color':'red', 'marker':'+', 'linestyle':'-'},
+        #{'label':'aiMPDATA_gauge_clt1', 'color':'red', 'marker':'+', 'linestyle':'-'},
+        #!{'label':'aiMPDATA_gauge', 'color':'green', 'marker':'x', 'linestyle':'-'},
+        {'label':'aiMPDATA_gauge_solverlast', 'color':'red', 'marker':'+', 'linestyle':'-'},
         ##{'label':'aiMPDATA_gauge_solverlast_3oc', 'color':'green', 'marker':'x', 'linestyle':'-'},
         #{'label':'aiMPDATA_gauge_3oc', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        #{'label':'implicitLW', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        ####{'label':'LW_aicorrection', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        #!!{'scheme': 'aiUpwind', 'do_beta':'blend', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        #!!{'scheme': 'aiUpwind', 'do_beta':'switch', 'color':'green', 'marker':'x', 'linestyle':'-'},
+
         ]
 
     # Initial conditions
@@ -69,7 +78,7 @@ def main():
     nt = 100                    # number of time steps
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 6.25#3.125#31.25#3.125#1.#6.25#3.125              # constant velocity
+    uconstant = 5.#1.5625#31.25#3.125#1.#6.25#3.125              # constant velocity
     coords = 'uniform'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]

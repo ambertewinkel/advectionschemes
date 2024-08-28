@@ -1205,6 +1205,54 @@ def aiMPDATA_gauge_clt1(init, nt, dt, u, dx, solver='NumPy', do_beta='', do_limi
 
     return field
 
+def implicitLW(init, nt, dt, u, dx):
+    """This function implements the implicit Lax-Wendroff scheme, which should have second-order accuracy in space and time.
+    Assumes constant velocity and uniform grid. The numpy solver is employed at the end of each time step."""
+
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
+    c = u*dt/dx
+    
+    M = np.zeros((len(init), len(init)))
+    for i in range(len(init)):
+        M[i,i-1] = 0.5*(c[i]*c[i] - c[i])
+        M[i,i] = 1 - c[i]*c[i]
+        M[i,(i+1)%len(init)] = 0.5*(c[i]*c[i] + c[i])
+
+    # Time stepping
+    for it in range(nt):
+        rhs = field[it]
+        field[it+1] = sv.NumPy(M, field[it], rhs, ni=1)
+
+    return field
+
+def LW_aicorrection(init, nt, dt, u, dx, solver='NumPy', niter=0):
+    """This scheme is like aiMPDATA_gauge but with a different correction. Namely, it has an implicit correction in addition to the explicit one in aiMPDATA_gauge."""
+
+
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
+    
+    solverfn = getattr(sv, solver)
+    c = dt*u/dx
+    theta = 1-1/c
+
+    M = np.zeros((len(init), len(init)))
+
+    D = np.zeros(len(init))
+    D = 0.5*((1-2*theta)*c*c -c)
+    for i in range(len(init)):
+        M[i,i] = 1 + theta[i]*c[i] + 2*theta[i]*D[i]
+        M[i,(i-1)%len(init)] = -theta[i]*c[i] - theta[i]*D[i]
+        M[i,(i+1)%len(init)] = -theta[i]*D[i] 
+
+    for it in range(nt):
+        rhs = field[it] + c*(1 - theta)*(np.roll(field[it],1) - field[it]) + D*(1 - theta)*(np.roll(field[it],1) - 2*field[it] + np.roll(field[it],-1))
+        field[it+1] = solverfn(M, field[it], rhs, niter)
+
+    return field
+
+
 def LW3rd(init, nt, dt, uf, dxc): # Only explicit and uniform grid and velocity # previously called thirdorderinfgaugeLWMPDATA
     """This scheme is based on MPDATA_LW3 derivation from Hilary from 29-07-2024. Third-order Lax-Wendroff.
     It assumes the grid is uniform.
