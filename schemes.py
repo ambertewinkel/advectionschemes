@@ -616,7 +616,7 @@ def MPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_limit=False, limit=0.5, nSmooth=
 
 
 @njit(**jitflags)
-def MPDATA_gauge_njit(init, nt, dt, uf, dxc):
+def MPDATA_gauge(init, nt, dt, uf, dxc):
     """
     This functions implements the MPDATA scheme with an infinite gauge, assuming a 
     constant velocity (input through the Courant number) and a 
@@ -656,47 +656,6 @@ def MPDATA_gauge_njit(init, nt, dt, uf, dxc):
             dx_up[i] = 0.5*flux_njit(np.roll(dxc,1)[i], dxc[i], uf[i]/abs(uf[i]))
         V = 0.5*(field_FP - np.roll(field_FP,1))*uf/(0.5*dxf)*(dx_up - 0.5*dt*uf)   # V[i] is at i-1/2
         flx_SP = V
-        field[it+1] = field_FP - dt*(np.roll(flx_SP,-1) - flx_SP)/dxc
-
-    return field
-
-
-def MPDATA_gauge(init, nt, dt, uf, dxc):
-    """
-    This functions implements the MPDATA scheme with an infinite gauge, assuming a 
-    constant velocity (input through the Courant number) and a 
-    periodic spatial domain.
-    Reference (1): P. Smolarkiewicz and L. Margolin. MPDATA: A finite-difference 
-    solver for geophysical flows. J. Comput. Phys., 140:459-480, 1998.
-    --- Input ---
-    init : array of floats, initial field to advect
-    nt      : integer, total number of time steps to take
-    dt      : float, timestep
-    uf      : array of floats, velocity defined at faces
-    dxc     : array of floats, spacing between cell faces
-    eps     : float, optional. Small number to avoid division by zero.
-    --- Output --- 
-    field   : 2D array of floats. Outputs each timestep of the field while advecting 
-            the initial condition. Dimensions: nt+1 x length of init
-    """
-
-    # Initialisation
-    field = np.zeros((nt+1, len(init)))
-    field[0] = init.copy()
-
-    dxf = 0.5*(dxc + np.roll(dxc,1))
-
-    # Time stepping
-    for it in range(nt):
-        # First pass  
-        flx_FP = flux(np.roll(field[it],1), field[it], uf) # flx_FP[i] is at i-1/2
-        field_FP = field[it] - dt*(np.roll(flx_FP,-1) - flx_FP)/dxc
-
-        # Second pass
-        # Infinite gauge: multiply the pseudovelocity by 0.5 and do not divide by (field_FP + np.roll(field_FP,1) + eps), and set the first two arguments in flux() to 1.
-        dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
-        V = 0.5*(field_FP - np.roll(field_FP,1))*uf/(0.5*dxf)*(dx_up - 0.5*dt*uf)   # V[i] is at i-1/2
-        flx_SP = flux(1., 1., V)
         field[it+1] = field_FP - dt*(np.roll(flx_SP,-1) - flx_SP)/dxc
 
     return field
