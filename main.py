@@ -59,8 +59,8 @@ def main():
         #{'scheme': 'aiUpwind', 'do_beta':'blend'},
         #{'scheme': 'Upwind'},
         #{'scheme':'BTBS'},
-        {'scheme':'MPDATA'},
-        {'scheme':'MPDATA_njit'},
+        {'scheme':'MPDATA_gauge'},
+        {'scheme':'MPDATA_gauge_njit'},
         ]
     
     plot_args = [\
@@ -77,12 +77,12 @@ def main():
         #{'label': 'Upwind', 'color':'red', 'marker': '.', 'linestyle': '-'},
         #{'label': 'BTBS', 'color':'orange','marker':'.', 'linestyle':'-'},
         #{'label': 'BTBS', 'color':'orange','marker':'.', 'linestyle':'-'}
-        {'label':'MPDATA', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        {'label':'MPDATA_njit', 'color':'green', 'marker':'+', 'linestyle':'-'},
+        {'label':'MPDATA_gauge', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        {'label':'MPDATA_gauge_njit', 'color':'green', 'marker':'+', 'linestyle':'-'},
         ]
 
     # Initial conditions
-    analytic = an.cosbell_yshift         # initial condition, options: sine, cosbell, tophat, or combi
+    analytic = an.sine         # initial condition, options: sine, cosbell, tophat, or combi
     dt = 0.01                   # time step
     nt = 100                   # number of time steps
     nx = 40                     # number of points in space
