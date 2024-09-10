@@ -6,7 +6,8 @@
 
 import numpy as np
 import solvers as sv
-
+from numba_config import jitflags
+from numba import njit, prange
 
 def FTBS(init, nt, dt, uf, dxc):
     """

@@ -15,6 +15,8 @@ import os
 import datetime as dati
 import logging
 import inspect
+from numba_config import jitflags
+from numba import njit, prange
 
 
 logger = logging.getLogger(__name__)
