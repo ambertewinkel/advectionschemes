@@ -28,6 +28,27 @@ def sine(x, xmax, u=0., t=0., shifty=0.5, ampl=0.5, shiftx=0.):
     return psi
 
 
+def sine_yshift(x, xmax, u=0., t=0., shifty=10.0, ampl=0.5, shiftx=0.):
+    """This function returns an array from input array x advected by velocity u for a time t.
+    The initial condition has values from the function y = shifty + ampl*sin(2pi(x-shiftx)/xmax).
+    --- Input ---
+    x   : 1D array of floats, points to calculate the result of the function for
+    xmax: float, domain size
+    u   : float or 1D array of floats, velocity
+    t   : float, total time
+    shifty: float, y shift of the sine wave
+    ampl : float, amplitude of the sine wave
+    shiftx: float, x shift of the sine wave
+    --- Output ---
+    psi : 1D array of floats, result from function at the points defined in x
+    """
+    psi = np.zeros(len(x))
+    x0 = (x - u*t)%xmax
+    psi = shifty + ampl*np.sin(2*np.pi*(x0-shiftx)/xmax)
+
+    return psi
+
+
 def cosbell(x, xmax, u=0., t=0., shift=0., ampl=1., a=0., b=0.5):
     """
     This function returns an array from input array x and constants a and b advected 
@@ -57,6 +78,34 @@ def cosbell(x, xmax, u=0., t=0., shift=0., ampl=1., a=0., b=0.5):
 
     return psi
 
+def cosbell_yshift(x, xmax, u=0., t=0., shift=10., ampl=1., a=0., b=0.5):
+    """
+    This function returns an array from input array x and constants a and b advected 
+    by velocity u for a time t. The initial condition has values from the function 
+    y = 0.5*(1-cos(2pi(x-a)/(b-a))), in the range of the domain enclosed by a and b. 
+    Outside of this region, the array elements are zero.
+    --- Input ---
+    x   : 1D array of floats, points to calculate the result of the function for
+    xmax: float, domain size
+    u   : float or 1D array of floats, velocity
+    t   : float, total time
+    shift: float, shift of the cosine bell
+    ampl : float, amplitude of the cosine bell
+    a   : float, left boundary of cosine bell
+    b   : float, right boundary of cosine bell
+    --- Output ---
+    psi : 1D array of floats, result from function at the points defined in x
+    """
+    psi = np.zeros(len(x))
+    x0 = (x - u*t)%xmax
+
+    # Define nonzero region of the cosine bell
+    if a < b:
+        psi = shift + ampl*np.where((x0 >= a) & (x0 <= b), 0.5*(1 - np.cos(2*np.pi*(x0-a)/(b-a))), 0.)
+    else:
+        psi = shift + ampl*np.where((x0 >= a) | (x0 <= b), 0.5*(1 - np.cos(2*np.pi*(x0-a+xmax)/(b-a+xmax))), 0.)
+
+    return psi
 
 def tophat(x, xmax, u=0., t=0., shift=0., ampl=1., a=0.6, b=0.8):
     """

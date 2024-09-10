@@ -16,8 +16,6 @@ import datetime as dati
 import logging
 import inspect
 import timeit
-from numba_config import jitflags
-from numba import njit, prange
 
 
 logger = logging.getLogger(__name__)
@@ -84,7 +82,7 @@ def main():
         ]
 
     # Initial conditions
-    analytic = an.sine         # initial condition, options: sine, cosbell, tophat, or combi
+    analytic = an.cosbell_yshift         # initial condition, options: sine, cosbell, tophat, or combi
     dt = 0.01                   # time step
     nt = 100                   # number of time steps
     nx = 40                     # number of points in space
