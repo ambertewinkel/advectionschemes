@@ -556,7 +556,7 @@ def CNCS(init, nt, dt, uf, dxc):
     return field
 
 @njit(**jitflags)
-def MPDATA_njit(init, nt, dt, uf, dxc, eps=1e-16, do_limit=False, limit=0.5, nSmooth=0):
+def MPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_limit=False, limit=0.5, nSmooth=0):
     """
     This functions implements the MPDATA scheme without a gauge, assuming a 
     constant velocity (input through the Courant number) and a 
@@ -609,58 +609,6 @@ def MPDATA_njit(init, nt, dt, uf, dxc, eps=1e-16, do_limit=False, limit=0.5, nSm
         
         for i in range(len(init)):
             flx_SP[i] = flux_njit(np.roll(field_FP,1)[i], field_FP[i], V[i])
-        field[it+1] = field_FP - dt*(np.roll(flx_SP,-1) - flx_SP)/dxc
-
-    return field
-
-def MPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_limit=False, limit=0.5, nSmooth=0):
-    """
-    This functions implements the MPDATA scheme without a gauge, assuming a 
-    constant velocity (input through the Courant number) and a 
-    periodic spatial domain.
-    Reference (1): P. Smolarkiewicz and L. Margolin. MPDATA: A finite-difference 
-    solver for geophysical flows. J. Comput. Phys., 140:459-480, 1998.
-    --- Input ---
-    init : array of floats, initial field to advect
-    nt      : integer, total number of time steps to take
-    dt      : float, timestep
-    uf      : array of floats, velocity defined at faces
-    dxc     : array of floats, spacing between cell faces
-    eps     : float, optional. Small number to avoid division by zero.
-    do_limit: boolean, optional. If True, V is limited. Default is True.
-    limit   : float, optional. Limiting value. Default is 0.5.
-    nSmooth : integer, optional. Number of smoothing steps for V. Default is 1.
-    --- Output --- 
-    field   : 2D array of floats. Outputs each timestep of the field while advecting 
-            the initial condition. Dimensions: nt+1 x length of init
-    """
-
-    # Initialisation
-    field = np.zeros((nt+1, len(init)))
-    field[0] = init.copy()
-
-    dxf = 0.5*(dxc + np.roll(dxc,1))
-
-    # Time stepping
-    for it in prange(nt):
-        # First pass  
-        flx_FP = flux(np.roll(field[it],1), field[it], uf) # flx_FP[i] is at i-1/2
-        field_FP = field[it] - dt*(np.roll(flx_FP,-1) - flx_FP)/dxc
-
-        # Second pass
-        dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
-        A = (field_FP - np.roll(field_FP,1))/(field_FP + np.roll(field_FP,1) + eps) # A[i] is at i-1/2
-        V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*uf) # Same index shift as for A
-        
-        if do_limit == True: # Limit V
-            corrCLimit = limit*uf
-            V = np.maximum(np.minimum(V, corrCLimit), -corrCLimit)  
-        
-        # Smooth V
-        for ismooth in range(nSmooth):
-            V = 0.5*V + 0.25*(np.roll(V,1) + np.roll(V,-1))
-        
-        flx_SP = flux(np.roll(field_FP,1), field_FP, V)
         field[it+1] = field_FP - dt*(np.roll(flx_SP,-1) - flx_SP)/dxc
 
     return field
