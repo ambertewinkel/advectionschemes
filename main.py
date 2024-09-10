@@ -15,6 +15,7 @@ import os
 import datetime as dati
 import logging
 import inspect
+import timeit
 from numba_config import jitflags
 from numba import njit, prange
 
@@ -133,7 +134,7 @@ def main():
     logging.info(f'Number of grid points: {nx}')
     logging.info(f'Number of time steps: {nt}')
     logging.info(f'Time step: {dt} s')
-    logging.info(f'Total runtime: {nt*dt:.2f} s')
+    logging.info(f'Total simulated time: {nt*dt:.2f} s')
     logging.info(f'Velocity: {uconstant}')     
     logging.info(f'Schemes included are: {schemenames}')
     logging.info(f'Cases:')
@@ -444,9 +445,16 @@ def callscheme(case, nt, dt, uf, dxc, psi_in):
 
     # Call the scheme
     print(f'Running {sc} with parameters {params}')
+    startscheme = timeit.default_timer()
     psi = fn(psi_in.copy(), nt, dt, uf, dxc, **params)
+    print(f'--> Runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.2f} s, {nt}, {len(psi)}')
 
     return psi
 
     
-if __name__ == "__main__": main()
+if __name__ == "__main__": 
+    starttime = timeit.default_timer()
+    
+    main()
+
+    print('Total runtime: ', timeit.default_timer() - starttime)
