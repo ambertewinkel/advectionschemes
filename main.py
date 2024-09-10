@@ -49,36 +49,39 @@ def main():
         #{'scheme':'LW3rd'},
         #{'scheme':'aiMPDATA_gauge_clt1', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0},
         #!{'scheme':'aiMPDATA_gauge', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0},
-        {'scheme':'aiMPDATA_gauge_solverlast', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0},
+        #{'scheme':'aiMPDATA_gauge_solverlast', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0},
         ##{'scheme':'aiMPDATA_gauge_solverlast', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'third_order':True},
         #{'scheme':'aiMPDATA_gauge', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'third_order':True},
         #{'scheme':'implicitLW'},
         ####{'scheme':'LW_aicorrection'},
-        #!!{'scheme': 'aiUpwind', 'do_beta':'blend'},
-        #!!{'scheme': 'aiUpwind', 'do_beta':'switch'},
+        {'scheme': 'aiUpwind', 'do_beta':'switch'},
+        {'scheme': 'aiUpwind', 'do_beta':'blend'},
+        #{'scheme': 'Upwind'},
+        {'scheme':'BTBS'}
         ]
     
     plot_args = [\
         #{'label':'LW3rd', 'color':'blue', 'marker':'x', 'linestyle':'-'},
         #{'label':'aiMPDATA_gauge_clt1', 'color':'red', 'marker':'+', 'linestyle':'-'},
         #!{'label':'aiMPDATA_gauge', 'color':'green', 'marker':'x', 'linestyle':'-'},
-        {'label':'aiMPDATA_gauge_solverlast', 'color':'red', 'marker':'+', 'linestyle':'-'},
+        #{'label':'aiMPDATA_gauge_solverlast', 'color':'red', 'marker':'+', 'linestyle':'-'},
         ##{'label':'aiMPDATA_gauge_solverlast_3oc', 'color':'green', 'marker':'x', 'linestyle':'-'},
         #{'label':'aiMPDATA_gauge_3oc', 'color':'blue', 'marker':'x', 'linestyle':'-'},
         #{'label':'implicitLW', 'color':'blue', 'marker':'x', 'linestyle':'-'},
         ####{'label':'LW_aicorrection', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        #!!{'scheme': 'aiUpwind', 'do_beta':'blend', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        #!!{'scheme': 'aiUpwind', 'do_beta':'switch', 'color':'green', 'marker':'x', 'linestyle':'-'},
-
+        {'label': 'aiUpwind_hard', 'color':'green', 'marker':'+', 'linestyle':'-'},
+        {'label': 'aiUpwind_soft', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        #{'label': 'Upwind', 'color':'red', 'marker': '.', 'linestyle': '-'}
+        {'label': 'BTBS', 'color':'orange','marker':'.', 'linestyle':'-'}
         ]
 
     # Initial conditions
-    analytic = an.sine         # initial condition, options: sine, cosbell, tophat, or combi
+    analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
     dt = 0.01                   # time step
-    nt = 100                    # number of time steps
+    nt = 1                   # number of time steps
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 5.#1.5625#31.25#3.125#1.#6.25#3.125              # constant velocity
+    uconstant = 3.125#3.125#5.#1.5625#31.25#3.125#1.#6.25#3.125              # constant velocity
     coords = 'uniform'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]
@@ -354,7 +357,9 @@ def main():
                 rmse[xi] = epm.rmse(locals()[f'psi_{s}_{l}'][nt], locals()[f'psi_an_{l}'][nt], resolution[xi]) # Calculate RMSE for each grid spacing at the final time            
 
             # Plot error over grid spacing
-            ax1.scatter(resolution, rmse, marker=plot_args[c]['marker'], label=f'Psi {plot_args[c]['label']}')
+            ax1.scatter(resolution, rmse, marker=plot_args[c]['marker'], label=f'Psi {plot_args[c]['label']}', color=plot_args[c]['color'])
+            logging.info('')
+            logging.info(f'{cases[c]['scheme']} - RMSE array for the different resolutions (fine, coarse, reg): {rmse}')
 
         # Order of accuracy lines in the plot for reference
         gridscale = np.logspace(0, np.log10(2*factor), num=10)
@@ -375,8 +380,11 @@ def main():
         ax1.legend()
 
         # Save plot of error over grid spacing
-        plt.savefig(outputdir + f'RMSE_{var_acc}_' + schemenames_settings + '.pdf')
         plt.tight_layout()
+        if save_as == 'test':
+            plt.savefig(outputdir + 'RMSE.pdf')
+        elif save_as == 'store':
+            plt.savefig(outputdir + f'RMSE_{var_acc}_' + schemenames_settings + '.pdf')
         plt.close()
 
     """

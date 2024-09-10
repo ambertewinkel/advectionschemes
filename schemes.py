@@ -1149,6 +1149,7 @@ def aiMPDATA_gauge_solverlast(init, nt, dt, uf, dxc, do_beta='switch', solver='N
 
     return field
 
+
 def aiMPDATA_gauge_clt1(init, nt, dt, u, dx, solver='NumPy', do_beta='', do_limit='', nSmooth=0, solver_location='first-pass', niter=1):
     """
     Implements a hybrid scheme with explicit infinite-gauge MPDATA correction.  
@@ -1204,6 +1205,7 @@ def aiMPDATA_gauge_clt1(init, nt, dt, u, dx, solver='NumPy', do_beta='', do_limi
             field[it+1] = solver(M, field[it], rhs, niter)
 
     return field
+    
 
 def implicitLW(init, nt, dt, u, dx):
     """This function implements the implicit Lax-Wendroff scheme, which should have second-order accuracy in space and time.
@@ -1225,6 +1227,7 @@ def implicitLW(init, nt, dt, u, dx):
         field[it+1] = sv.NumPy(M, field[it], rhs, ni=1)
 
     return field
+
 
 def LW_aicorrection(init, nt, dt, u, dx, solver='NumPy', niter=0):
     """This scheme is like aiMPDATA_gauge but with a different correction. Namely, it has an implicit correction in addition to the explicit one in aiMPDATA_gauge."""
@@ -1250,6 +1253,35 @@ def LW_aicorrection(init, nt, dt, u, dx, solver='NumPy', niter=0):
         rhs = field[it] + c*(1 - theta)*(np.roll(field[it],1) - field[it]) + D*(1 - theta)*(np.roll(field[it],1) - 2*field[it] + np.roll(field[it],-1))
         field[it+1] = solverfn(M, field[it], rhs, niter)
 
+    return field
+
+
+def aiUpwind(init, nt, dt, u, dx, do_beta='switch', solver='NumPy', niter=0):
+    """This scheme test the accuracy of adaptively implicit upwind. (Needs to be first-order accurate to have a nice second/third-order correction to it.)
+    Options include do_beta='blend' or 'switch'. Currently not upwind just FTBS - i.e. not accounting for the sign of u.
+    Assuming constant velocity and dx."""
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
+    solverfn = getattr(sv, solver)
+
+    c = dt*u/dx
+    beta = np.zeros(len(init),dtype=float)
+    if do_beta == 'switch':
+        beta = np.invert((np.roll(c,1) <= 1.)*(c <= 1.))
+    elif do_beta == 'blend':
+        beta = np.maximum.reduce([np.zeros(len(c)), 1 - 1/c, 1 - 1/np.roll(c,1)])
+    else:
+        print('Error: do_beta must be either "switch" or "blend"')
+    
+    M = np.zeros((len(init), len(init)))
+    for i in range(len(init)):
+        M[i,i] = 1 + beta[i]*c[i]
+        M[i,(i-1)%len(init)] = -1.*beta[i]*c[i]
+    
+    for it in range(nt):
+        rhs = field[it] - c*(1-beta)*(field[it] - np.roll(field[it],1))
+        field[it+1] = solverfn(M, field[it], rhs, niter)
+    
     return field
 
 
