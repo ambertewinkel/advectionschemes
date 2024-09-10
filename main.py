@@ -37,7 +37,7 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     limitCto1 = False
@@ -58,9 +58,11 @@ def main():
         #{'scheme':'implicitLW'},
         ####{'scheme':'LW_aicorrection'},
         #{'scheme': 'aiUpwind', 'do_beta':'switch'},
-        {'scheme': 'aiUpwind', 'do_beta':'blend'},
-        {'scheme': 'Upwind'},
-        {'scheme':'BTBS'}
+        #{'scheme': 'aiUpwind', 'do_beta':'blend'},
+        #{'scheme': 'Upwind'},
+        #{'scheme':'BTBS'},
+        {'scheme':'MPDATA'},
+        {'scheme':'MPDATA_njit'},
         ]
     
     plot_args = [\
@@ -73,18 +75,21 @@ def main():
         #{'label':'implicitLW', 'color':'blue', 'marker':'x', 'linestyle':'-'},
         ####{'label':'LW_aicorrection', 'color':'blue', 'marker':'x', 'linestyle':'-'},
         #{'label': 'aiUpwind_hard', 'color':'green', 'marker':'+', 'linestyle':'-'},
-        {'label': 'aiUpwind_soft', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        {'label': 'Upwind', 'color':'red', 'marker': '.', 'linestyle': '-'},
-        {'label': 'BTBS', 'color':'orange','marker':'.', 'linestyle':'-'}
+        #{'label': 'aiUpwind_soft', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        #{'label': 'Upwind', 'color':'red', 'marker': '.', 'linestyle': '-'},
+        #{'label': 'BTBS', 'color':'orange','marker':'.', 'linestyle':'-'},
+        #{'label': 'BTBS', 'color':'orange','marker':'.', 'linestyle':'-'}
+        {'label':'MPDATA', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        {'label':'MPDATA_njit', 'color':'green', 'marker':'+', 'linestyle':'-'},
         ]
 
     # Initial conditions
-    analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
+    analytic = an.sine         # initial condition, options: sine, cosbell, tophat, or combi
     dt = 0.01                   # time step
     nt = 100                   # number of time steps
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 3.125#3.125#5.#1.5625#31.25#3.125#1.#6.25#3.125              # constant velocity
+    uconstant = 1.#50.0#12.5#3.125#31.25#6.25#3.125#1.5625           # constant velocity
     coords = 'uniform'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]
@@ -166,7 +171,7 @@ def main():
             c_arr = np.array([uconstant*dt_arr[0]/dx_arr[0], uconstant*dt_arr[1]/dx_arr[1], uconstant*dt_arr[2]/dx_arr[2]], dtype=float)
             resolution = dx_arr.copy()
             print('Courant numbers for the [fine, coarse, reg] grid spacings:', c_arr)
-            var_acc = 'dx with dt const'
+            var_acc = f'dx with dt={dt_arr[-1]:.3f}'
         elif accuracy_in == 'time with dx const':
             nt_arr = np.array([nt*factor, nt/factor, nt], dtype=int)
             dt_arr = np.array([dt/factor, dt*factor, dt], dtype=float)
@@ -175,7 +180,7 @@ def main():
             c_arr = np.array([uconstant*dt_arr[0]/dx_arr[0], uconstant*dt_arr[1]/dx_arr[1], uconstant*dt_arr[2]/dx_arr[2]], dtype=float)
             resolution = dt_arr.copy()
             print('Courant numbers for the [fine, coarse, reg] grid spacings:', c_arr)
-            var_acc = 'dt with dx const'
+            var_acc = f'dt with dx={dx_arr[-1]:.3f}'
         elif accuracy_in == 'space with C const': # dx and dt vary keeping Courant number constant
             nx_arr = np.array([nx*factor, nx/factor, nx], dtype=int)
             dx_arr = np.array([xmax/nx_arr[0], xmax/nx_arr[1], xmax/nx_arr[2]], dtype=float)
@@ -184,7 +189,7 @@ def main():
             c_arr = np.array([uconstant*dt_arr[0]/dx_arr[0], uconstant*dt_arr[1]/dx_arr[1], uconstant*dt_arr[2]/dx_arr[2]], dtype=float)
             resolution = dx_arr.copy()
             print('Courant numbers for the [fine, coarse, reg] grid spacings:', c_arr)
-            var_acc = 'dx with C const'
+            var_acc = f'dx with C={c_arr[-1]:.3f}'
         else:
             logging.info('Error: invalid accuracy_in')
         gridlabels = ['fine', 'coarse', 'reg']
@@ -371,8 +376,8 @@ def main():
         secondorder = rmse[0]*gridscale*gridscale
         thirdorder = rmse[0]*gridscale*gridscale*gridscale
         ax1.plot(gridsizes, firstorder, color='black', linestyle=':', label=f'O({var_acc})')
-        ax1.plot(gridsizes, secondorder, color='black', linestyle=':', label=f'O({var_acc}^2)')
-        ax1.plot(gridsizes, thirdorder, color='black', linestyle=':', label=f'O({var_acc}^3)')
+        ax1.plot(gridsizes, secondorder, color='black', linestyle=':', label=f'O({var_acc})^2')
+        ax1.plot(gridsizes, thirdorder, color='black', linestyle=':', label=f'O({var_acc})^3')
         
         # Plot details
         ax1.set_xscale('log')
