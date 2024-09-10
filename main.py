@@ -57,9 +57,9 @@ def main():
         #{'scheme':'aiMPDATA_gauge', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'third_order':True},
         #{'scheme':'implicitLW'},
         ####{'scheme':'LW_aicorrection'},
-        {'scheme': 'aiUpwind', 'do_beta':'switch'},
+        #{'scheme': 'aiUpwind', 'do_beta':'switch'},
         {'scheme': 'aiUpwind', 'do_beta':'blend'},
-        #{'scheme': 'Upwind'},
+        {'scheme': 'Upwind'},
         {'scheme':'BTBS'}
         ]
     
@@ -72,16 +72,16 @@ def main():
         #{'label':'aiMPDATA_gauge_3oc', 'color':'blue', 'marker':'x', 'linestyle':'-'},
         #{'label':'implicitLW', 'color':'blue', 'marker':'x', 'linestyle':'-'},
         ####{'label':'LW_aicorrection', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        {'label': 'aiUpwind_hard', 'color':'green', 'marker':'+', 'linestyle':'-'},
+        #{'label': 'aiUpwind_hard', 'color':'green', 'marker':'+', 'linestyle':'-'},
         {'label': 'aiUpwind_soft', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        #{'label': 'Upwind', 'color':'red', 'marker': '.', 'linestyle': '-'}
+        {'label': 'Upwind', 'color':'red', 'marker': '.', 'linestyle': '-'},
         {'label': 'BTBS', 'color':'orange','marker':'.', 'linestyle':'-'}
         ]
 
     # Initial conditions
     analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
     dt = 0.01                   # time step
-    nt = 1                   # number of time steps
+    nt = 100                   # number of time steps
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
     uconstant = 3.125#3.125#5.#1.5625#31.25#3.125#1.#6.25#3.125              # constant velocity

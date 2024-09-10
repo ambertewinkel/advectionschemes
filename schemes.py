@@ -95,7 +95,7 @@ def CTCS(init, nt, dt, uf, dxc):
         
     return field
 
-
+@njit(**jitflags)
 def Upwind(init, nt, dt, uf, dxc): # FTBS when u >= 0, FTFS when u < 0
     """
     This function computes the upwind (FTBS when u>=0, FTFS when u<0)
@@ -126,7 +126,7 @@ def Upwind(init, nt, dt, uf, dxc): # FTBS when u >= 0, FTFS when u < 0
     
     return field
 
-
+@njit(**jitflags)
 def BTBS(init, nt, dt, uf, dxc):
     """
     This functions implements the BTBS scheme (backward in time, backward in 
@@ -1256,32 +1256,27 @@ def LW_aicorrection(init, nt, dt, u, dx, solver='NumPy', niter=0):
 
     return field
 
-
+@njit(**jitflags)
 def aiUpwind(init, nt, dt, u, dx, do_beta='switch', solver='NumPy', niter=0):
     """This scheme test the accuracy of adaptively implicit upwind. (Needs to be first-order accurate to have a nice second/third-order correction to it.)
     Options include do_beta='blend' or 'switch'. Currently not upwind just FTBS - i.e. not accounting for the sign of u.
     Assuming constant velocity and dx."""
     field = np.zeros((nt+1, len(init)))
     field[0] = init.copy()
-    solverfn = getattr(sv, solver)
 
     c = dt*u/dx
-    beta = np.zeros(len(init),dtype=float)
-    if do_beta == 'switch':
-        beta = np.invert((np.roll(c,1) <= 1.)*(c <= 1.))
-    elif do_beta == 'blend':
-        beta = np.maximum.reduce([np.zeros(len(c)), 1 - 1/c, 1 - 1/np.roll(c,1)])
-    else:
-        print('Error: do_beta must be either "switch" or "blend"')
-    
+    beta = np.zeros(len(init))
+    if do_beta == 'blend':
+        beta = np.maximum(1 - 1/c, np.zeros(len(init)))
+
     M = np.zeros((len(init), len(init)))
-    for i in range(len(init)):
-        M[i,i] = 1 + beta[i]*c[i]
+    for i in prange(len(init)):
+        M[i,i] = 1. + beta[i]*c[i]
         M[i,(i-1)%len(init)] = -1.*beta[i]*c[i]
     
-    for it in range(nt):
+    for it in prange(nt):
         rhs = field[it] - c*(1-beta)*(field[it] - np.roll(field[it],1))
-        field[it+1] = solverfn(M, field[it], rhs, niter)
+        field[it+1] = np.linalg.solve(M, rhs)
     
     return field
 
