@@ -95,6 +95,7 @@ def CTCS(init, nt, dt, uf, dxc):
         
     return field
 
+
 @njit(**jitflags)
 def Upwind(init, nt, dt, uf, dxc): # FTBS when u >= 0, FTFS when u < 0
     """
@@ -125,6 +126,7 @@ def Upwind(init, nt, dt, uf, dxc): # FTBS when u >= 0, FTFS when u < 0
         field[it+1] = field[it] - dt*spatial/dxc
     
     return field
+
 
 @njit(**jitflags)
 def BTBS(init, nt, dt, uf, dxc):
@@ -616,7 +618,7 @@ def MPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_limit=False, limit=0.5, nSmooth=
 
 
 @njit(**jitflags)
-def MPDATA_gauge(init, nt, dt, uf, dxc):
+def MPDATA_gauge(init, nt, dt, uf, dxc, corrsource='previous'):
     """
     This functions implements the MPDATA scheme with an infinite gauge, assuming a 
     constant velocity (input through the Courant number) and a 
@@ -654,7 +656,12 @@ def MPDATA_gauge(init, nt, dt, uf, dxc):
         # Infinite gauge: multiply the pseudovelocity by 0.5 and do not divide by (field_FP + np.roll(field_FP,1) + eps), and set the first two arguments in flux() to 1.
         for i in range(len(init)):
             dx_up[i] = 0.5*flux_njit(np.roll(dxc,1)[i], dxc[i], uf[i]/abs(uf[i]))
-        V = 0.5*(field_FP - np.roll(field_FP,1))*uf/(0.5*dxf)*(dx_up - 0.5*dt*uf)   # V[i] is at i-1/2
+        
+        # Use the first-pass or the previous field for the correction 
+        if corrsource == 'firstpass':
+            V = 0.5*(field_FP - np.roll(field_FP,1))*uf/(0.5*dxf)*(dx_up - 0.5*dt*uf)   # V[i] is at i-1/2
+        elif corrsource == 'previous':
+            V = 0.5*(field[it] - np.roll(field[it],1))*uf/(0.5*dxf)*(dx_up - 0.5*dt*uf)   # V[i] is at i-1/2
         flx_SP = V
         field[it+1] = field_FP - dt*(np.roll(flx_SP,-1) - flx_SP)/dxc
 
@@ -990,7 +997,7 @@ def aiMPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_beta='switch', solver='NumPy',
     return field
 
 
-def aiMPDATA_gauge(init, nt, dt, uf, dxc, do_beta='switch', solver='NumPy', niter=0, do_limit=False, limit=0.5, nSmooth=0, third_order=False):
+def aiMPDATA_gauge(init, nt, dt, uf, dxc, do_beta='switch', solver='NumPy', niter=0, do_limit=False, limit=0.5, nSmooth=0, third_order=False, corrsource='previous'):
     """
     Implements a hybrid scheme with explicit infinite-gauge MPDATA correction.  
     First pass: explicit or implicit (or both if do_beta='blend') upwind with numpy direct elimination on the whole matrix. beta determines the degree of im/ex - as trapezoidal implicit.
@@ -1054,9 +1061,11 @@ def aiMPDATA_gauge(init, nt, dt, uf, dxc, do_beta='switch', solver='NumPy', nite
         # Second pass
         # Infinite gauge: multiply the pseudovelocity by 0.5 and do not divide by (field_FP + np.roll(field_FP,1) + eps), and set the first two arguments in flux() to 1.
         dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
-        # Use the first-pass field for A. A[i] is at i-1/2
-        ###A = (field_FP - np.roll(field_FP,1))/2.
-        A = (field[it] - np.roll(field[it],1))/2.
+        # Use the first-pass or the previous field for A. A[i] is at i-1/2
+        if corrsource == 'firstpass':
+            A = (field_FP - np.roll(field_FP,1))/2.
+        elif corrsource == 'previous':
+            A = (field[it] - np.roll(field[it],1))/2.
         
         # Calculate and limit the antidiffusive velocity V. Same index shift as for A
         V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf)

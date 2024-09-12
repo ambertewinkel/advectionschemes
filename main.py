@@ -39,7 +39,7 @@ def main():
     
     # Input booleans
     limitCto1 = False
-    create_animation = False
+    create_animation = True
     check_orderofconvergence = True
     accuracy_in = 'space with C const' # 'space with dt const' or 'time with dx const' or 'space with C const'; (relevant only if check_orderofconvergence == True)
     date = dati.date.today().strftime("%d%m%Y")                   # date of the run
@@ -59,8 +59,10 @@ def main():
         #{'scheme': 'aiUpwind', 'do_beta':'blend'},
         #{'scheme': 'Upwind'},
         #{'scheme':'BTBS'},
-        {'scheme':'MPDATA_gauge'},
-        {'scheme':'MPDATA_gauge_njit'},
+        {'scheme':'MPDATA_gauge', 'corrsource':'previous'},
+        {'scheme':'MPDATA_gauge', 'corrsource':'firstpass'},        
+        {'scheme':'aiMPDATA_gauge', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'corrsource':'previous'},
+        {'scheme':'aiMPDATA_gauge', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'corrsource':'firstpass'},   
         ]
     
     plot_args = [\
@@ -77,8 +79,10 @@ def main():
         #{'label': 'Upwind', 'color':'red', 'marker': '.', 'linestyle': '-'},
         #{'label': 'BTBS', 'color':'orange','marker':'.', 'linestyle':'-'},
         #{'label': 'BTBS', 'color':'orange','marker':'.', 'linestyle':'-'}
-        {'label':'MPDATA_gauge', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        {'label':'MPDATA_gauge_njit', 'color':'green', 'marker':'+', 'linestyle':'-'},
+        {'label':'MPDATAg_n', 'color':'red', 'marker':'x', 'linestyle':'-'},
+        {'label':'MPDATAg_FP', 'color':'orange', 'marker':'x', 'linestyle':'--'},
+        {'label':'aiMPDATAg_n', 'color':'blue', 'marker':'+', 'linestyle':'-'},
+        {'label':'aiMPDATAg_FP', 'color':'green', 'marker':'+', 'linestyle':'--'},
         ]
 
     # Initial conditions
@@ -87,7 +91,7 @@ def main():
     nt = 100                   # number of time steps
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 1.#50.0#12.5#3.125#31.25#6.25#3.125#1.5625           # constant velocity
+    uconstant = 1.#2.5#50.0#12.5#3.125#31.25#6.25#3.125#1.5625           # constant velocity
     coords = 'uniform'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]
@@ -390,7 +394,7 @@ def main():
         if save_as == 'test':
             plt.savefig(outputdir + 'RMSE.pdf')
         elif save_as == 'store':
-            plt.savefig(outputdir + f'RMSE_{var_acc}_' + schemenames_settings + '.pdf')
+            plt.savefig(outputdir + f'RMSE_{var_acc}.pdf')
         plt.close()
 
     """
