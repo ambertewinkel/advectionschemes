@@ -6,6 +6,7 @@
 
 import numpy as np
 import solvers as sv
+#import limiter as lim
 from numba_config import jitflags
 from numba import njit, prange
 
@@ -618,7 +619,7 @@ def MPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_limit=False, limit=0.5, nSmooth=
 
 
 @njit(**jitflags)
-def MPDATA_gauge(init, nt, dt, uf, dxc, corrsource='previous'):
+def MPDATA_gauge(init, nt, dt, uf, dxc, corrsource='previous', FCT=False):
     """
     This functions implements the MPDATA scheme with an infinite gauge, assuming a 
     constant velocity (input through the Courant number) and a 
@@ -662,7 +663,11 @@ def MPDATA_gauge(init, nt, dt, uf, dxc, corrsource='previous'):
             V = 0.5*(field_FP - np.roll(field_FP,1))*uf/(0.5*dxf)*(dx_up - 0.5*dt*uf)   # V[i] is at i-1/2
         elif corrsource == 'previous':
             V = 0.5*(field[it] - np.roll(field[it],1))*uf/(0.5*dxf)*(dx_up - 0.5*dt*uf)   # V[i] is at i-1/2
+
         flx_SP = V
+        #if FCT == True:
+        #    lim.FCT(field_FP, flx_SP, dxc, previous=True, field=field)
+        
         field[it+1] = field_FP - dt*(np.roll(flx_SP,-1) - flx_SP)/dxc
 
     return field

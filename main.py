@@ -39,7 +39,7 @@ def main():
     
     # Input booleans
     limitCto1 = False
-    create_animation = True
+    create_animation = False
     check_orderofconvergence = True
     accuracy_in = 'space with C const' # 'space with dt const' or 'time with dx const' or 'space with C const'; (relevant only if check_orderofconvergence == True)
     date = dati.date.today().strftime("%d%m%Y")                   # date of the run
@@ -59,10 +59,12 @@ def main():
         #{'scheme': 'aiUpwind', 'do_beta':'blend'},
         #{'scheme': 'Upwind'},
         #{'scheme':'BTBS'},
-        {'scheme':'MPDATA_gauge', 'corrsource':'previous'},
-        {'scheme':'MPDATA_gauge', 'corrsource':'firstpass'},        
-        {'scheme':'aiMPDATA_gauge', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'corrsource':'previous'},
-        {'scheme':'aiMPDATA_gauge', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'corrsource':'firstpass'},   
+        #{'scheme':'MPDATA_gauge', 'corrsource':'previous'},
+        #{'scheme':'MPDATA_gauge', 'corrsource':'firstpass'},        
+        #{'scheme':'MPDATA_gauge', 'corrsource':'firstpass', 'FCT': True},        
+        #{'scheme':'aiMPDATA_gauge', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'corrsource':'previous'},
+        #{'scheme':'aiMPDATA_gauge', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'corrsource':'firstpass'},   
+        {'scheme': 'MPDATA_gauge', 'corrsource':'firstpass'},
         ]
     
     plot_args = [\
@@ -79,19 +81,21 @@ def main():
         #{'label': 'Upwind', 'color':'red', 'marker': '.', 'linestyle': '-'},
         #{'label': 'BTBS', 'color':'orange','marker':'.', 'linestyle':'-'},
         #{'label': 'BTBS', 'color':'orange','marker':'.', 'linestyle':'-'}
-        {'label':'MPDATAg_n', 'color':'red', 'marker':'x', 'linestyle':'-'},
-        {'label':'MPDATAg_FP', 'color':'orange', 'marker':'x', 'linestyle':'--'},
-        {'label':'aiMPDATAg_n', 'color':'blue', 'marker':'+', 'linestyle':'-'},
-        {'label':'aiMPDATAg_FP', 'color':'green', 'marker':'+', 'linestyle':'--'},
+        #{'label':'MPDATAg_n', 'color':'red', 'marker':'x', 'linestyle':'-'},
+        #{'label':'MPDATAg_FP', 'color':'orange', 'marker':'x', 'linestyle':'--'},
+        #{'label':'MPDATAg_FP_FCT', 'color':'orange', 'marker':'x', 'linestyle':'--'},
+        #{'label':'aiMPDATAg_n', 'color':'blue', 'marker':'+', 'linestyle':'-'},
+        #{'label':'aiMPDATAg_FP', 'color':'green', 'marker':'+', 'linestyle':'--'},
+        {'label':'MPDATAg', 'color':'orange','marker':'.', 'linestyle':'-'}
         ]
 
     # Initial conditions
     analytic = an.sine         # initial condition, options: sine, cosbell, tophat, or combi
-    dt = 0.01                   # time step
-    nt = 100                   # number of time steps
-    nx = 40                     # number of points in space
+    dt = 0.001                   # time step
+    nt = 20                   # number of time steps
+    nx = 400                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 1.#2.5#50.0#12.5#3.125#31.25#6.25#3.125#1.5625           # constant velocity
+    uconstant = 3.75#50.0#12.5#3.125#31.25#6.25#3.125#1.5625           # constant velocity
     coords = 'uniform'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]
@@ -165,6 +169,7 @@ def main():
     # Setup: run schemes for one or three grid spacings (nx*factor, nx/factor, nx)
     if check_orderofconvergence == True: # Run schemes for two extra grid spacings
         factor = 2
+        gridlabels = ['fine', 'coarse', 'reg']
         if accuracy_in == 'space with dt const': # 'space with dt const' or 'time with dx const' or 'space with C const'
             nx_arr = np.array([nx*factor, nx/factor, nx], dtype=int)
             dx_arr = np.array([xmax/nx_arr[0], xmax/nx_arr[1], xmax/nx_arr[2]], dtype=float)
@@ -190,11 +195,14 @@ def main():
             dt_arr = np.array([dt/factor, dt*factor, dt], dtype=float)
             c_arr = np.array([uconstant*dt_arr[0]/dx_arr[0], uconstant*dt_arr[1]/dx_arr[1], uconstant*dt_arr[2]/dx_arr[2]], dtype=float)
             resolution = dx_arr.copy()
-            print('Courant numbers for the [fine, coarse, reg] grid spacings:', c_arr)
+            for i in range(len(nx_arr)): # Loop over 1 or 3 grid spacings
+                logging.info(f'Courant number for the {gridlabels[i]} grid spacing: {c_arr[i]:.2f}')
+                logging.info(f'nt, dt, nt*dt for the {gridlabels[i]} grid spacing: {nt_arr[i]}, {dt_arr[i]:.2f}, {nt_arr[i]*dt_arr[i]:.2f}')
+                logging.info(f'nx, dx, xmax for the {gridlabels[i]} grid spacing: {nx_arr[i]}, {dx_arr[i]:.2f}, {xmax}')
+                logging.info('')
             var_acc = f'dx with C={c_arr[-1]:.3f}'
         else:
             logging.info('Error: invalid accuracy_in')
-        gridlabels = ['fine', 'coarse', 'reg']
     else: # Run schemes for only the one grid spacing defined above
         nx_arr = np.array([nx], dtype=int)
         dt_arr = np.array([dt], dtype=float)
@@ -453,8 +461,9 @@ def callscheme(case, nt, dt, uf, dxc, psi_in):
     # Call the scheme
     print(f'Running {sc} with parameters {params}')
     startscheme = timeit.default_timer()
+    print(f'--> Starting runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.2f} s, {nt}, {len(psi_in)}')
     psi = fn(psi_in.copy(), nt, dt, uf, dxc, **params)
-    print(f'--> Runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.2f} s, {nt}, {len(psi)}')
+    print(f'--> Runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.2f} s, {nt}, {len(psi[-1])}')
 
     return psi
 

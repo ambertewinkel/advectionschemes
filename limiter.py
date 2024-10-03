@@ -3,9 +3,11 @@
 # Email: a.j.tewinkel@pgr.reading.ac.uk
 
 import numpy as np
+from numba_config import jitflags
+from numba import njit
 
-
-def FCT(field_LO, corr, dxc, previous=False, field=np.empty(0)):
+@njit(**jitflags)
+def FCT(field_LO, corr, dxc, previous=False, field=np.array([])):
     """This function limits the high-order correction based 
     on the low-order solution's local bounds. If previous=True, 
     then also the previous time step field can determine the max/min bounds.
@@ -28,19 +30,19 @@ def FCT(field_LO, corr, dxc, previous=False, field=np.empty(0)):
                 amin[i] = field[i]
             
             # Determine local max and min
-            fieldmax[i] = max(field_LO[i-1], field_LO[i], field_LO[i+1])
-            fieldmin[i] = min(field_LO[i-1], field_LO[i], field_LO[i+1])
+            fieldmax[i] = max([field_LO[i-1], field_LO[i], field_LO[i+1]])
+            fieldmin[i] = min([field_LO[i-1], field_LO[i], field_LO[i+1]])
 
-            Pp[i] = max(0., corr[i]) - min(0., corr[i+1])
+            Pp[i] = max([0., corr[i]]) - min([0., corr[i+1]])
             Qp[i] = (fieldmax[i] - field_LO[i])*dxc[i]
-            Rp[i] = min(1., Qp[i]/Pp[i]) if Pp[i] > 0. else 0.
+            Rp[i] = min([1., Qp[i]/Pp[i]]) if Pp[i] > 0. else 0.
             
-            Pm[i] = max(0., corr[i+1]) - min(0., corr[i-1])
+            Pm[i] = max([0., corr[i+1]]) - min([0., corr[i-1]])
             Qm[i] = (field_LO[i] - fieldmin[i])*dxc[i]
-            Rm[i] = min(1., Qm[i]/Pm[i]) if Pm[i] > 0. else 0.
+            Rm[i] = min([1., Qm[i]/Pm[i]]) if Pm[i] > 0. else 0.
 
             # Determine C at face i-1/2
-            C[i] = min(Rp[i-1], Rm[i]) if corr[i] < 0. else min(Rp[i], Rm[i-1])
+            C[i] = min([Rp[i-1], Rm[i]]) if corr[i] < 0. else min([Rp[i], Rm[i-1]])
 
             # Determine limited correction
             corrlim[i] = C[i]*corr[i] 
