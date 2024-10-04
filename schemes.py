@@ -6,7 +6,7 @@
 
 import numpy as np
 import solvers as sv
-#import limiter as lim
+import limiter as lim
 from numba_config import jitflags
 from numba import njit, prange
 
@@ -1307,7 +1307,7 @@ def aiUpwind(init, nt, dt, u, dx, do_beta='switch', solver='NumPy', niter=0):
     return field
 
 
-def LW3rd(init, nt, dt, uf, dxc): # Only explicit and uniform grid and velocity # previously called thirdorderinfgaugeLWMPDATA
+def LW3(init, nt, dt, uf, dxc, FCT=False): # Only explicit and uniform grid and velocity # previously called thirdorderinfgaugeLWMPDATA
     """This scheme is based on MPDATA_LW3 derivation from Hilary from 29-07-2024. Third-order Lax-Wendroff.
     It assumes the grid is uniform.
     --- Input ---
@@ -1329,10 +1329,15 @@ def LW3rd(init, nt, dt, uf, dxc): # Only explicit and uniform grid and velocity 
         field_FP = field[it] - c*(field[it] - np.roll(field[it],1))
         
         #field_SP = field_FP -0.5*c*(1-c)*(np.roll(field_FP, -1) - 2*field_FP + np.roll(field_FP, 1))
-        field_SP = field_FP -0.5*c*(1-c)*(np.roll(field[it], -1) - 2*field[it] + np.roll(field[it], 1))
+        field_SP = field_FP - 0.5*c*(1-c)*(np.roll(field[it], -1) - 2*field[it] + np.roll(field[it], 1))
 
         #field[it+1] = field_SP + c*(1-c*c)/6*(np.roll(field_SP, -1) - 3*field_SP + 3*np.roll(field_SP, 1) - np.roll(field_SP, 2))
         field[it+1] = field_SP + c*(1-c*c)/6*(np.roll(field[it], -1) - 3*field[it] + 3*np.roll(field[it], 1) - np.roll(field[it], 2))
+
+        if FCT == True:
+            corr = field[it+1] - field_FP
+            corr = lim.FCT(field_FP, corr, dxc, previous = False)
+            field[it+1] = field_FP - (np.roll(corr,-1) - corr)/dxc
 
     return field
 

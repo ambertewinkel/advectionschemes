@@ -40,62 +40,31 @@ def main():
     # Input booleans
     limitCto1 = False
     create_animation = False
-    check_orderofconvergence = True
+    check_orderofconvergence = False
     accuracy_in = 'space with C const' # 'space with dt const' or 'time with dx const' or 'space with C const'; (relevant only if check_orderofconvergence == True)
     date = dati.date.today().strftime("%d%m%Y")                   # date of the run
     datetime = dati.datetime.now().strftime("%d%m%Y-%H%M%S")      # date and time of the run
 
+    #!!! note for later, apply FCT only for implicit part???
+
     # Input cases
     cases = [\
-        #{'scheme':'LW3rd'},
-        #{'scheme':'aiMPDATA_gauge_clt1', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0},
-        #!{'scheme':'aiMPDATA_gauge', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0},
-        #{'scheme':'aiMPDATA_gauge_solverlast', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0},
-        ##{'scheme':'aiMPDATA_gauge_solverlast', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'third_order':True},
-        #{'scheme':'aiMPDATA_gauge', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'third_order':True},
-        #{'scheme':'implicitLW'},
-        ####{'scheme':'LW_aicorrection'},
-        #{'scheme': 'aiUpwind', 'do_beta':'switch'},
-        #{'scheme': 'aiUpwind', 'do_beta':'blend'},
-        #{'scheme': 'Upwind'},
-        #{'scheme':'BTBS'},
-        #{'scheme':'MPDATA_gauge', 'corrsource':'previous'},
-        #{'scheme':'MPDATA_gauge', 'corrsource':'firstpass'},        
-        #{'scheme':'MPDATA_gauge', 'corrsource':'firstpass', 'FCT': True},        
-        #{'scheme':'aiMPDATA_gauge', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'corrsource':'previous'},
-        #{'scheme':'aiMPDATA_gauge', 'do_beta':'blend', 'do_limit':False, 'nSmooth':0, 'corrsource':'firstpass'},   
-        {'scheme': 'MPDATA_gauge', 'corrsource':'firstpass'},
+        {'scheme':'LW3'},
+        {'scheme':'LW3', 'FCT':True},
         ]
     
     plot_args = [\
-        #{'label':'LW3rd', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        #{'label':'aiMPDATA_gauge_clt1', 'color':'red', 'marker':'+', 'linestyle':'-'},
-        #!{'label':'aiMPDATA_gauge', 'color':'green', 'marker':'x', 'linestyle':'-'},
-        #{'label':'aiMPDATA_gauge_solverlast', 'color':'red', 'marker':'+', 'linestyle':'-'},
-        ##{'label':'aiMPDATA_gauge_solverlast_3oc', 'color':'green', 'marker':'x', 'linestyle':'-'},
-        #{'label':'aiMPDATA_gauge_3oc', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        #{'label':'implicitLW', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        ####{'label':'LW_aicorrection', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        #{'label': 'aiUpwind_hard', 'color':'green', 'marker':'+', 'linestyle':'-'},
-        #{'label': 'aiUpwind_soft', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        #{'label': 'Upwind', 'color':'red', 'marker': '.', 'linestyle': '-'},
-        #{'label': 'BTBS', 'color':'orange','marker':'.', 'linestyle':'-'},
-        #{'label': 'BTBS', 'color':'orange','marker':'.', 'linestyle':'-'}
-        #{'label':'MPDATAg_n', 'color':'red', 'marker':'x', 'linestyle':'-'},
-        #{'label':'MPDATAg_FP', 'color':'orange', 'marker':'x', 'linestyle':'--'},
-        #{'label':'MPDATAg_FP_FCT', 'color':'orange', 'marker':'x', 'linestyle':'--'},
-        #{'label':'aiMPDATAg_n', 'color':'blue', 'marker':'+', 'linestyle':'-'},
-        #{'label':'aiMPDATAg_FP', 'color':'green', 'marker':'+', 'linestyle':'--'},
-        {'label':'MPDATAg', 'color':'orange','marker':'.', 'linestyle':'-'}
+        {'label':'LW3', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        {'label':'LW3_FCT', 'color':'green', 'marker':'x', 'linestyle':'-'},        
         ]
 
     # Initial conditions
     analytic = an.sine         # initial condition, options: sine, cosbell, tophat, or combi
-    dt = 0.001                   # time step
-    nt = 20                   # number of time steps
-    nx = 400                     # number of points in space
+    dt = 0.01                   # time step
+    nt = 50                   # number of time steps
+    nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 3.75#50.0#12.5#3.125#31.25#6.25#3.125#1.5625           # constant velocity
+    uconstant = 1.#3.75#50.0#12.5#3.125#31.25#6.25#3.125#1.5625           # constant velocity
     coords = 'uniform'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]
