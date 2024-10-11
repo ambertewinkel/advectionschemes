@@ -50,7 +50,6 @@ def main():
     # Input cases
     cases = [\
         {'scheme':'LW3'},
-        #{'scheme':'LW3', 'old':True},
         {'scheme':'LW3', 'FCT':True},
         #{'scheme':'LW3', 'FCT':True, 'returndiffusive':True},
         #{'scheme':'Upwind'},
@@ -58,7 +57,6 @@ def main():
     
     plot_args = [\
         {'label':'LW3', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        #{'label':'LW3_old', 'color':'purple', 'marker':'+', 'linestyle':'-'},
         {'label':'LW3_FCT', 'color':'green', 'marker':'+', 'linestyle':'-'},        
         #{'label':'LW3_FCT_diffusive', 'color':'red', 'marker':'x', 'linestyle':'-'}, 
         #{'label':'Upwind','color':'orange', 'marker':'+', 'linestyle':'--'}       
@@ -68,9 +66,9 @@ def main():
     analytic = an.sine         # initial condition, options: sine, cosbell, tophat, or combi
     dt = 0.01                   # time step
     nt = 2                   # number of time steps
-    nx = 10                     # number of points in space
+    nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 1.#3.75#50.0#12.5#3.125#31.25#6.25#3.125#1.5625           # constant velocity
+    uconstant = 1.           # constant velocity
     coords = 'uniform'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]
