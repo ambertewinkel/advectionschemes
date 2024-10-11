@@ -35,12 +35,12 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     limitCto1 = False
-    create_animation = False
-    check_orderofconvergence = False
+    create_animation = True
+    check_orderofconvergence = True
     accuracy_in = 'space with C const' # 'space with dt const' or 'time with dx const' or 'space with C const'; (relevant only if check_orderofconvergence == True)
     date = dati.date.today().strftime("%d%m%Y")                   # date of the run
     datetime = dati.datetime.now().strftime("%d%m%Y-%H%M%S")      # date and time of the run
@@ -50,19 +50,25 @@ def main():
     # Input cases
     cases = [\
         {'scheme':'LW3'},
+        #{'scheme':'LW3', 'old':True},
         {'scheme':'LW3', 'FCT':True},
+        #{'scheme':'LW3', 'FCT':True, 'returndiffusive':True},
+        #{'scheme':'Upwind'},
         ]
     
     plot_args = [\
         {'label':'LW3', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        {'label':'LW3_FCT', 'color':'green', 'marker':'x', 'linestyle':'-'},        
+        #{'label':'LW3_old', 'color':'purple', 'marker':'+', 'linestyle':'-'},
+        {'label':'LW3_FCT', 'color':'green', 'marker':'+', 'linestyle':'-'},        
+        #{'label':'LW3_FCT_diffusive', 'color':'red', 'marker':'x', 'linestyle':'-'}, 
+        #{'label':'Upwind','color':'orange', 'marker':'+', 'linestyle':'--'}       
         ]
 
     # Initial conditions
     analytic = an.sine         # initial condition, options: sine, cosbell, tophat, or combi
     dt = 0.01                   # time step
-    nt = 50                   # number of time steps
-    nx = 40                     # number of points in space
+    nt = 2                   # number of time steps
+    nx = 10                     # number of points in space
     xmax = 1.                   # physical domain parameters
     uconstant = 1.#3.75#50.0#12.5#3.125#31.25#6.25#3.125#1.5625           # constant velocity
     coords = 'uniform'          # 'uniform' or 'stretching'
@@ -228,7 +234,7 @@ def main():
 
         # Calculate initial condition
         psi_in = locals()[f'psi_an_{l}'][0]
-
+        
         # Calculate numerical solutions for each scheme through time
         # Output is 2D field ([1d time, 1d space])
         for c in range(len(cases)):
@@ -331,6 +337,8 @@ def main():
     if check_orderofconvergence == True:
         # Setup plot
         fig, ax1 = plt.subplots(1, 1, figsize=(10, 5))
+        gridscale = np.logspace(0, np.log10(2*factor), num=10)
+        gridsizes = resolution[0]*gridscale
         for c in range(len(cases)):        
             s = plot_args[c]['label']
             # Calculate error for each grid spacing (one or three)
@@ -348,20 +356,18 @@ def main():
             logging.info('')
             logging.info(f'{cases[c]['scheme']} - RMSE array for the different resolutions (fine, coarse, reg): {rmse}')
 
-        # Order of accuracy lines in the plot for reference
-        gridscale = np.logspace(0, np.log10(2*factor), num=10)
-        gridsizes = resolution[0]*gridscale
-        firstorder = rmse[0]*gridscale
-        secondorder = rmse[0]*gridscale*gridscale
-        thirdorder = rmse[0]*gridscale*gridscale*gridscale
-        ax1.plot(gridsizes, firstorder, color='black', linestyle=':', label=f'O({var_acc})')
-        ax1.plot(gridsizes, secondorder, color='black', linestyle=':', label=f'O({var_acc})^2')
-        ax1.plot(gridsizes, thirdorder, color='black', linestyle=':', label=f'O({var_acc})^3')
+            # Order of accuracy lines in the plot for reference
+            firstorder = rmse[0]*gridscale
+            secondorder = rmse[0]*gridscale*gridscale
+            thirdorder = rmse[0]*gridscale*gridscale*gridscale
+            ax1.plot(gridsizes, firstorder, color='black', linestyle=':')
+            ax1.plot(gridsizes, secondorder, color='black', linestyle=':')
+            ax1.plot(gridsizes, thirdorder, color='black', linestyle=':')
         
         # Plot details
         ax1.set_xscale('log')
         ax1.set_yscale('log')
-        ax1.set_title(f'RMSE vs {var_acc}')
+        ax1.set_title(f'RMSE vs {var_acc} at t={nt*dt}')
         ax1.set_ylabel('RMSE')
         ax1.set_xlabel(var_acc)
         ax1.legend()
@@ -373,30 +379,6 @@ def main():
         elif save_as == 'store':
             plt.savefig(outputdir + f'RMSE_{var_acc}.pdf')
         plt.close()
-
-    """
-    #### Error analysis for a single scheme
-    scheme = 'Upwind'
-    fn = getattr(sch, f'{scheme}')
-    nx_arr = np.array([nx*2, nx, nx/2], dtype=int)
-    dx_arr = xmax/nx_arr
-    dt_arr = c[0]*dx_arr/u[0]   # This assumes a constant c throughout the domain
-    nt_arr = np.array(nt*dt/dt_arr, dtype=int)  # nt*dt is total time above
-    rmse_arr = np.zeros(len(dx_arr))
-
-    for i in range(len(nx_arr)):
-        c_error = np.full(nx_arr[i], c[0])
-        x_error = np.linspace(xmin, xmax, nx_arr[i], endpoint=False)
-        psi_in_error = an.cosinebell(x_error)
-        psi_Upwind_error = fn(psi_in_error.copy(), nt_arr[i], c_error)
-        psi_an_error = an.cosinebell(x_error, nt_arr[i], c_error)
-        rmse_arr[i] = epm.rmse(psi_an_error, psi_Upwind_error, dx_arr[i])
-
-    # log-log plot of RMSE
-    plt.loglog(dx_arr, rmse_arr, '-x', label=f'{scheme}')
-    plt.loglog(dx_arr, dx_arr, color='green', label='O(dx) accurate')
-    ut.design_figure(f'loglog_{scheme}.pdf', f'RMSE for {scheme} scheme', 'dx', 'RMSE')
-    """
 
     ###########################
     #### Create animations ####
@@ -430,9 +412,11 @@ def callscheme(case, nt, dt, uf, dxc, psi_in):
     # Call the scheme
     print(f'Running {sc} with parameters {params}')
     startscheme = timeit.default_timer()
-    print(f'--> Starting runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.2f} s, {nt}, {len(psi_in)}')
+    #print(f'--> Starting runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.2f} s, {nt}, {len(psi_in)}')
     psi = fn(psi_in.copy(), nt, dt, uf, dxc, **params)
-    print(f'--> Runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.2f} s, {nt}, {len(psi[-1])}')
+    print('psi', psi[-1])
+    print()
+    #print(f'--> Runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.2f} s, {nt}, {len(psi[-1])}')
 
     return psi
 

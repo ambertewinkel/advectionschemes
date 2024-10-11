@@ -1307,7 +1307,7 @@ def aiUpwind(init, nt, dt, u, dx, do_beta='switch', solver='NumPy', niter=0):
     return field
 
 
-def LW3(init, nt, dt, uf, dxc, FCT=False): # Only explicit and uniform grid and velocity # previously called thirdorderinfgaugeLWMPDATA
+def LW3(init, nt, dt, uf, dxc, FCT=False, returndiffusive=False, old=False): # Only explicit and uniform grid and velocity # previously called thirdorderinfgaugeLWMPDATA
     """This scheme is based on MPDATA_LW3 derivation from Hilary from 29-07-2024. Third-order Lax-Wendroff.
     It assumes the grid is uniform.
     --- Input ---
@@ -1324,23 +1324,37 @@ def LW3(init, nt, dt, uf, dxc, FCT=False): # Only explicit and uniform grid and 
     nx = len(init)
     field = np.zeros((nt+1, nx))
     field[0] = init.copy()
+    finalfield_FP = np.zeros(np.shape(field))
+    finalfield_FP[0] = init.copy() # setting this to be nonzero allows to compare the RMSE over time with upwind (if just a single timestep)
 
     for it in range(nt):
-        field_FP = field[it] - c*(field[it] - np.roll(field[it],1))
-        
-        #field_SP = field_FP -0.5*c*(1-c)*(np.roll(field_FP, -1) - 2*field_FP + np.roll(field_FP, 1))
-        field_SP = field_FP - 0.5*c*(1-c)*(np.roll(field[it], -1) - 2*field[it] + np.roll(field[it], 1))
+        if old == True:
+            field_FP = field[it] - c*(field[it] - np.roll(field[it],1))
+            field_SP = field_FP - 0.5*c*(1-c)*(np.roll(field[it], -1) - 2*field[it] + np.roll(field[it], 1))
+            field[it+1] = field_SP + c*(1-c*c)/6*(np.roll(field[it], -1) - 3*field[it] + 3*np.roll(field[it], 1) - np.roll(field[it], 2))
+        else:
+            flx_FP = uf*dt*np.roll(field[it],1) # assumes u>0, i.e., FTBS rather than upwind # flx_FP[i] defined at i-1/2
+            field_FP = field[it] - (np.roll(flx_FP,-1) - flx_FP)/dxc
+            
+            flx_SP = 0.5*uf*dt*(1-c)*(field[it] - np.roll(field[it],1)) # assumes u>0 # flx_SP[i] defined at i-1/2
+            field_SP = field_FP - (np.roll(flx_SP,-1) - flx_SP)/dxc
 
-        #field[it+1] = field_SP + c*(1-c*c)/6*(np.roll(field_SP, -1) - 3*field_SP + 3*np.roll(field_SP, 1) - np.roll(field_SP, 2))
-        field[it+1] = field_SP + c*(1-c*c)/6*(np.roll(field[it], -1) - 3*field[it] + 3*np.roll(field[it], 1) - np.roll(field[it], 2))
+            flx_TP = - uf*dt/6*(1-c*c)*(field[it] - 2*np.roll(field[it],1) + np.roll(field[it],2)) # assumes u>0 # flx_TP[i] defined at i-1/2
+            field[it+1] = field_SP - (np.roll(flx_TP,-1) - flx_TP)/dxc
 
         if FCT == True:
-            corr = field[it+1] - field_FP
+            corr = flx_SP + flx_TP # high-order flux - low-order flux # corr[i] defined at i-1/2
             corr = lim.FCT(field_FP, corr, dxc, previous = False)
             field[it+1] = field_FP - (np.roll(corr,-1) - corr)/dxc
+            
+        if returndiffusive == True:
+            finalfield_FP[it+1] = field_FP.copy()
 
-    return field
-
+    if returndiffusive == True:
+        return finalfield_FP
+    else:
+        return field
+    
 
 def HW_aiMPDATA(init, nt, dt, uf, dxc, do_beta='switch', do_limit=False, limit=0.5, nSmooth=0, gauge=0.):
     """Code from Hilary Weller (April 2024) for a hybrid MPDATA scheme. Based on implicitMPDATA.py.
