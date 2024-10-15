@@ -26,6 +26,10 @@ def FCT(field_LO, corr, dxc):
     for i in range(n):
         if corr[i]*(field_LO[i] - field_LO[i-1]) < 0. and (corr[i]*(field_LO[(i+1)%n] - field_LO[i]) < 0. or corr[i]*(field_LO[i-1] - field_LO[i-2]) < 0.):
             corr[i] = 0.
+        #    print('i:', i)
+        #    print(corr[i]*(field_LO[i] - field_LO[i-1]), 'and (either)', corr[i]*(field_LO[(i+1)%n] - field_LO[i]), 'or', corr[i]*(field_LO[i-1] - field_LO[i-2]))
+        #else:
+        #    print('if not activated i =', i)
 
         # Determine local max and min
         fieldmax[i] = max([field_LO[i-1], field_LO[i], field_LO[(i+1)%n]])
@@ -39,11 +43,19 @@ def FCT(field_LO, corr, dxc):
         Qm[i] = (field_LO[i] - fieldmin[i])*dxc[i]
         Rm[i] = min([1., Qm[i]/Pm[i]]) if Pm[i] > 0. else 0.
 
+        #print('ehllo')
+
     for i in range(n):
         # Determine C at face i-1/2
         C[i] = min([Rp[i-1], Rm[i]]) if corr[i] < 0. else min([Rp[i], Rm[i-1]])
 
         # Determine limited correction
-        corrlim[i] = C[i]*corr[i] 
+        corrlim[i] = C[i]*corr[i]
+
+        #print('hellooo')
+
+    #print('C:', C)
+    #print('corr:', corr)
+    #print('corrlim:', corrlim)
 
     return corrlim

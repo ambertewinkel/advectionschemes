@@ -673,6 +673,85 @@ def MPDATA_gauge(init, nt, dt, uf, dxc, corrsource='previous', FCT=False):
     return field
 
 
+def MPDATA_gauge(init, nt, dt, uf, dxc, corrsource='firstpass', FCT=False, returndiffusive=False): # not numba yet to allow for FCT implementation which isn't numba yet
+    """
+    This functions implements the MPDATA scheme with an infinite gauge, assuming a 
+    constant velocity (input through the Courant number) and a 
+    periodic spatial domain.
+    Reference (1): P. Smolarkiewicz and L. Margolin. MPDATA: A finite-difference 
+    solver for geophysical flows. J. Comput. Phys., 140:459-480, 1998.
+    --- Input ---
+    init : array of floats, initial field to advect
+    nt      : integer, total number of time steps to take
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
+    eps     : float, optional. Small number to avoid division by zero.
+    --- Output --- 
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
+    """
+
+    # Initialisation
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
+    finalfield_FP = np.zeros(np.shape(field))
+    finalfield_FP[0] = init.copy() # setting this to be nonzero allows to compare the RMSE over time with upwind (if just a single timestep)
+
+    dxf = 0.5*(dxc + np.roll(dxc,1))
+    flx_FP, flx_SP = np.zeros(len(init)), np.zeros(len(init))
+    dx_up = np.zeros(len(init))
+
+    # Time stepping
+    for it in range(nt):
+        # First pass  
+        for i in range(len(init)):
+            flx_FP[i] = dt*flux_njit(np.roll(field[it],1)[i], field[it,i], uf[i])
+        field_FP = field[it] - (np.roll(flx_FP,-1) - flx_FP)/dxc
+
+        # Second pass
+        # Infinite gauge: multiply the pseudovelocity by 0.5 and do not divide by (field_FP + np.roll(field_FP,1) + eps), and set the first two arguments in flux() to 1.
+        for i in range(len(init)):
+            dx_up[i] = 0.5*flux_njit(np.roll(dxc,1)[i], dxc[i], uf[i]/abs(uf[i]))
+        
+        # Use the first-pass or the previous field for the correction
+        # V = flux for the second-pass flx_SP
+        if corrsource == 'firstpass':
+            V = 0.5*dt*(field_FP - np.roll(field_FP,1))*uf/(0.5*dxf)*(dx_up - 0.5*dt*uf)   # V[i] is at i-1/2 
+        elif corrsource == 'previous':
+            V = 0.5*dt*(field[it] - np.roll(field[it],1))*uf/(0.5*dxf)*(dx_up - 0.5*dt*uf)   # V[i] is at i-1/2
+
+        if returndiffusive == True:
+            finalfield_FP[it+1] = field_FP.copy()
+        
+        print('field_FP:', field_FP[0:3])
+        #Vbefore = V.copy()  
+        Vcorr = V.copy()
+        print('V before potential limit:', V[0:3])
+        # Limiting the second-pass correction
+        if FCT == True: # second input needs to be DIFFERENCE HO and LO FLUXES? No i think it is correct now??? 
+            Vcorr = lim.FCT(field_FP, V, dxc)
+            print('V after limit (if applied):', Vcorr[0:3])
+        #print('V factor after limit:', V[0:3]/Vbefore[0:3])
+        
+        
+        field[it+1] = field_FP - (np.roll(Vcorr,-1) - Vcorr)/dxc
+
+        print('field[it+1] with FCT:', field[it+1][0:3])
+
+        fieldwo = np.zeros(np.shape(field))
+        fieldwo = field_FP - (np.roll(V,-1) - V)/dxc
+
+        print('field without FCT:', fieldwo[0:3])
+
+    if returndiffusive == True:
+        print('finalfield_FP[it+1]:', finalfield_FP[it+1][0:3])
+        return finalfield_FP
+    else:
+        print('field[it+1]:', field[it+1][0:3])
+        return field
+
+
 def aiMPDATA1J(init, nt, dt, uf, dxc, do_beta='switch', eps=1e-16, do_limit=False, limit=0.5, nSmooth=0, gauge=0.):
     """
     This functions implements 

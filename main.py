@@ -39,8 +39,8 @@ def main():
     
     # Input booleans
     limitCto1 = False
-    create_animation = True
-    check_orderofconvergence = True
+    create_animation = False
+    check_orderofconvergence = False
     accuracy_in = 'space with C const' # 'space with dt const' or 'time with dx const' or 'space with C const'; (relevant only if check_orderofconvergence == True)
     date = dati.date.today().strftime("%d%m%Y")                   # date of the run
     datetime = dati.datetime.now().strftime("%d%m%Y-%H%M%S")      # date and time of the run
@@ -49,24 +49,28 @@ def main():
 
     # Input cases
     cases = [\
-        {'scheme':'LW3'},
-        {'scheme':'LW3', 'FCT':True},
+        #{'scheme':'LW3'},
+        #{'scheme':'LW3', 'FCT':True},
         #{'scheme':'LW3', 'FCT':True, 'returndiffusive':True},
-        #{'scheme':'Upwind'},
+        #{'scheme':'MPDATA_gauge'},
+        {'scheme':'MPDATA_gauge', 'FCT':True},
+        #{'scheme':'MPDATA_gauge', 'FCT':True, 'returndiffusive':True},
         ]
     
     plot_args = [\
-        {'label':'LW3', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        {'label':'LW3_FCT', 'color':'green', 'marker':'+', 'linestyle':'-'},        
+        #{'label':'LW3', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        #{'label':'LW3_FCT', 'color':'green', 'marker':'+', 'linestyle':'-'},      
         #{'label':'LW3_FCT_diffusive', 'color':'red', 'marker':'x', 'linestyle':'-'}, 
-        #{'label':'Upwind','color':'orange', 'marker':'+', 'linestyle':'--'}       
+        #{'label':'MPDATAg', 'color':'purple', 'marker':'x', 'linestyle':'-'},
+        {'label':'MPDATAg_FCT', 'color':'orange', 'marker':'+', 'linestyle':'-'},  
+        #{'label':'MPDATAg_FCT_diffusive', 'color':'blue', 'marker':'+', 'linestyle':'--'},  
         ]
 
     # Initial conditions
-    analytic = an.sine         # initial condition, options: sine, cosbell, tophat, or combi
+    analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
     dt = 0.01                   # time step
-    nt = 2                   # number of time steps
-    nx = 40                     # number of points in space
+    nt = 1                   # number of time steps
+    nx = 10                     # number of points in space
     xmax = 1.                   # physical domain parameters
     uconstant = 1.           # constant velocity
     coords = 'uniform'          # 'uniform' or 'stretching'
@@ -412,7 +416,7 @@ def callscheme(case, nt, dt, uf, dxc, psi_in):
     startscheme = timeit.default_timer()
     #print(f'--> Starting runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.2f} s, {nt}, {len(psi_in)}')
     psi = fn(psi_in.copy(), nt, dt, uf, dxc, **params)
-    print('psi', psi[-1])
+    #print('psi', psi[-1])
     print()
     #print(f'--> Runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.2f} s, {nt}, {len(psi[-1])}')
 
