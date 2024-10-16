@@ -52,18 +52,18 @@ def main():
         #{'scheme':'LW3'},
         #{'scheme':'LW3', 'FCT':True},
         #{'scheme':'LW3', 'FCT':True, 'returndiffusive':True},
-        #{'scheme':'MPDATA_gauge'},
+        {'scheme':'MPDATA_gauge'},
         {'scheme':'MPDATA_gauge', 'FCT':True},
-        #{'scheme':'MPDATA_gauge', 'FCT':True, 'returndiffusive':True},
+        {'scheme':'MPDATA_gauge', 'FCT':True, 'returndiffusive':True},
         ]
     
     plot_args = [\
         #{'label':'LW3', 'color':'blue', 'marker':'x', 'linestyle':'-'},
         #{'label':'LW3_FCT', 'color':'green', 'marker':'+', 'linestyle':'-'},      
         #{'label':'LW3_FCT_diffusive', 'color':'red', 'marker':'x', 'linestyle':'-'}, 
-        #{'label':'MPDATAg', 'color':'purple', 'marker':'x', 'linestyle':'-'},
+        {'label':'MPDATAg', 'color':'purple', 'marker':'x', 'linestyle':'-'},
         {'label':'MPDATAg_FCT', 'color':'orange', 'marker':'+', 'linestyle':'-'},  
-        #{'label':'MPDATAg_FCT_diffusive', 'color':'blue', 'marker':'+', 'linestyle':'--'},  
+        {'label':'MPDATAg_FCT_diffusive', 'color':'blue', 'marker':'+', 'linestyle':'--'},  
         ]
 
     # Initial conditions

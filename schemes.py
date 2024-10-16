@@ -619,7 +619,7 @@ def MPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_limit=False, limit=0.5, nSmooth=
 
 
 @njit(**jitflags)
-def MPDATA_gauge(init, nt, dt, uf, dxc, corrsource='previous', FCT=False):
+def MPDATA_gauge_njit(init, nt, dt, uf, dxc, corrsource='previous', FCT=False):
     """
     This functions implements the MPDATA scheme with an infinite gauge, assuming a 
     constant velocity (input through the Courant number) and a 
@@ -696,10 +696,10 @@ def MPDATA_gauge(init, nt, dt, uf, dxc, corrsource='firstpass', FCT=False, retur
     field = np.zeros((nt+1, len(init)))
     field[0] = init.copy()
     finalfield_FP = np.zeros(np.shape(field))
-    finalfield_FP[0] = init.copy() # setting this to be nonzero allows to compare the RMSE over time with upwind (if just a single timestep)
+    finalfield_FP[0] = init.copy()
 
     dxf = 0.5*(dxc + np.roll(dxc,1))
-    flx_FP, flx_SP = np.zeros(len(init)), np.zeros(len(init))
+    flx_FP = np.zeros(len(init))
     dx_up = np.zeros(len(init))
 
     # Time stepping
@@ -724,31 +724,15 @@ def MPDATA_gauge(init, nt, dt, uf, dxc, corrsource='firstpass', FCT=False, retur
         if returndiffusive == True:
             finalfield_FP[it+1] = field_FP.copy()
         
-        print('field_FP:', field_FP[0:3])
-        #Vbefore = V.copy()  
-        Vcorr = V.copy()
-        print('V before potential limit:', V[0:3])
         # Limiting the second-pass correction
-        if FCT == True: # second input needs to be DIFFERENCE HO and LO FLUXES? No i think it is correct now??? 
-            Vcorr = lim.FCT(field_FP, V, dxc)
-            print('V after limit (if applied):', Vcorr[0:3])
-        #print('V factor after limit:', V[0:3]/Vbefore[0:3])
+        if FCT == True:
+            V = lim.FCT(field_FP, V, dxc)
         
-        
-        field[it+1] = field_FP - (np.roll(Vcorr,-1) - Vcorr)/dxc
-
-        print('field[it+1] with FCT:', field[it+1][0:3])
-
-        fieldwo = np.zeros(np.shape(field))
-        fieldwo = field_FP - (np.roll(V,-1) - V)/dxc
-
-        print('field without FCT:', fieldwo[0:3])
+        field[it+1] = field_FP - (np.roll(V,-1) - V)/dxc
 
     if returndiffusive == True:
-        print('finalfield_FP[it+1]:', finalfield_FP[it+1][0:3])
         return finalfield_FP
     else:
-        print('field[it+1]:', field[it+1][0:3])
         return field
 
 
