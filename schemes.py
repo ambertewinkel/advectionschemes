@@ -619,7 +619,7 @@ def MPDATA(init, nt, dt, uf, dxc, eps=1e-16, do_limit=False, limit=0.5, nSmooth=
 
 
 @njit(**jitflags)
-def MPDATA_gauge_njit(init, nt, dt, uf, dxc, corrsource='previous', FCT=False):
+def MPDATA_gauge_njit(init, nt, dt, uf, dxc, corrsource='firstpass', FCT=False):
     """
     This functions implements the MPDATA scheme with an infinite gauge, assuming a 
     constant velocity (input through the Courant number) and a 
@@ -898,7 +898,6 @@ def imMPDATA(init, nt, dt, uf, dxc, eps=1e-16, solver='NumPy', niter=0, do_limit
         flx_SP = flux(np.roll(field_FP,1), field_FP, V)
         field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc - gauge
 
-
     return field
 
 
@@ -975,7 +974,6 @@ def imMPDATA_gauge(init, nt, dt, uf, dxc, eps=1e-16, solver='NumPy', niter=0, do
         # Calculate the flux and second-pass result
         flx_SP = flux(1., 1., V)
         field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc
-
 
     return field
 
@@ -1397,6 +1395,68 @@ def LW3(init, nt, dt, uf, dxc, FCT=False, returndiffusive=False): # Only explici
         flx_SP = 0.5*uf*dt*(1-c)*(field[it] - np.roll(field[it],1)) # assumes u>0 # flx_SP[i] defined at i-1/2
         field_SP = field_FP - (np.roll(flx_SP,-1) - flx_SP)/dxc
 
+        flx_TP = - uf*dt/6*(1-c*c)*(field[it] - 2*np.roll(field[it],1) + np.roll(field[it],2)) # assumes u>0 # flx_TP[i] defined at i-1/2
+        field[it+1] = field_SP - (np.roll(flx_TP,-1) - flx_TP)/dxc
+
+        if FCT == True:
+            corr = flx_SP + flx_TP # high-order flux - low-order flux # corr[i] defined at i-1/2
+            corr = lim.FCT(field_FP, corr, dxc)
+            field[it+1] = field_FP - (np.roll(corr,-1) - corr)/dxc
+            
+        if returndiffusive == True:
+            finalfield_FP[it+1] = field_FP.copy()
+
+    if returndiffusive == True:
+        return finalfield_FP
+    else:
+        return field
+
+
+def iLW3(init, nt, dt, uf, dxc, solver='NumPy', niter=1, FCT=False, returndiffusive=False):
+    """This function implements the third-order Lax-Wendroff scheme with an implicit first-order part. The second- and third-order correction are based on the previous time step's field, and are not actually be second- and third-order in combination with first-order implicit (only with first-order (explicit) upwind).
+    Assumes constant velocity and uniform grid.
+    Third-order correction is based on MPDATA_LW3 derivation from Hilary from 29-07-2024. Third-order Lax-Wendroff.
+    --- Input ---
+    init    : array of floats, initial field to advect
+    nt      : integer, total number of time steps to take
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
+    --- Output ---
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
+    """    
+    c = dt*uf/dxc # assumes uniform grid
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+    finalfield_FP = np.zeros(np.shape(field))
+    finalfield_FP[0] = init.copy() # setting this to be nonzero allows to compare the RMSE over time with upwind (if just a single timestep)
+    
+    solverfn = getattr(sv, solver)
+    beta = np.ones(len(init)) # beta[i] is at i-1/2; implicit
+    ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
+    ufm = 0.5*(uf - abs(uf))
+
+    # Define the matrix to solve
+    M = np.zeros((len(init), len(init)))
+    for i in range(len(init)): 
+        M[i,i] = 1. + dt*(np.roll(beta*ufp,-1)[i] - beta[i]*ufm[i])/dxc[i]
+        M[i,(i-1)%len(init)] = -dt*beta[i]*ufp[i]/dxc[i]
+        M[i,(i+1)%len(init)] = dt*np.roll(beta*ufm,-1)[i]/dxc[i]
+    
+    # Time stepping
+    for it in range(nt):
+        # First pass: implicit upwind. flx_FP[i] is at i-1/2
+        flx_FP = flux(np.roll(field[it],1), field[it], uf)
+        rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
+        field_FP = solverfn(M, field[it], rhs, niter)
+        
+        # Second pass
+        flx_SP = 0.5*uf*dt*(1-c)*(field[it] - np.roll(field[it],1)) # assumes u>0 # flx_SP[i] defined at i-1/2
+        field_SP = field_FP - (np.roll(flx_SP,-1) - flx_SP)/dxc
+
+        # Third pass
         flx_TP = - uf*dt/6*(1-c*c)*(field[it] - 2*np.roll(field[it],1) + np.roll(field[it],2)) # assumes u>0 # flx_TP[i] defined at i-1/2
         field[it+1] = field_SP - (np.roll(flx_TP,-1) - flx_TP)/dxc
 

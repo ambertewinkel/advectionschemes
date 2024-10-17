@@ -45,25 +45,17 @@ def main():
     date = dati.date.today().strftime("%d%m%Y")                   # date of the run
     datetime = dati.datetime.now().strftime("%d%m%Y-%H%M%S")      # date and time of the run
 
-    #!!! note for later, apply FCT only for implicit part???
-
     # Input cases
     cases = [\
-        #{'scheme':'LW3'},
-        #{'scheme':'LW3', 'FCT':True},
-        #{'scheme':'LW3', 'FCT':True, 'returndiffusive':True},
-        {'scheme':'MPDATA_gauge'},
-        {'scheme':'MPDATA_gauge', 'FCT':True},
-        {'scheme':'MPDATA_gauge', 'FCT':True, 'returndiffusive':True},
+        {'scheme':'iLW3'},
+        {'scheme':'iLW3', 'FCT':True},
+        {'scheme':'iLW3', 'FCT':True, 'returndiffusive':True},
         ]
     
     plot_args = [\
-        #{'label':'LW3', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        #{'label':'LW3_FCT', 'color':'green', 'marker':'+', 'linestyle':'-'},      
-        #{'label':'LW3_FCT_diffusive', 'color':'red', 'marker':'x', 'linestyle':'-'}, 
-        {'label':'MPDATAg', 'color':'purple', 'marker':'x', 'linestyle':'-'},
-        {'label':'MPDATAg_FCT', 'color':'orange', 'marker':'+', 'linestyle':'-'},  
-        {'label':'MPDATAg_FCT_diffusive', 'color':'blue', 'marker':'+', 'linestyle':'--'},  
+        {'label':'iLW3', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        {'label':'iLW3_FCT', 'color':'red', 'marker':'o', 'linestyle':'-'},
+        {'label':'iLW3_FCT_diffusive', 'color':'purple', 'marker':'^', 'linestyle':'-'},
         ]
 
     # Initial conditions
@@ -416,7 +408,7 @@ def callscheme(case, nt, dt, uf, dxc, psi_in):
     startscheme = timeit.default_timer()
     #print(f'--> Starting runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.2f} s, {nt}, {len(psi_in)}')
     psi = fn(psi_in.copy(), nt, dt, uf, dxc, **params)
-    #print('psi', psi[-1])
+    print('psi', psi[-1])
     print()
     #print(f'--> Runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.2f} s, {nt}, {len(psi[-1])}')
 
