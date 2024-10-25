@@ -35,7 +35,7 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     limitCto1 = False
@@ -47,24 +47,32 @@ def main():
 
     # Input cases
     cases = [\
-        {'scheme':'iLW3'},
+        #{'scheme':'aiLW3'},
+        {'scheme':'LW3', 'FCT':True},
         {'scheme':'iLW3', 'FCT':True},
-        {'scheme':'iLW3', 'FCT':True, 'returndiffusive':True},
+        {'scheme':'aiLW3', 'FCT':True},
+        #{'scheme':'aiLW3', 'FCT':True, 'returndiffusive':True},
+        #{'scheme': 'BTBS'},
+        #{'scheme': 'Upwind'},
         ]
     
     plot_args = [\
-        {'label':'iLW3', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        {'label':'iLW3_FCT', 'color':'red', 'marker':'o', 'linestyle':'-'},
-        {'label':'iLW3_FCT_diffusive', 'color':'purple', 'marker':'^', 'linestyle':'-'},
+        #{'label':'aiLW3', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        {'label':'LW3_FCT', 'color':'red', 'marker':'o', 'linestyle':'-'},
+        {'label':'iLW3_FCT', 'color':'green', 'marker':'x', 'linestyle':'-'},
+        {'label':'aiLW3_FCT', 'color':'blue', 'marker':'+', 'linestyle':'-'},
+        #{'label':'aiLW3_FCT_diffusive', 'color':'purple', 'marker':'^', 'linestyle':'-'},
+        #{'label':'BTBS', 'color':'green', 'marker':'s', 'linestyle':'-'},
+        #{'label':'Upwind', 'color':'orange', 'marker':'d', 'linestyle':'-'},
         ]
 
     # Initial conditions
     analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
     dt = 0.01                   # time step
-    nt = 1                   # number of time steps
-    nx = 10                     # number of points in space
+    nt = 100                   # number of time steps
+    nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 1.           # constant velocity
+    uconstant = 6.           # constant velocity
     coords = 'uniform'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]

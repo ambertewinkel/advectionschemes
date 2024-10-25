@@ -6,7 +6,7 @@ import numpy as np
 from numba_config import jitflags
 from numba import njit
 
-def FCT(field_LO, corr, dxc):
+def FCT(field_LO, corr, dxc, previous):
     """
     This function limits the high-order correction based 
     on the low-order solution's local bounds. If previous=True, 
@@ -15,21 +15,26 @@ def FCT(field_LO, corr, dxc):
     field_LO: low-order solution
     corr: high-order correction, corr[i] is defined at i-1/2
     dxc: cell width
-    previous: boolean to include previous time step field in max/min bounds as well (default=False)
-    field: previous time step field (default=np.array([]))
+    previous: previous time step field - if an element in previous is None, it is not used.
     --- Output ---
     corrlim: limited high-order correction
     """
     n = len(field_LO)
-    corrlim, C, amax, amin, fieldmax, fieldmin, Pp, Qp, Rp, Pm, Qm, Rm = np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n),  np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n)
+    corrlim, C, fieldmax, fieldmin, Pp, Qp, Rp, Pm, Qm, Rm = np.zeros(n), np.zeros(n), np.zeros(n),  np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n)
     
     for i in range(n):
         if corr[i]*(field_LO[i] - field_LO[i-1]) < 0. and (corr[i]*(field_LO[(i+1)%n] - field_LO[i]) < 0. or corr[i]*(field_LO[i-1] - field_LO[i-2]) < 0.):
             corr[i] = 0.
 
         # Determine local max and min
-        fieldmax[i] = max([field_LO[i-1], field_LO[i], field_LO[(i+1)%n]])
-        fieldmin[i] = min([field_LO[i-1], field_LO[i], field_LO[(i+1)%n]])
+        if previous[i] is not None:
+            fieldmax[i] = max([field_LO[i-1], field_LO[i], field_LO[(i+1)%n], previous[i-1], previous[i], previous[(i+1)%n]])
+            fieldmin[i] = min([field_LO[i-1], field_LO[i], field_LO[(i+1)%n], previous[i-1], previous[i], previous[(i+1)%n]])
+            print('we include previous')
+        else:
+            fieldmax[i] = max([field_LO[i-1], field_LO[i], field_LO[(i+1)%n]])
+            fieldmin[i] = min([field_LO[i-1], field_LO[i], field_LO[(i+1)%n]])
+            print('we do NOT include previous')
 
         Pp[i] = max([0., corr[i]]) - min([0., corr[(i+1)%n]])
         Qp[i] = (fieldmax[i] - field_LO[i])*dxc[i]
