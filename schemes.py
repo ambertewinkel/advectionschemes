@@ -1829,203 +1829,23 @@ def thirdorder(field, dxc, uf, dt):
     return TOC
 
 
-def iMPDATAg(init, nt, dt, uf, dxc, solver='NumPy', niter=1, FCT=False, returndiffusive=False, include_chi=False):
-    """NOPE THIS IS MPDATA NOT LW. and not third-order either!!! This function implements the third-order Lax-Wendroff scheme with an implicit first-order part. The second- and third-order correction are based on the previous time step's field, and are not actually be second- and third-order in combination with first-order implicit (only with first-order (explicit) upwind).
+def LW3aiU(init, nt, dt, uf, dxc, solver='NumPy', do_beta='blend', niter=1, FCT=False, returnLO=False):
+    """This function implements the third-order Lax-Wendroff scheme and an adaptively implicit first-order scheme. Then FCT is applied to determine how much of the LW3 scheme can be applied while ensuring boundedness.
     Assumes constant velocity and uniform grid.
-    Third-order correction is based on MPDATA_LW3 derivation from Hilary from 29-07-2024. Third-order Lax-Wendroff.
+    Third-order correction is based on MPDATA_LW3 derivation from Hilary from 29-07-2024. Third-order Lax-Wendroff. 
     --- Input ---
     init    : array of floats, initial field to advect
     nt      : integer, total number of time steps to take
     dt      : float, timestep
     uf      : array of floats, velocity defined at faces
     dxc     : array of floats, spacing between cell faces
+    solver  : string, optional. If 'NumPy', use numpy's linalg.solve. If 'Jacobi', use Jacobi iteration.
+    do_beta : string, optional. If 'switch', beta is 0 for c<=1 and 1 for c>1. If 'blend', beta is 0 for c<=1 and 1-1/c for c>1. Default is 'blend'.
+    niter   : integer, optional. Number of iterations for the solver
+    FCT     : boolean, optional. If True, use FCT to limit the high-order flux
+    returnLO: boolean, optional. If True, return the low-order solution
     --- Output ---
-    field   : 2D array of floats. Outputs each timestep of the field while advecting 
-            the initial condition. Dimensions: nt+1 x length of init
-    """    
-    c = dt*uf/dxc # assumes uniform grid
-    nx = len(init)
-    field = np.zeros((nt+1, nx))
-    field[0] = init.copy()
-    finalfield_FP = np.zeros(np.shape(field))
-    finalfield_FP[0] = init.copy() # setting this to be nonzero allows to compare the RMSE over time with upwind (if just a single timestep)
-    
-    solverfn = getattr(sv, solver)
-    beta = np.ones(len(init)) # beta[i] is at i-1/2; implicit
-    ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
-    ufm = 0.5*(uf - abs(uf))
-    previous = np.full(len(init), None) 
-    chi = np.maximum(1 - 2*beta, np.zeros(len(init))) # chi[i] is at i-1/2
-
-    # Define the matrix to solve
-    M = np.zeros((len(init), len(init)))
-    for i in range(len(init)): 
-        M[i,i] = 1. + dt*(np.roll(beta*ufp,-1)[i] - beta[i]*ufm[i])/dxc[i]
-        M[i,(i-1)%len(init)] = -dt*beta[i]*ufp[i]/dxc[i]
-        M[i,(i+1)%len(init)] = dt*np.roll(beta*ufm,-1)[i]/dxc[i]
-    
-    # Time stepping
-    for it in range(nt):
-        # First pass: implicit upwind. flx_FP[i] is at i-1/2
-        flx_FP = flux(np.roll(field[it],1), field[it], uf) # this is not actually the first-order flux here. That is the M matrix above. However, corr below and as such FCT is still correct.
-        rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
-        field_FP = solverfn(M, field[it], rhs, niter)
-        
-        # Second pass
-        if include_chi == True:
-            flx_SP = 0.5*uf*dt*(1-chi*c)*(field_FP - np.roll(field_FP,1)) # assumes u>0 # flx_SP[i] defined at i-1/2
-        else:
-            flx_SP = 0.5*uf*dt*(1-c)*(field_FP - np.roll(field_FP,1)) # assumes u>0 # flx_SP[i] defined at i-1/2
-        field[it+1] = field_FP - (np.roll(flx_SP,-1) - flx_SP)/dxc
-
-        # Third pass
-        #flx_TP = - uf*dt/6*(1-c*c)*(field[it] - 2*np.roll(field[it],1) + np.roll(field[it],2)) # assumes u>0 # flx_TP[i] defined at i-1/2
-        #field[it+1] = field_SP - (np.roll(flx_TP,-1) - flx_TP)/dxc
-
-        previous = [field[it][i] if c[i] <= 1. else None for i in range(len(init))] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used.
-
-        if FCT == True:
-            corr = flx_SP.copy()# + flx_TP # high-order flux - low-order flux # corr[i] defined at i-1/2
-            corr = lim.FCT(field_FP, corr, dxc, previous)
-            field[it+1] = field_FP - (np.roll(corr,-1) - corr)/dxc
-            
-        if returndiffusive == True:
-            finalfield_FP[it+1] = field_FP.copy()
-
-    if returndiffusive == True:
-        return finalfield_FP
-    else:
-        return field
-    
-
-
-
-#
-#
-#
-#
-#def imMPDATA_gauge(init, nt, dt, uf, dxc, eps=1e-16, solver='NumPy', niter=0, do_limit=False, limit=0.5, nSmooth=0): #same as above initially
-#    """
-#    Implements infinite-gauge MPDATA with an implicit first pass. 
-#    First pass: implicit upwind with numpy direct elimination on the whole matrix.
-#    Second pass: explicit MPDATA correction with an infinite-gauge. For this:
-#    A is calculated with field_FP (first-pass) and not field[it]. The upwind direction is determined with the pseudovelocity V.
-#    Optional: smooth and limit V. 
-#    --- Input ---
-#    init : array of floats, initial field to advect
-#    nt      : integer, total number of time steps to take
-#    dt      : float, timestep
-#    uf      : array of floats, velocity defined at faces
-#    dxc     : array of floats, spacing between cell faces
-#    eps     : float, optional. Small number to avoid division by zero.
-#    solver  : string, optional. If 'NumPy', use numpy's linalg.solve. If 'Jacobi', use Jacobi iteration.
-#    do_limit: boolean, optional. If True, limit the antidiffusive velocity V
-#    limit   : float, optional. Assumed positive. Limiting value for V
-#    nSmooth : integer, optional. Number of smoothing iterations for V
-#    gauge   : float, optional. Gauge term to add to the field
-#    --- Output --- 
-#    field   : 2D array of floats. Outputs each timestep of the field while advecting 
-#            the initial condition. Dimensions: nt+1 x length of init
-#    """
-#
-#
-#    c = dt*uf/dxc # assumes uniform grid
-#    nx = len(init)
-#
-#
-#    #----------------
-#
-#    # Initialisation
-#    field = np.zeros((nt+1, len(init)))
-#    field[0] = init.copy()
-#    field_FP = np.zeros(len(init))
-#
-#    solverfn = getattr(sv, solver)
-#
-#    dxf = 0.5*(dxc + np.roll(dxc,1)) # dxf[i] is at i-1/2
-#    ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
-#    ufm = 0.5*(uf - abs(uf))
-#    
-#    # For stability, determine the amount of temporal MPDATA correction in V for use later
-#    beta = np.ones(len(init)) # beta[i] is at i-1/2; implicit
-#    chi = np.maximum(1 - 2*beta, np.zeros(len(init))) # chi[i] is at i-1/2
-#
-#    # Define the matrix to solve
-#    M = np.zeros((len(init), len(init)))
-#    for i in range(len(init)): 
-#        M[i,i] = 1. + dt*(np.roll(beta*ufp,-1)[i] - beta[i]*ufm[i])/dxc[i]
-#        M[i,(i-1)%len(init)] = -dt*beta[i]*ufp[i]/dxc[i]
-#        M[i,(i+1)%len(init)] = dt*np.roll(beta*ufm,-1)[i]/dxc[i]
-#    
-#
-#
-#
-#
-##____________________
-#
-# # Time stepping
-#    for it in range(nt):
-#        # First pass: implicit upwind. flx_FP[i] is at i-1/2
-#        flx_FP = flux(np.roll(field[it],1), field[it], uf) # this is not actually the first-order flux here. That is the M matrix above. However, corr below and as such FCT is still correct.
-#        rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
-#        field_FP = solverfn(M, field[it], rhs, niter)
-#        
-#        # Second pass
-#        flx_SP = 0.5*uf*dt*(1-c)*(field_FP - np.roll(field_FP,1)) # assumes u>0 # flx_SP[i] defined at i-1/2
-#        field[it+1] = field_FP - (np.roll(flx_SP,-1) - flx_SP)/dxc
-#
-#        # Third pass
-#        #flx_TP = - uf*dt/6*(1-c*c)*(field[it] - 2*np.roll(field[it],1) + np.roll(field[it],2)) # assumes u>0 # flx_TP[i] defined at i-1/2
-#        #field[it+1] = field_SP - (np.roll(flx_TP,-1) - flx_TP)/dxc
-#
-#        previous = [field[it][i] if c[i] <= 1. else None for i in range(len(init))] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used.
-#
-#        if FCT == True:
-#            corr = flx_SP.copy()# + flx_TP # high-order flux - low-order flux # corr[i] defined at i-1/2
-#            corr = lim.FCT(field_FP, corr, dxc, previous)
-#            field[it+1] = field_FP - (np.roll(corr,-1) - corr)/dxc
-#            
-#
-#    #________________________
-#
-#
-#    # Time stepping
-#    for it in range(nt):
-#        # First pass: upwind. flx_FP[i] is at i-1/2
-#        flx_FP = flux(np.roll(field[it],1), field[it], uf)
-#        rhs = field[it] - dt*(np.roll((1. - beta)*flx_FP,-1) - (1. - beta)*flx_FP)/dxc
-#
-#        # First pass: converged BTBS (implicit)
-#        field_FP = solverfn(M, field[it], rhs, niter)
-#
-#        # Second pass (explicit)
-#        # Infinite gauge: multiply the pseudovelocity by 0.5 and do not divide by (field_FP + np.roll(field_FP,1) + eps), and set the first two arguments in flux() to 1.
-#        dx_up = 0.5*flux(np.roll(dxc,1), dxc, uf/abs(uf))
-#        # Use the first-pass field for A. A[i] is at i-1/2
-#        A = (field_FP - np.roll(field_FP,1))/2.
-#        
-#        # Calculate and limit the antidiffusive velocity V. Same index shift as for A
-#        V = A*uf/(0.5*dxf)*(dx_up - 0.5*dt*chi*uf)        
-#        if do_limit == True: # Limit V
-#            corrCLimit = limit*uf
-#            V = np.maximum(np.minimum(V, corrCLimit), -corrCLimit)  
-#        
-#        # Smooth V
-#        for ismooth in range(nSmooth):
-#            V = 0.5*V + 0.25*(np.roll(V,1) + np.roll(V,-1))
-#
-#        # Calculate the flux and second-pass result
-#        flx_SP = flux(1., 1., V)
-#        field[it+1] = field_FP + dt*(-np.roll(flx_SP,-1) + flx_SP)/dxc
-#
-#    return field
-
-
-
-def LW3aiU(init, nt, dt, uf, dxc, solver='NumPy', do_beta='blend', niter=1, FCT=False, returnLO=False): # note: default set to blend
-    """This function implements the third-order Lax-Wendroff scheme with an adaptively implicit first-order part. The second- and third-order correction are based on the previous time step's field, and are not actually be second- and third-order in combination with first-order implicit (only with first-order (explicit) upwind).
-    Assumes constant velocity and uniform grid.
-    Third-order correction is based on MPDATA_LW3 derivation from Hilary from 29-07-2024. Third-order Lax-Wendroff. 
+    field   : 2D array of floats. Outputs each timestep of the field while advecting
     """    
     c = dt*uf/dxc # assumes uniform grid
     nx = len(init)
@@ -2067,21 +1887,7 @@ def LW3aiU(init, nt, dt, uf, dxc, solver='NumPy', do_beta='blend', niter=1, FCT=
         flx_FP = dt*flux(np.roll(field[it],1), field[it], uf)
         flx_SP = 0.5*uf*dt*(1-c)*(field[it] - np.roll(field[it],1)) # assumes u>0 # flx_SP[i] defined at i-1/2
         flx_TP = - uf*dt/6*(1-c*c)*(field[it] - 2*np.roll(field[it],1) + np.roll(field[it],2)) # assumes u>0 # flx_TP[i] defined at i-1/2
-        #flx_HO = flx_FP + flx_SP + flx_TP
-        #field[it+1] = field[it] - (np.roll(flx_HO,-1) - flx_HO)/dxc # high-order solution, changes if it needs to be limited by FCT
 
-        # First pass: upwind. flx_FP[i] is at i-1/2
-        #flx_FP = flux(np.roll(field[it],1), field[it], uf)
-        #field_FP = field[it] - dt*(np.roll(flx_FP,-1) - flx_FP)/dxc
-        
-        # Second pass
-        #flx_SP = 0.5*uf*dt*(1-c)*(field[it] - np.roll(field[it],1)) # assumes u>0 # flx_SP[i] defined at i-1/2
-        #field_SP = field_FP - (np.roll(flx_SP,-1) - flx_SP)/dxc
-
-        # Third pass
-        #flx_TP = - uf*dt/6*(1-c*c)*(field[it] - 2*np.roll(field[it],1) + np.roll(field[it],2)) # assumes u>0 # flx_TP[i] defined at i-1/2
-        #field[it+1] = field_SP - (np.roll(flx_TP,-1) - flx_TP)/dxc
-        
         previous = [field[it][i] if c[i] <= 1. else None for i in range(len(init))] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used.
 
         corr = flx_FP + flx_SP + flx_TP - flx_LO # high-order flux - low-order flux # corr[i] defined at i-1/2
