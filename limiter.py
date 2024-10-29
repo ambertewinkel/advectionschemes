@@ -30,11 +30,9 @@ def FCT(field_LO, corr, dxc, previous):
         if previous[i] is not None:
             fieldmax[i] = max([field_LO[i-1], field_LO[i], field_LO[(i+1)%n], previous[i-1], previous[i], previous[(i+1)%n]])
             fieldmin[i] = min([field_LO[i-1], field_LO[i], field_LO[(i+1)%n], previous[i-1], previous[i], previous[(i+1)%n]])
-            print('we include previous')
         else:
             fieldmax[i] = max([field_LO[i-1], field_LO[i], field_LO[(i+1)%n]])
             fieldmin[i] = min([field_LO[i-1], field_LO[i], field_LO[(i+1)%n]])
-            print('we do NOT include previous')
 
         Pp[i] = max([0., corr[i]]) - min([0., corr[(i+1)%n]])
         Qp[i] = (fieldmax[i] - field_LO[i])*dxc[i]
