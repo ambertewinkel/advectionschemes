@@ -85,16 +85,16 @@ def main():
         ]
 
     # Initial conditions
-    analytic = an.sine         # initial condition, options: sine, cosbell, tophat, or combi
+    analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
     dt = 0.01                   # time step
-    nt = 2                   # number of time steps
-    nx = 40                     # number of points in space
+    nt = 1                   # number of time steps
+    nx = 10                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 1.           # constant velocity
+    uconstant = 12.5#3.125           # constant velocity
     coords = 'uniform'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]
-    schemenames_settings = str(analytic.__name__) + f'_t{nt*dt:.2f}_u{uconstant:.2f}_' + "-".join(schemenames)
+    schemenames_settings = str(analytic.__name__) + f'_t{nt*dt:.4f}_u{uconstant:.4f}_' + "-".join(schemenames)
     
     ##################################
     #### Setup output and logging ####
@@ -140,7 +140,7 @@ def main():
     logging.info(f'Number of grid points: {nx}')
     logging.info(f'Number of time steps: {nt}')
     logging.info(f'Time step: {dt} s')
-    logging.info(f'Total simulated time: {nt*dt:.2f} s')
+    logging.info(f'Total simulated time: {nt*dt:.4f} s')
     logging.info(f'Velocity: {uconstant}')     
     logging.info(f'Schemes included are: {schemenames}')
     logging.info(f'Cases:')
@@ -173,7 +173,7 @@ def main():
             c_arr = np.array([uconstant*dt_arr[0]/dx_arr[0], uconstant*dt_arr[1]/dx_arr[1], uconstant*dt_arr[2]/dx_arr[2]], dtype=float)
             resolution = dx_arr.copy()
             print('Courant numbers for the [fine, coarse, reg] grid spacings:', c_arr)
-            var_acc = f'dx with dt={dt_arr[-1]:.3f}'
+            var_acc = f'dx with dt={dt_arr[-1]:.4f}'
         elif accuracy_in == 'time with dx const':
             nt_arr = np.array([nt*factor, nt/factor, nt], dtype=int)
             dt_arr = np.array([dt/factor, dt*factor, dt], dtype=float)
@@ -182,7 +182,7 @@ def main():
             c_arr = np.array([uconstant*dt_arr[0]/dx_arr[0], uconstant*dt_arr[1]/dx_arr[1], uconstant*dt_arr[2]/dx_arr[2]], dtype=float)
             resolution = dt_arr.copy()
             print('Courant numbers for the [fine, coarse, reg] grid spacings:', c_arr)
-            var_acc = f'dt with dx={dx_arr[-1]:.3f}'
+            var_acc = f'dt with dx={dx_arr[-1]:.4f}'
         elif accuracy_in == 'space with C const': # dx and dt vary keeping Courant number constant
             nx_arr = np.array([nx*factor, nx/factor, nx], dtype=int)
             dx_arr = np.array([xmax/nx_arr[0], xmax/nx_arr[1], xmax/nx_arr[2]], dtype=float)
@@ -191,11 +191,11 @@ def main():
             c_arr = np.array([uconstant*dt_arr[0]/dx_arr[0], uconstant*dt_arr[1]/dx_arr[1], uconstant*dt_arr[2]/dx_arr[2]], dtype=float)
             resolution = dx_arr.copy()
             for i in range(len(nx_arr)): # Loop over 1 or 3 grid spacings
-                logging.info(f'Courant number for the {gridlabels[i]} grid spacing: {c_arr[i]:.2f}')
-                logging.info(f'nt, dt, nt*dt for the {gridlabels[i]} grid spacing: {nt_arr[i]}, {dt_arr[i]:.2f}, {nt_arr[i]*dt_arr[i]:.2f}')
-                logging.info(f'nx, dx, xmax for the {gridlabels[i]} grid spacing: {nx_arr[i]}, {dx_arr[i]:.2f}, {xmax}')
+                logging.info(f'Courant number for the {gridlabels[i]} grid spacing: {c_arr[i]:.4f}')
+                logging.info(f'nt, dt, nt*dt for the {gridlabels[i]} grid spacing: {nt_arr[i]}, {dt_arr[i]:.4f}, {nt_arr[i]*dt_arr[i]:.4f}')
+                logging.info(f'nx, dx, xmax for the {gridlabels[i]} grid spacing: {nx_arr[i]}, {dx_arr[i]:.4f}, {xmax}')
                 logging.info('')
-            var_acc = f'dx with C={c_arr[-1]:.3f}'
+            var_acc = f'dx with C={c_arr[-1]:.4f}'
         else:
             logging.info('Error: invalid accuracy_in')
     else: # Run schemes for only the one grid spacing defined above
@@ -235,14 +235,14 @@ def main():
         cmax = np.max(cc)
         cmin = np.min(cc)
 
-        logging.info(f'Min Courant number: {cmin:.2f}')
-        logging.info(f'Max Courant number: {cmax:.2f}')  
+        logging.info(f'Min Courant number: {cmin:.4f}')
+        logging.info(f'Max Courant number: {cmax:.4f}')  
 
             # Print and plot grid and Courant number (solely for the regular grid spacing)
         if gridlabels[xi] == 'reg':
             logging.info('The (cell center) points and Courant numbers are:')
             for i in range(nx):
-                logging.info(f'{i}: {xc[i]:.2f} -- {cc[i]:.2f}')
+                logging.info(f'{i}: {xc[i]:.4f} -- {cc[i]:.4f}')
             logging.info('')
             ut.plot_Courant(xc, cc, outputdir)
             ut.plot_grid(xc, dxc, outputdir)
@@ -251,6 +251,9 @@ def main():
         locals()[f'psi_an_{l}'] = np.zeros((nt+1, nx))
         for it in range(nt+1):
             locals()[f'psi_an_{l}'][it] = analytic(xc, xmax, uc, it*dt)
+        a = locals()[f'psi_an_{l}'][-1].copy()
+        logging.info(f"Analytic solution for nx={nx}, nt={nt}, dt={dt}: {a}")
+        logging.info('')
 
         # Calculate initial condition
         psi_in = locals()[f'psi_an_{l}'][0]
@@ -285,18 +288,18 @@ def main():
     
     # Conservation, boundedness and total variation Psi
     csv_psi_analytic = epm.check_conservation(psi_in, locals()['psi_an_reg'][nt], dxc)
-    logging.info(f'Analytic - Mass gained: {csv_psi_analytic:.2E}')    
+    logging.info(f'Analytic - Mass gained: {csv_psi_analytic:.4E}')    
     bdn_psi_analytic = epm.check_boundedness(psi_in, locals()['psi_an_reg'][nt])
     logging.info(f'Analytic - Boundedness: {bdn_psi_analytic}')    
     logging.info('')
     for c in range(len(cases)):        
         s = plot_args[c]['label']
         locals()[f'csv_psi_{s}'] = epm.check_conservation(psi_in, locals()[f'psi_{s}_reg'][nt], dxc)
-        logging.info(f"{plot_args[c]['label']} - Mass gained: {locals()[f'csv_psi_{s}']:.2E}")
+        logging.info(f"{plot_args[c]['label']} - Mass gained: {locals()[f'csv_psi_{s}']:.4E}")
         locals()[f'bdn_psi_{s}'] = epm.check_boundedness(psi_in, locals()[f'psi_{s}_reg'][nt])
         logging.info(f"{plot_args[c]['label']} - Boundedness: {locals()[f'bdn_psi_{s}']}")         
         locals()[f'TV_psi_{s}'] = epm.totalvariation(locals()[f'psi_{s}_reg'][nt])
-        logging.info(f"{plot_args[c]['label']} - Variation: {locals()[f'TV_psi_{s}']:.2E}")
+        logging.info(f"{plot_args[c]['label']} - Variation: {locals()[f'TV_psi_{s}']:.4E}")
         logging.info('')
 
     ##########################
@@ -432,11 +435,11 @@ def callscheme(case, nt, dt, uf, dxc, psi_in):
     # Call the scheme
     print(f'Running {sc} with parameters {params}')
     startscheme = timeit.default_timer()
-    #print(f'--> Starting runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.2f} s, {nt}, {len(psi_in)}')
+    #print(f'--> Starting runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.4f} s, {nt}, {len(psi_in)}')
     psi = fn(psi_in.copy(), nt, dt, uf, dxc, **params)
-    print('psi', psi[-1])
-    print()
-    #print(f'--> Runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.2f} s, {nt}, {len(psi[-1])}')
+    logging.info(f'Final psi for {sc} with parameters {params} and nx={len(psi_in)}: {psi[-1]}')
+    logging.info('')
+    #print(f'--> Runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.4f} s, {nt}, {len(psi[-1])}')
 
     return psi
 
