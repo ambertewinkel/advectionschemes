@@ -9,6 +9,8 @@ import solvers as sv
 import limiter as lim
 from numba_config import jitflags
 from numba import njit, prange
+import matplotlib.pyplot as plt
+
 
 def FTBS(init, nt, dt, uf, dxc):
     """
@@ -1344,17 +1346,19 @@ def LW_aicorrection(init, nt, dt, u, dx, solver='NumPy', niter=0):
 
 
 @njit(**jitflags)
-def aiUpwind(init, nt, dt, u, dx, do_beta='switch', solver='NumPy', niter=0):
+def aiUpwind(init, nt, dt, u, dx, solver='NumPy', niter=0):
     """This scheme test the accuracy of adaptively implicit upwind. (Needs to be first-order accurate to have a nice second/third-order correction to it.)
-    Options include do_beta='blend' or 'switch'. Currently not upwind just FTBS - i.e. not accounting for the sign of u.
+    Currently not upwind just FTBS - i.e. not accounting for the sign of u.
     Assuming constant velocity and dx."""
     field = np.zeros((nt+1, len(init)))
     field[0] = init.copy()
 
     c = dt*u/dx
     beta = np.zeros(len(init))
-    if do_beta == 'blend':
-        beta = np.maximum(1 - 1/c, np.zeros(len(init)))
+    #if do_beta == 'blend':
+    beta = np.maximum(1 - 1/c, np.zeros(len(init))) # beta: blend!
+    #elif do_beta == 'switch':
+    #    beta = np.invert((np.roll(c,1) <= 1.)*(c <= 1.)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit
 
     M = np.zeros((len(init), len(init)))
     for i in prange(len(init)):
@@ -1793,6 +1797,7 @@ def flux(Psi_L, Psi_R, U):
 
     return F
 
+
 def d2dx2(field, dxc):
     """
     This function computes the second derivative of a field with respect to x
@@ -1829,7 +1834,7 @@ def thirdorder(field, dxc, uf, dt):
     return TOC
 
 
-def LW3aiU(init, nt, dt, uf, dxc, solver='NumPy', do_beta='blend', niter=1, FCT=False, returnLO=False):
+def LW3aiU(init, nt, dt, uf, dxc, solver='NumPy', do_beta='blend', niter=1, FCT=False, returnLO=False, switch_sign=False, explFCTuntil2=False, FCTadim=False):
     """This function implements the third-order Lax-Wendroff scheme and an adaptively implicit first-order scheme. Then FCT is applied to determine how much of the LW3 scheme can be applied while ensuring boundedness.
     Assumes constant velocity and uniform grid.
     Third-order correction is based on MPDATA_LW3 derivation from Hilary from 29-07-2024. Third-order Lax-Wendroff. 
@@ -1844,6 +1849,8 @@ def LW3aiU(init, nt, dt, uf, dxc, solver='NumPy', do_beta='blend', niter=1, FCT=
     niter   : integer, optional. Number of iterations for the solver
     FCT     : boolean, optional. If True, use FCT to limit the high-order flux
     returnLO: boolean, optional. If True, return the low-order solution
+    switch_sign: boolean, optional. If True, switch the sign of the second- and third-order correction. 07-11-2024 testing for diffusive effect of C>1 region.
+    FCTadim : boolean, optional. If True, use beta to determine how much upwind FCT we can apply. 
     --- Output ---
     field   : 2D array of floats. Outputs each timestep of the field while advecting
     """    
@@ -1864,7 +1871,7 @@ def LW3aiU(init, nt, dt, uf, dxc, solver='NumPy', do_beta='blend', niter=1, FCT=
         beta = np.maximum.reduce([np.zeros(len(c)), 1 - 1/c, 1 - 1/np.roll(c,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
     else:
         print('Error: do_beta must be either "switch" or "blend"')
-    chi = np.maximum(1 - 2*beta, np.zeros(len(init))) # chi[i] is at i-1/2 #!!! 
+    #chi = np.maximum(1 - 2*beta, np.zeros(len(init))) # chi[i] is at i-1/2 #!!! 
 
     ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
     ufm = 0.5*(uf - abs(uf))
@@ -1888,11 +1895,17 @@ def LW3aiU(init, nt, dt, uf, dxc, solver='NumPy', do_beta='blend', niter=1, FCT=
         flx_SP = 0.5*uf*dt*(1-c)*(field[it] - np.roll(field[it],1)) # assumes u>0 # flx_SP[i] defined at i-1/2
         flx_TP = - uf*dt/6*(1-c*c)*(field[it] - 2*np.roll(field[it],1) + np.roll(field[it],2)) # assumes u>0 # flx_TP[i] defined at i-1/2
 
-        previous = [field[it][i] if c[i] <= 1. else None for i in range(len(init))] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used.
+        if c[0] > 1. and switch_sign == True: # Take care with a non-uniform grid! This assumes uniform grid and velocity.
+            flx_SP = - flx_SP 
+            flx_TP = - flx_TP
+
+        cbound = 1. if explFCTuntil2 == False else 2.
+        
+        previous = [field[it][i] if c[i] <= cbound else None for i in range(len(init))] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used.
 
         corr = flx_FP + flx_SP + flx_TP - flx_LO # high-order flux - low-order flux # corr[i] defined at i-1/2
         if FCT == True:
-            corr = lim.FCT(field_LO, corr, dxc, previous)
+            corr = lim.FCT(field_LO, corr, dxc, previous)#, adim=FCTadim)
         field[it+1] = field_LO - (np.roll(corr,-1) - corr)/dxc
             
         if returnLO == True:
@@ -1900,5 +1913,82 @@ def LW3aiU(init, nt, dt, uf, dxc, solver='NumPy', do_beta='blend', niter=1, FCT=
 
     if returnLO == True:
         return finalfield_FP
+    else:
+        return field
+    
+
+def FCTex_im(init, nt, dt, uf, dxc, solver='NumPy', do_beta='blend', niter=1, FCT=False, returnLO=False, returnFCT=False, returnHO=False):
+    """This function implements a scheme that applies FCT to the explicit parts of HO and LO solution, and then applies the LO implicit part."""
+
+    c = dt*uf/dxc # assumes uniform grid
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+    finalfield_LO = np.zeros(np.shape(field))
+    finalfield_FCT = np.zeros(np.shape(field))
+    finalfield_HO = np.zeros(np.shape(field))
+    finalfield_LO[0] = init.copy() # setting this to be nonzero allows to compare the RMSE over time with upwind (if just a single timestep)
+    finalfield_FCT[0] = init.copy() # setting this to be nonzero allows to compare the RMSE over time with upwind (if just a single timestep)
+    finalfield_HO [0] = init.copy() # setting this to be nonzero allows to compare the RMSE over time with upwind (if just a single timestep)
+
+    solverfn = getattr(sv, solver)
+    beta = np.ones(len(init)) # beta[i] is at i-1/2
+    previous = np.full(len(init), None) 
+
+    if do_beta == 'switch':
+        beta = np.invert((np.roll(c,1) <= 1.)*(c <= 1.)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit
+    elif do_beta == 'blend':
+        beta = np.maximum.reduce([np.zeros(len(c)), 1 - 1/c, 1 - 1/np.roll(c,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
+    else:
+        print('Error: do_beta must be either "switch" or "blend"')
+    #chi = np.maximum(1 - 2*beta, np.zeros(len(init))) # chi[i] is at i-1/2 #!!! 
+
+    ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
+    ufm = 0.5*(uf - abs(uf))
+
+    # Define the matrix to solve
+    M = np.zeros((len(init), len(init)))
+    for i in range(len(init)): 
+        M[i,i] = 1. + dt*(np.roll(beta*ufp,-1)[i] - beta[i]*ufm[i])/dxc[i]
+        M[i,(i-1)%len(init)] = -dt*beta[i]*ufp[i]/dxc[i]
+        M[i,(i+1)%len(init)] = dt*np.roll(beta*ufm,-1)[i]/dxc[i]
+    
+    # Time stepping
+    for it in range(nt):
+        # Low-order explicit solution (adaptively implicit upwind/ftbs and btbs)
+        flx_LOe = dt*(1. - beta)*flux(np.roll(field[it],1), field[it], uf)
+        field_LOe = field[it] - (np.roll(flx_LOe,-1) - flx_LOe)/dxc
+
+        # High-order solution: third-order Lax-Wendroff
+        flx_FPe = (1. - beta)*dt*flux(np.roll(field[it],1), field[it], uf)
+        flx_SPe = (1. - beta)*0.5*uf*dt*(1-c)*(field[it] - np.roll(field[it],1)) # assumes u>0 # flx_SP[i] defined at i-1/2
+        flx_TPe = -(1. - beta)*uf*dt/6*(1-c*c)*(field[it] - 2*np.roll(field[it],1) + np.roll(field[it],2)) # assumes u>0 # flx_TP[i] defined at i-1/2
+
+        previous = [field[it][i] if c[i] <= 1. else None for i in range(len(init))] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used.
+
+        flx_HOe = flx_FPe + flx_SPe + flx_TPe
+        field_HOe = field[it] - (np.roll(flx_HOe,-1) - flx_HOe)/dxc
+
+        corr = flx_FPe + flx_SPe + flx_TPe - flx_LOe # high-order flux - low-order flux # corr[i] defined at i-1/2
+        if FCT == True:
+            corr = lim.FCT(field_LOe, corr, dxc, previous)
+        field_FCT = field_LOe - (np.roll(corr,-1) - corr)/dxc
+        field[it+1] = solverfn(M, field_FCT, field_FCT, niter)
+            
+        if returnLO == True:
+            finalfield_LO[it+1] = field_LOe.copy()
+
+        if returnFCT == True:
+            finalfield_FCT[it+1] = field_FCT.copy()
+
+        if returnHO == True:
+            finalfield_HO[it+1] = field_HOe.copy()
+    
+    if returnFCT == True:
+        return finalfield_FCT        
+    elif returnLO == True:
+        return finalfield_LO
+    elif returnHO == True:
+        return finalfield_HO
     else:
         return field

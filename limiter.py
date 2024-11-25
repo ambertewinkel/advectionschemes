@@ -23,7 +23,7 @@ def FCT(field_LO, corr, dxc, previous):
     corrlim, C, fieldmax, fieldmin, Pp, Qp, Rp, Pm, Qm, Rm = np.zeros(n), np.zeros(n), np.zeros(n),  np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n)
     
     for i in range(n):
-        if corr[i]*(field_LO[i] - field_LO[i-1]) < 0. and (corr[i]*(field_LO[(i+1)%n] - field_LO[i]) < 0. or corr[i]*(field_LO[i-1] - field_LO[i-2]) < 0.):
+        if corr[i]*(field_LO[i] - field_LO[i-1]) <= 0. and (corr[i]*(field_LO[(i+1)%n] - field_LO[i]) <= 0. or corr[i]*(field_LO[i-1] - field_LO[i-2]) <= 0.):
             corr[i] = 0.
 
         # Determine local max and min

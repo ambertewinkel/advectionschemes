@@ -35,7 +35,7 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     limitCto1 = False
@@ -60,9 +60,17 @@ def main():
         ###{'scheme': 'iMPDATAg', 'FCT':False, 'returndiffusive':False, 'include_chi':True},
         #{'scheme': 'iMPDATAg', 'FCT':True, 'returndiffusive':False},
         #{'scheme': 'iMPDATAg', 'FCT':True, 'returndiffusive':True},
-        {'scheme': 'LW3aiU'},
+        #!{'scheme': 'LW3aiU'},
         {'scheme': 'LW3aiU', 'FCT':True},
-        {'scheme': 'LW3aiU', 'FCT':True, 'returnLO':True},
+        #!{'scheme': 'LW3aiU', 'FCT':True, 'returnLO':True},
+        #!{'scheme': 'LW3aiU', 'switch_sign':True},
+        #!{'scheme': 'LW3aiU', 'FCT':True, 'switch_sign':True},
+        #!{'scheme': 'LW3aiU', 'FCT':True, 'explFCTuntil2':True},
+        {'scheme': 'FCTex_im', 'FCT':True},
+        #{'scheme': 'FCTex_im', 'FCT':True, 'returnFCT':True},
+        #{'scheme': 'FCTex_im', 'FCT':True, 'returnLO':True},
+        #{'scheme': 'FCTex_im', 'FCT':True, 'returnHO':True},
+        {'scheme': 'aiUpwind'},
         ]
     
     plot_args = [\
@@ -79,18 +87,26 @@ def main():
         ###{'label':'iMPDATAg_chi', 'color':'black', 'marker':'x', 'linestyle':'-'},
         #{'label':'iMPDATAg_FCT', 'color':'red', 'marker':'o', 'linestyle':'-'},
         #{'label':'iMPDATAg_FCT_diffusive', 'color':'green', 'marker':'^', 'linestyle':'-'},
-        {'label':'LW3aiU', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        {'label':'LW3aiU_FCT', 'color':'red', 'marker':'+', 'linestyle':'-'},
-        {'label':'LW3aiU_FCT_LO', 'color':'green', 'marker':'x', 'linestyle':'-'},
+        #!{'label':'LW3aiU_noFCT', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        {'label':'LW3aiU', 'color':'magenta', 'marker':'o', 'linestyle':'-'},
+        #!{'label':'LW3aiU_LO', 'color':'green', 'marker':'x', 'linestyle':'-'},
+        #!{'label':'LW3aiU_noFCT_switchsigncorr', 'color':'red', 'marker':'X', 'linestyle':'-'},
+        #!{'label':'LW3aiU_switchsigncorr', 'color':'purple', 'marker':'x', 'linestyle':'-'},
+        #!{'label':'LW3aiU_FCT2', 'color':'pink', 'marker':'+', 'linestyle':'-'},
+        {'label':'FCTex-im', 'color':'blue', 'marker':'+', 'linestyle':'-'},
+        #{'label':'FCTex-im_FCT', 'color':'purple', 'marker':'+', 'linestyle':'-'},
+        #{'label':'FCTex-im_LO', 'color':'green', 'marker':'x', 'linestyle':'-'},
+        #{'label':'FCTex-im_HO', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        {'label':'aiUpwind', 'color':'green', 'marker':'x', 'linestyle':'-'},
         ]
 
     # Initial conditions
     analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
     dt = 0.01                   # time step
     nt = 1                   # number of time steps
-    nx = 10                     # number of points in space
+    nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 12.5#3.125           # constant velocity
+    uconstant = 6.25#5.0#6.25#6.0#12.5#3.125           # constant velocity
     coords = 'uniform'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]
@@ -437,6 +453,9 @@ def callscheme(case, nt, dt, uf, dxc, psi_in):
     startscheme = timeit.default_timer()
     #print(f'--> Starting runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.4f} s, {nt}, {len(psi_in)}')
     psi = fn(psi_in.copy(), nt, dt, uf, dxc, **params)
+    #plt.plot(psi[-1])
+    #plt.title('After exiting the scheme function')
+    #plt.show()
     logging.info(f'Final psi for {sc} with parameters {params} and nx={len(psi_in)}: {psi[-1]}')
     logging.info('')
     #print(f'--> Runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.4f} s, {nt}, {len(psi[-1])}')
