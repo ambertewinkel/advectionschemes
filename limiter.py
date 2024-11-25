@@ -49,4 +49,11 @@ def FCT(field_LO, corr, dxc, previous):
         # Determine limited correction
         corrlim[i] = C[i]*corr[i]
 
+    print('fieldmax: ', fieldmax)
+    print('fieldmin: ', fieldmin)
+    print()
+    print('corrlim: ', corrlim)
+    print()
+    print()
+    
     return corrlim

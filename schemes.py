@@ -1917,7 +1917,7 @@ def LW3aiU(init, nt, dt, uf, dxc, solver='NumPy', do_beta='blend', niter=1, FCT=
         return field
     
 
-def FCTex_im(init, nt, dt, uf, dxc, solver='NumPy', do_beta='blend', niter=1, FCT=False, returnLO=False, returnFCT=False, returnHO=False):
+def FCTex_im(init, nt, dt, uf, dxc, solver='NumPy', do_beta='blend', niter=1, FCT=False, returnLO=False, returnFCT=False, returnHO=False, explFCTuntil2=False):
     """This function implements a scheme that applies FCT to the explicit parts of HO and LO solution, and then applies the LO implicit part."""
 
     c = dt*uf/dxc # assumes uniform grid
@@ -1941,7 +1941,7 @@ def FCTex_im(init, nt, dt, uf, dxc, solver='NumPy', do_beta='blend', niter=1, FC
         beta = np.maximum.reduce([np.zeros(len(c)), 1 - 1/c, 1 - 1/np.roll(c,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
     else:
         print('Error: do_beta must be either "switch" or "blend"')
-    #chi = np.maximum(1 - 2*beta, np.zeros(len(init))) # chi[i] is at i-1/2 #!!! 
+    chi = np.maximum(1 - 2*beta, np.zeros(len(init))) # chi[i] is at i-1/2 #!!! 
 
     ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
     ufm = 0.5*(uf - abs(uf))
@@ -1959,22 +1959,58 @@ def FCTex_im(init, nt, dt, uf, dxc, solver='NumPy', do_beta='blend', niter=1, FC
         flx_LOe = dt*(1. - beta)*flux(np.roll(field[it],1), field[it], uf)
         field_LOe = field[it] - (np.roll(flx_LOe,-1) - flx_LOe)/dxc
 
+        cbound = 1. if explFCTuntil2 == False else 2.
+        previous = [field[it][i] if c[i] <= cbound else None for i in range(len(init))] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used.
+
         # High-order solution: third-order Lax-Wendroff
         flx_FPe = (1. - beta)*dt*flux(np.roll(field[it],1), field[it], uf)
         flx_SPe = (1. - beta)*0.5*uf*dt*(1-c)*(field[it] - np.roll(field[it],1)) # assumes u>0 # flx_SP[i] defined at i-1/2
         flx_TPe = -(1. - beta)*uf*dt/6*(1-c*c)*(field[it] - 2*np.roll(field[it],1) + np.roll(field[it],2)) # assumes u>0 # flx_TP[i] defined at i-1/2
 
-        previous = [field[it][i] if c[i] <= 1. else None for i in range(len(init))] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used.
-
         flx_HOe = flx_FPe + flx_SPe + flx_TPe
         field_HOe = field[it] - (np.roll(flx_HOe,-1) - flx_HOe)/dxc
 
+        #chi = max(1 - 2*beta, 0) # chi[i] is at i-1/2 #!!!
+        eta = 1.
+        chi=1.5
+        # High-order solution: third-order Lax-Wendroff # second choice!
+        flx_FPe2 = (1. - beta)*dt*flux(np.roll(field[it],1), field[it], uf)
+        flx_SPe2 = (1. - beta)*0.5*uf*dt*(1-chi*c)*(field[it] - np.roll(field[it],1)) # assumes u>0 # flx_SP[i] defined at i-1/2
+        flx_TPe2 = -uf*dt/6*(1-eta*c*c)*(field[it] - 2*np.roll(field[it],1) + np.roll(field[it],2)) # assumes u>0 # flx_TP[i] defined at i-1/2
+
+        flx_HOe2 = flx_FPe2 + flx_SPe2 #+ flx_TPe2
+        field_HOe2 = field[it] - (np.roll(flx_HOe2,-1) - flx_HOe2)/dxc
+
+        # calculate HO field
+        flx_FP = dt*flux(np.roll(field[it],1), field[it], uf)
+        flx_SP = 0.5*uf*dt*(1-c)*(field[it] - np.roll(field[it],1)) # assumes u>0 # flx_SP[i] defined at i-1/2
+        flx_TP = -uf*dt/6*(1-c*c)*(field[it] - 2*np.roll(field[it],1) + np.roll(field[it],2)) # assumes u>0 # flx_TP[i] defined at i-1/2
+
+        flx_HO = flx_FP + flx_SP + flx_TP
+        field_HO = field[it] - (np.roll(flx_HO,-1) - flx_HO)/dxc
+
         corr = flx_FPe + flx_SPe + flx_TPe - flx_LOe # high-order flux - low-order flux # corr[i] defined at i-1/2
+        print('field[it]', field[it])
+        print('field_LOe', field_LOe)
+        print('field_HOe', field_HOe)
+        print('field_HOe2', field_HOe2)
+
+        print('1-beta', 1-beta)
+        plt.plot(field[it], label='field[it]')
+        plt.plot(field_HOe, label='field_HOe')
+        plt.plot(field_HO, label='field_HO')
+        plt.plot(field_HOe2, label='field_HOe2')
+        plt.legend()
+        plt.show() 
+
         if FCT == True:
             corr = lim.FCT(field_LOe, corr, dxc, previous)
         field_FCT = field_LOe - (np.roll(corr,-1) - corr)/dxc
         field[it+1] = solverfn(M, field_FCT, field_FCT, niter)
-            
+
+        print('field_FCT', field_FCT)
+        print('field[it+1]', field[it+1])      
+        print()
         if returnLO == True:
             finalfield_LO[it+1] = field_LOe.copy()
 
