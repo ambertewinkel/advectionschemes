@@ -2075,4 +2075,75 @@ def aiUexcorr(init, nt, dt, uf, dxc, solver='NumPy', do_beta='blend', niter=1):#
 
     return field
 
-    
+
+def RK2QC(init, nt, dt, uf, dxc, solver='NumPy', kmax=2):
+    """This scheme solves second-order Runge-Kutta quasi-cubic scheme. See HW notes sent on 27-11-2024."""
+    # assumes u>0
+
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+    fh_HO_n, flx_HO_n, fh_1st_km1, flx_1st_km1, fh_HOC_km1, flx_HOC_km1, rhs, field_k, beta = np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx)
+    M = np.zeros((nx, nx))
+    solverfn = getattr(sv, solver)
+
+    c = dt*uf/dxc # assumes uniform grid
+    alpha = np.maximum(0.5, 1. - 1./c) # assumes uniform grid # alpha[i] is at i-1/2
+    for i in range(nx):
+        beta[i] = 0. if c[i] < 0.8 else 1 # beta[i] is at i-1/2
+    #print(beta)
+    ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
+    ufm = 0.5*(uf - abs(uf))
+
+    for i in range(nx):	# includes flx_1st_k # based on implicit upwind matrices above.
+        M[i,i] = 1. + dt*(np.roll(alpha*beta*ufp,-1)[i] - alpha[i]*beta[i]*ufm[i])/dxc[i]
+        M[i,i-1] = -dt*alpha[i]*beta[i]*ufp[i]/dxc[i]
+        M[i,(i+1)%nx] = dt*np.roll(alpha*beta*ufm,-1)[i]/dxc[i]
+
+    for it in range(nt):
+        field[it+1] = field[it].copy() # not actually in the equations, this is to make the computer code more concise
+        for k in range(kmax):
+            for i in range(nx):
+                fh_HO_n[i] = quadh(field[it,i-2], field[it,i-1], field[it,i]) # [i] defined at i-1/2
+                flx_HO_n[i] = (1. - alpha[i])*uf[i]*fh_HO_n[i] # [i] defined at i-1/2
+                fh_1st_km1[i] = field[it+1,i-1] # upwind # [i] defined at i-1/2 # not actually field[it+1], this is to make the computer code more concise
+                flx_1st_km1[i] = alpha[i]*(1. - beta[i])*uf[i]*fh_1st_km1[i] # [i] defined at i-1/2
+                fh_HOC_km1[i] = fh_HO_n[i] - fh_1st_km1[i] # [i] defined at i-1/2
+                flx_HOC_km1[i] = alpha[i]*uf[i]*fh_HOC_km1[i] # [i] defined at i-1/2
+        #for k in range(1, kmax + 1):
+            for i in range(nx):
+                rhs[i] = field[it,i] - dt*(ddx(flx_HO_n[i], flx_HO_n[(i+1)%nx], dxc[i]) + \
+                        ddx(flx_1st_km1[i], flx_1st_km1[(i+1)%nx], dxc[i]) + \
+                        ddx(flx_HOC_km1[i], flx_HOC_km1[(i+1)%nx], dxc[i])) # [i] defined at i
+            field[it+1] = solverfn(M, fh_1st_km1, rhs, 1)    
+            #if k != kmax:
+            #    for i in range(nx):
+            #        fh_1st_km1[i] = field_k[i-1] # upwind # [i] defined at i-1/2
+            #        flx_1st_km1[i] = alpha[i]*(1. - beta[i])*uf[i]*fh_1st_km1[i] # [i] defined at i-1/2
+            #        fh_HOC_km1[i] = fh_HO_n[i] - fh_1st_km1[i] # [i] defined at i-1/2
+            #        flx_HOC_km1[i] = alpha[i]*uf[i]*fh_HOC_km1[i] # [i] defined at i-1/2
+            #else:
+        #field[it+1] = field_k.copy()
+
+    return field
+
+
+def quadh(fm1, f, fp1):
+    """This quadratic interpolation for f[i+1/2] leads to a cubic approximation when put in the FV ddx scheme. The quadratic interpolation matches the integral of the polynomial to the integral of the field over the three cells. See notes sent by James Kent on 28-11-2024.
+    --- in ---
+    fm1 : f[i-1]
+    f   : f[i]
+    fp1 : f[i+1]
+    --- out --- 
+    f[i+1/2] 
+    """
+    return (2.*fp1 + 5.*f - fm1)/6.
+
+
+def ddx(fmh, fph, dxc):
+    """This function computes the first derivative of a field f with respect to x with a finite-volume method. 
+    dfdx[i] = (f_{i+1/2} - f_{i-1/2})/dx
+    fmh : f_{i-1/2}
+    fph : f_{i+1/2}
+    """
+    return (fph - fmh)/dxc
