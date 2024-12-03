@@ -2083,7 +2083,7 @@ def RK2QC(init, nt, dt, uf, dxc, solver='NumPy', kmax=2):
     nx = len(init)
     field = np.zeros((nt+1, nx))
     field[0] = init.copy()
-    fh_HO_n, flx_HO_n, fh_1st_km1, flx_1st_km1, fh_HOC_km1, flx_HOC_km1, rhs, field_k, beta = np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx)
+    fh_HO_n, flx_HO_n, fh_1st_km1, flx_1st_km1, fh_HOC_km1, flx_HOC_km1, rhs, beta = np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx)
     M = np.zeros((nx, nx))
     solverfn = getattr(sv, solver)
 
@@ -2110,20 +2110,11 @@ def RK2QC(init, nt, dt, uf, dxc, solver='NumPy', kmax=2):
                 flx_1st_km1[i] = alpha[i]*(1. - beta[i])*uf[i]*fh_1st_km1[i] # [i] defined at i-1/2
                 fh_HOC_km1[i] = fh_HO_n[i] - fh_1st_km1[i] # [i] defined at i-1/2
                 flx_HOC_km1[i] = alpha[i]*uf[i]*fh_HOC_km1[i] # [i] defined at i-1/2
-        #for k in range(1, kmax + 1):
             for i in range(nx):
                 rhs[i] = field[it,i] - dt*(ddx(flx_HO_n[i], flx_HO_n[(i+1)%nx], dxc[i]) + \
                         ddx(flx_1st_km1[i], flx_1st_km1[(i+1)%nx], dxc[i]) + \
                         ddx(flx_HOC_km1[i], flx_HOC_km1[(i+1)%nx], dxc[i])) # [i] defined at i
             field[it+1] = solverfn(M, fh_1st_km1, rhs, 1)    
-            #if k != kmax:
-            #    for i in range(nx):
-            #        fh_1st_km1[i] = field_k[i-1] # upwind # [i] defined at i-1/2
-            #        flx_1st_km1[i] = alpha[i]*(1. - beta[i])*uf[i]*fh_1st_km1[i] # [i] defined at i-1/2
-            #        fh_HOC_km1[i] = fh_HO_n[i] - fh_1st_km1[i] # [i] defined at i-1/2
-            #        flx_HOC_km1[i] = alpha[i]*uf[i]*fh_HOC_km1[i] # [i] defined at i-1/2
-            #else:
-        #field[it+1] = field_k.copy()
 
     return field
 
