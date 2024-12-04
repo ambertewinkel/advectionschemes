@@ -39,7 +39,7 @@ def main():
     
     # Input booleans
     limitCto1 = False
-    create_animation = False
+    create_animation = True
     check_orderofconvergence = False
     accuracy_in = 'space with C const' # 'space with dt const' or 'time with dx const' or 'space with C const'; (relevant only if check_orderofconvergence == True)
     date = dati.date.today().strftime("%d%m%Y")                   # date of the run
@@ -116,11 +116,11 @@ def main():
 
     # Initial conditions
     analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
-    dt = 0.01                   # time step
-    nt = 1                  # number of time steps
-    nx = 40                     # number of points in space
+    dt = 1/80#0.01                   # time step
+    nt = 80                  # number of time steps
+    nx = 100                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 1.#2.5#1.#2.#3.125#6.25#10.#8.75#6.25#3.125#3.125#3.125#1.5625#3.125#12.5#6.25#5.0#6.25#6.0#12.5#3.125           # constant velocity
+    uconstant = 1.#3.125#2.5#1.#2.#3.125#6.25#10.#8.75#6.25#3.125#3.125#3.125#1.5625#3.125#12.5#6.25#5.0#6.25#6.0#12.5#3.125           # constant velocity
     coords = 'uniform'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]
@@ -146,15 +146,15 @@ def main():
             filename = outputdir + 'out.log'
             os.remove(filename)
     elif save_as == 'store':
-        if not os.path.exists('./output/' + date + '/'):
-            os.mkdir('./output/' + date + '/')
+        if not os.path.exists('./output/dated/' + date + '/'):
+            os.mkdir('./output/dated/' + date + '/')
             print("Folder %s created" % date)
-        outputdir = f'./output/{date}/{schemenames_settings}/' 
+        outputdir = f'./output/dated/{date}/{schemenames_settings}/' 
         i = 0 
         while os.path.exists(outputdir):
             print("Folder %s already exists" % outputdir)
             i += 1
-            outputdir = f'./output/{date}/{schemenames_settings}_{i}/'
+            outputdir = f'./output/dated/{date}/{schemenames_settings}_{i}/'
         os.mkdir(outputdir)
         print("Folder %s created" % outputdir)
         filename = outputdir + 'out.log'

@@ -2083,7 +2083,7 @@ def RK2QC(init, nt, dt, uf, dxc, solver='NumPy', kmax=2):
     nx = len(init)
     field = np.zeros((nt+1, nx))
     field[0] = init.copy()
-    fh_HO_n, flx_HO_n, fh_1st_km1, flx_1st_km1, fh_HOC_km1, flx_HOC_km1, rhs, beta = np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx)
+    fieldh_HO_n, flx_HO_n, fieldh_1st_km1, flx_1st_km1, fieldh_HO_km1, fieldh_HOC_km1, flx_HOC_km1, rhs, beta = np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx)
     M = np.zeros((nx, nx))
     solverfn = getattr(sv, solver)
 
@@ -2104,17 +2104,18 @@ def RK2QC(init, nt, dt, uf, dxc, solver='NumPy', kmax=2):
         field[it+1] = field[it].copy() # not actually in the equations, this is to make the computer code more concise
         for k in range(kmax):
             for i in range(nx):
-                fh_HO_n[i] = quadh(field[it,i-2], field[it,i-1], field[it,i]) # [i] defined at i-1/2
-                flx_HO_n[i] = (1. - alpha[i])*uf[i]*fh_HO_n[i] # [i] defined at i-1/2
-                fh_1st_km1[i] = field[it+1,i-1] # upwind # [i] defined at i-1/2 # not actually field[it+1], this is to make the computer code more concise
-                flx_1st_km1[i] = alpha[i]*(1. - beta[i])*uf[i]*fh_1st_km1[i] # [i] defined at i-1/2
-                fh_HOC_km1[i] = fh_HO_n[i] - fh_1st_km1[i] # [i] defined at i-1/2
-                flx_HOC_km1[i] = alpha[i]*uf[i]*fh_HOC_km1[i] # [i] defined at i-1/2
+                fieldh_HO_n[i] = quadh(field[it,i-2], field[it,i-1], field[it,i]) # [i] defined at i-1/2
+                flx_HO_n[i] = (1. - alpha[i])*uf[i]*fieldh_HO_n[i] # [i] defined at i-1/2
+                fieldh_1st_km1[i] = field[it+1,i-1] # upwind # [i] defined at i-1/2 # not actually field[it+1], this is to make the computer code more concise
+                flx_1st_km1[i] = alpha[i]*(1. - beta[i])*uf[i]*fieldh_1st_km1[i] # [i] defined at i-1/2
+                fieldh_HO_km1[i] = quadh(field[it+1,i-2], field[it+1,i-1], field[it+1,i]) # [i] defined at i-1/2
+                fieldh_HOC_km1[i] = fieldh_HO_km1[i] - fieldh_1st_km1[i] #fieldh_HO_n[i] - fieldh_1st_km1[i] # [i] defined at i-1/2
+                flx_HOC_km1[i] = alpha[i]*uf[i]*fieldh_HOC_km1[i] # [i] defined at i-1/2
             for i in range(nx):
                 rhs[i] = field[it,i] - dt*(ddx(flx_HO_n[i], flx_HO_n[(i+1)%nx], dxc[i]) + \
                         ddx(flx_1st_km1[i], flx_1st_km1[(i+1)%nx], dxc[i]) + \
                         ddx(flx_HOC_km1[i], flx_HOC_km1[(i+1)%nx], dxc[i])) # [i] defined at i
-            field[it+1] = solverfn(M, fh_1st_km1, rhs, 1)    
+            field[it+1] = solverfn(M, fieldh_1st_km1, rhs, 1)    
 
     return field
 
