@@ -35,92 +35,36 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     limitCto1 = False
-    create_animation = True
-    check_orderofconvergence = False
+    create_animation = False
+    check_orderofconvergence = True
     accuracy_in = 'space with C const' # 'space with dt const' or 'time with dx const' or 'space with C const'; (relevant only if check_orderofconvergence == True)
-    date = dati.date.today().strftime("%d%m%Y")                   # date of the run
+    date = dati.date.today().strftime("%Y%m%d")                   # date of the run
     datetime = dati.datetime.now().strftime("%d%m%Y-%H%M%S")      # date and time of the run
 
     # Input cases
     cases = [\
-        #{'scheme':'aiLW3'},
-        ##{'scheme':'LW3', 'FCT':True},
-        ##{'scheme':'iLW3', 'FCT':True},
-        ##{'scheme':'aiLW3', 'FCT':True},
-        #{'scheme':'aiLW3', 'FCT':True, 'returndiffusive':True},
-        #{'scheme': 'BTBS'},
-        #{'scheme': 'Upwind'},
-        ###{'scheme': 'imMPDATA'},
-        ###{'scheme': 'imMPDATA_gauge'},
-        ###{'scheme': 'iMPDATAg', 'FCT':False, 'returndiffusive':False},
-        ###{'scheme': 'iMPDATAg', 'FCT':False, 'returndiffusive':False, 'include_chi':True},
-        #{'scheme': 'iMPDATAg', 'FCT':True, 'returndiffusive':False},
-        #{'scheme': 'iMPDATAg', 'FCT':True, 'returndiffusive':True},
-        #!{'scheme': 'LW3aiU'},
-        #!!{'scheme': 'LW3aiU', 'FCT':True},
-        #!!{'scheme': 'LW3aiU', 'FCT':True, 'explFCTuntil2':True},
-        #!{'scheme': 'LW3aiU', 'FCT':True, 'returnLO':True},
-        #!{'scheme': 'LW3aiU', 'switch_sign':True},
-        #!{'scheme': 'LW3aiU', 'FCT':True, 'switch_sign':True},
-        #!{'scheme': 'LW3aiU', 'FCT':True, 'explFCTuntil2':True},
-        #!!!{'scheme': 'FCTex_im', 'FCT':True},
-        #!!!{'scheme': 'FCTex_im', 'FCT':True, 'explFCTuntil2':True},        
-        #{'scheme': 'FCTex_im', 'FCT':True, 'returnFCT':True},
-        #{'scheme': 'FCTex_im', 'FCT':True, 'returnLO':True},
-        #{'scheme': 'FCTex_im', 'FCT':True, 'returnHO':True},
-        #{'scheme': 'aiUpwind'},
-        #{'scheme':'aiUexcorr'},
-        #{'scheme': 'Upwind'},
-        #{'scheme': 'MPDATA'},
-        #{'scheme': 'MPDATA_gauge', 'corrsource':'previous'},
-        {'scheme': 'RK2QC'},
+        #{'scheme': 'aiUexcorr_testing'},
+        #{'scheme': 'aiUexcorr'},
+        {'scheme': 'aiMPDATA_gauge_solverlast', 'do_beta':'blend'},
         ]
     
     plot_args = [\
-        #{'label':'aiLW3', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        ##{'label':'LW3_FCT', 'color':'red', 'marker':'o', 'linestyle':'-'},
-        ##{'label':'iLW3_FCT', 'color':'green', 'marker':'x', 'linestyle':'-'},
-        ##{'label':'aiLW3_FCT', 'color':'blue', 'marker':'+', 'linestyle':'-'},
-        #{'label':'aiLW3_FCT_diffusive', 'color':'purple', 'marker':'^', 'linestyle':'-'},
-        #{'label':'BTBS', 'color':'green', 'marker':'s', 'linestyle':'-'},
-        #{'label':'Upwind', 'color':'orange', 'marker':'d', 'linestyle':'-'},
-        ###{'label':'imMPDATA', 'color':'purple', 'marker':'s', 'linestyle':'-'},
-        ###{'label':'imMPDATA_gauge', 'color':'orange', 'marker':'d', 'linestyle':'-'},
-        ###{'label':'iMPDATAg', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        ###{'label':'iMPDATAg_chi', 'color':'black', 'marker':'x', 'linestyle':'-'},
-        #{'label':'iMPDATAg_FCT', 'color':'red', 'marker':'o', 'linestyle':'-'},
-        #{'label':'iMPDATAg_FCT_diffusive', 'color':'green', 'marker':'^', 'linestyle':'-'},
-        #!{'label':'LW3aiU_noFCT', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        #!!{'label':'LW3aiU', 'color':'magenta', 'marker':'o', 'linestyle':'-'},
-        #!!{'label':'LW3aiU_FCT2', 'color':'green', 'marker':'x', 'linestyle':'-'},
-        #!{'label':'LW3aiU_LO', 'color':'green', 'marker':'x', 'linestyle':'-'},
-        #!{'label':'LW3aiU_noFCT_switchsigncorr', 'color':'red', 'marker':'X', 'linestyle':'-'},
-        #!{'label':'LW3aiU_switchsigncorr', 'color':'purple', 'marker':'x', 'linestyle':'-'},
-        #!{'label':'LW3aiU_FCT2', 'color':'pink', 'marker':'+', 'linestyle':'-'},
-        #!!!{'label':'FCTex-im', 'color':'blue', 'marker':'+', 'linestyle':'-'},
-        #!!!{'label':'FCTex-im_FCT2', 'color':'red', 'marker':'x', 'linestyle':'-'},
-        #{'label':'FCTex-im_FCT', 'color':'purple', 'marker':'+', 'linestyle':'-'},
-        #{'label':'FCTex-im_LO', 'color':'green', 'marker':'x', 'linestyle':'-'},
-        #{'label':'FCTex-im_HO', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        #{'label':'aiUpwind', 'color':'green', 'marker':'x', 'linestyle':'-'},
-        #{'label':'aiUexcorr', 'color':'orange',  'marker':'+', 'linestyle':'-'},
-        #{'label':'Upwind', 'color':'magenta', 'marker':'o', 'linestyle':'-'},
-        #{'label':'MPDATA', 'color':'green', 'marker':'x', 'linestyle':'-'},
-        #{'label':'LW', 'color':'blue', 'marker':'+', 'linestyle':'-'},
-        {'label':'RK2QC', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        {'label':'aiMPDATAg_solverlast_chinomax(0,_)', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        #{'label':'aiUexcorr_testing', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        #{'label':'aiUexcorr', 'color':'green', 'marker':'+', 'linestyle':'-'},
         ]
 
     # Initial conditions
     analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
-    dt = 1/80#0.01                   # time step
-    nt = 80                  # number of time steps
-    nx = 100                     # number of points in space
+    dt = 0.01                   # time step
+    nt = 1                  # number of time steps
+    nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 1.#3.125#2.5#1.#2.#3.125#6.25#10.#8.75#6.25#3.125#3.125#3.125#1.5625#3.125#12.5#6.25#5.0#6.25#6.0#12.5#3.125           # constant velocity
+    uconstant = 1.#2.5           # constant velocity
     coords = 'uniform'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]

@@ -1197,7 +1197,7 @@ def aiMPDATA_gauge_solverlast(init, nt, dt, uf, dxc, do_beta='switch', solver='N
         beta = np.maximum.reduce([np.zeros(len(cc)), 1 - 1/cc, 1 - 1/np.roll(cc,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
     else:
         print('Error: do_beta must be either "switch" or "blend"')
-    chi = np.maximum(1 - 2*beta, np.zeros(len(init))) # chi[i] is at i-1/2
+    chi = np.maximum(1 - 2*beta, np.zeros(len(init))) # chi[i] is at i-1/2 # also tested on 18-12-2024 with just chi=1-2*beta
 
     # Define the matrix to solve
     M = np.zeros((len(init), len(init)))
@@ -2052,6 +2052,7 @@ def aiUexcorr(init, nt, dt, uf, dxc, solver='NumPy', do_beta='blend', niter=1):#
         print('Error: do_beta must be either "switch" or "blend"')
     chi = np.maximum(1 - 2*beta, np.zeros(len(init))) # chi[i] is at i-1/2 #!!! 
     eta = 1. - 3*beta + 3*beta*beta
+    chi = np.zeros(nx)
 
     ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
     ufm = 0.5*(uf - abs(uf))
@@ -2074,6 +2075,48 @@ def aiUexcorr(init, nt, dt, uf, dxc, solver='NumPy', do_beta='blend', niter=1):#
         field[it+1] = solverfn(M, field[it], rhs, niter)
 
     return field
+
+
+def aiUexcorr_testing(init, nt, dt, uf, dxc, solver='NumPy', do_beta='blend', niter=1):#, FCT=False, returnLO=False, returnFCT=False, returnHO=False, explFCTuntil2=False):
+    """This scheme was derived on 25-11-2024 by AW. It has adaptively implicit upwind with a third-order explicit correction (mathematically; I think)."""
+
+    c = dt*uf/dxc # assumes uniform grid
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+
+    solverfn = getattr(sv, solver)
+    beta = np.ones(len(init)) # beta[i] is at i-1/2
+
+    beta = 1 - 1/c # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
+   
+    chi = 1 - 2*beta # chi[i] is at i-1/2 #!!! 
+    eta = 1. - 3*beta + 3*beta*beta
+    chi = np.zeros(nx)
+
+    ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
+    ufm = 0.5*(uf - abs(uf))
+
+    # Define the matrix to solve
+    M = np.zeros((len(init), len(init)))
+    for i in range(len(init)): 
+        M[i,i] = 1. + dt*(np.roll(beta*ufp,-1)[i] - beta[i]*ufm[i])/dxc[i]
+        M[i,(i-1)%len(init)] = -dt*beta[i]*ufp[i]/dxc[i]
+        M[i,(i+1)%len(init)] = dt*np.roll(beta*ufm,-1)[i]/dxc[i]
+    
+    # Time stepping
+    for it in range(nt):
+        rhs = field[it] - c*(1 - beta)*(field[it] - np.roll(field[it],1)) \
+            - 0.5*(c*c*c*(1 - beta)*beta + c - c*c*chi)*(np.roll(field[it],-1) - 2*field[it] + np.roll(field[it],1)) \
+            + (0.5*(c*c*c*c*(1 - beta)*beta*beta + c*c*beta - c*c*c*chi) + (c*c*c*c*(1 - beta)*beta*chi + c - c*c*c*eta)/6) \
+            *(np.roll(field[it],-1) - 3*field[it] + 3*np.roll(field[it],1) - np.roll(field[it],2)) \
+            + 0.5*c*c*c*(1 - beta)*beta*(field[it] - 2*np.roll(field[it],1) + np.roll(field[it],2)) \
+            - (0.5*c*c*c*c*(1 - beta)*beta + c*c*c*c*(1 - beta)*beta*chi/6)*(field[it] - 3*np.roll(field[it],1) + 3*np.roll(field[it],2) - np.roll(field[it],3))
+        field[it+1] = solverfn(M, field[it], rhs, niter)
+
+    return field
+
+
 
 
 def RK2QC(init, nt, dt, uf, dxc, solver='NumPy', kmax=2):
