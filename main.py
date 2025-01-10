@@ -35,7 +35,7 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     limitCto1 = False
@@ -49,22 +49,24 @@ def main():
     cases = [\
         #{'scheme': 'aiUexcorr_testing'},
         #{'scheme': 'aiUexcorr'},
-        {'scheme': 'aiMPDATA_gauge_solverlast', 'do_beta':'blend'},
+        ##{'scheme': 'aiMPDATA_gauge_solverlast', 'do_beta':'blend'},
+        {'scheme': 'aiUexcorr_adjusted20250106', 'do_beta':'blend'},
         ]
     
     plot_args = [\
-        {'label':'aiMPDATAg_solverlast_chinomax(0,_)', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        ##{'label':'aiMPDATAg_solverlast_chinomax(0,_)', 'color':'blue', 'marker':'x', 'linestyle':'-'},
         #{'label':'aiUexcorr_testing', 'color':'blue', 'marker':'x', 'linestyle':'-'},
         #{'label':'aiUexcorr', 'color':'green', 'marker':'+', 'linestyle':'-'},
+        {'label':'aiUexcorr_adjusted20250106', 'color':'green', 'marker':'+', 'linestyle':'-'},
         ]
 
     # Initial conditions
-    analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
-    dt = 0.01                   # time step
-    nt = 1                  # number of time steps
-    nx = 40                     # number of points in space
+    analytic = an.sine         # initial condition, options: sine, cosbell, tophat, or combi
+    dt = 0.001                   # time step
+    nt = 2                  # number of time steps
+    nx = 400                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 1.#2.5           # constant velocity
+    uconstant = 1.5#2.5           # constant velocity
     coords = 'uniform'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]
