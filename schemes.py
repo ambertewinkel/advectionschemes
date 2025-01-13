@@ -2169,6 +2169,45 @@ def aiUexcorr_adjusted20250106(init, nt, dt, uf, dxc, solver='NumPy', do_beta='b
     return field
 
 
+def aiUexcorr2(init, nt, dt, uf, dxc, solver='NumPy', do_beta='blend', niter=1):
+    """This is the second-order (supposedly) version of the aiUexcorr scheme. It is based on the same principles, but only up to a second-order correction. See the handwritten derivation from 10-01-2025."""
+
+    c = dt*uf/dxc # assumes uniform grid
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+    solverfn = getattr(sv, solver)
+    beta = np.ones(len(init)) # beta[i] is at i-1/2
+
+    if do_beta == 'switch':
+        beta = np.invert((np.roll(c,1) <= 1.)*(c <= 1.)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit
+    elif do_beta == 'blend':
+        beta = np.maximum.reduce([np.zeros(len(c)), 1 - 1/c, 1 - 1/np.roll(c,1)]) # beta[i] is at i-1/2 # 0: fully explicit, 1: fully implicit 
+    else:
+        print('Error: do_beta must be either "switch" or "blend"')
+    chi = 1. - 2.*beta#np.maximum(1 - 2*beta, np.zeros(len(init))) # chi[i] is at i-1/2 #!!! 
+    eta = 1. - 3*beta + 3*beta*beta
+
+    ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
+    ufm = 0.5*(uf - abs(uf))
+
+    # Define the matrix to solve
+    M = np.zeros((len(init), len(init)))
+    for i in range(len(init)): 
+        M[i,i] = 1. + dt*(np.roll(beta*ufp,-1)[i] - beta[i]*ufm[i])/dxc[i]
+        M[i,(i-1)%len(init)] = -dt*beta[i]*ufp[i]/dxc[i]
+        M[i,(i+1)%len(init)] = dt*np.roll(beta*ufm,-1)[i]/dxc[i]
+    
+    # Time stepping
+    for it in range(nt):
+        rhs = field[it] - c*(1 - beta)*(field[it] - np.roll(field[it],1)) \
+            - 0.5*(-c*c*c*(1 - beta)*beta + c - c*c*chi)*(np.roll(field[it],-1) - 2*field[it] + np.roll(field[it],1)) \
+            - 0.5*c*c*c*(1 - beta)*beta*(field[it] - 2*np.roll(field[it],1) + np.roll(field[it],2))
+        field[it+1] = solverfn(M, field[it], rhs, niter)
+
+    return field
+
+
 def RK2QC(init, nt, dt, uf, dxc, solver='NumPy', kmax=2):
     """This scheme solves second-order Runge-Kutta quasi-cubic scheme. See HW notes sent on 27-11-2024."""
     # assumes u>0
