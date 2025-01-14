@@ -2252,6 +2252,54 @@ def RK2QC(init, nt, dt, uf, dxc, solver='NumPy', kmax=2):
     return field
 
 
+def backward(field, dxc):
+    """This function is used to computes the backward in space discretisation."""
+    return (field - np.roll(field,1))/dxc
+
+def centred(field, dxc):
+    """This function is used to computes the centred in space discretisation."""
+    return (np.roll(field,-1) - np.roll(field,1))/(2*dxc)
+
+
+def RK2_2t1s(init, nt, dt, uf, dxc, f=backward):
+    """This scheme solves second-order two-stage midpoint method Runge-Kutta with a backward in space spatial discretisation. It is explicit. Assumes uniform grid."""
+
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+
+    for it in range(nt):
+        k1 = f(field[it], dxc)
+        field[it+1] = field[it] + dt*f(field[it] + 0.5*dt*k1, dxc)
+            
+    return field
+
+
+def RK2_2t2s(init, nt, dt, uf, dxc, f=centred):
+    """This scheme solves second-order two-stage midpoint method Runge-Kutta with a centred in space discretisation. It is explicit."""
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+
+    for it in range(nt):
+        k1 = f(field[it], dxc)
+        field[it+1] = field[it] + dt*f(field[it] + 0.5*dt*k1, dxc)
+            
+    return field
+
+
+def RK2_2tFCTs(init, nt, dt, uf, dxc):
+    """This scheme has the RK2 midpoint method (two-stage, second-order in time) in time. It combines that with spatial discretisations limited by FCT. """
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+
+    for it in range(nt):
+        k1 = f(field[it], dxc)
+        field[it+1] = field[it] + dt*f(field[it] + 0.5*dt*k1, dxc)
+            
+    return field
+
 def quadh(fm1, f, fp1):
     """This quadratic interpolation for f[i+1/2] leads to a cubic approximation when put in the FV ddx scheme. The quadratic interpolation matches the integral of the polynomial to the integral of the field over the three cells. See notes sent by James Kent on 28-11-2024.
     --- in ---
