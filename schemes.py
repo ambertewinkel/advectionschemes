@@ -2208,7 +2208,7 @@ def aiUexcorr2(init, nt, dt, uf, dxc, solver='NumPy', do_beta='blend', niter=1):
     return field
 
 
-def RK2QC(init, nt, dt, uf, dxc, solver='NumPy', kmax=2):
+def RK2QC(init, nt, dt, uf, dxc, solver='NumPy', kmax=2, set_alpha='max', set_beta=None):
     """This scheme solves second-order Runge-Kutta quasi-cubic scheme. See HW notes sent on 27-11-2024."""
     # assumes u>0
 
@@ -2220,12 +2220,22 @@ def RK2QC(init, nt, dt, uf, dxc, solver='NumPy', kmax=2):
     solverfn = getattr(sv, solver)
 
     c = dt*uf/dxc # assumes uniform grid
-    alpha = np.maximum(0.5, 1. - 1./c) # assumes uniform grid # alpha[i] is at i-1/2
+    #alpha = np.maximum(0.5, 1. - 1./c) # assumes uniform grid # alpha[i] is at i-1/2
     for i in range(nx):
         beta[i] = 0. if c[i] < 0.8 else 1 # beta[i] is at i-1/2
     #print(beta)
+    if set_beta == 'one': 
+        beta = np.ones(len(init))
+
     ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
     ufm = 0.5*(uf - abs(uf))
+
+    if set_alpha == 'max': # assumes uniform grid # alpha[i] is at i-1/2
+        alpha = np.maximum(0.5, 1. - 1./c)
+    elif set_alpha == 'half':
+        alpha = np.full(len(init), 0.5)
+    else:
+        print('Error: set_alpha must be either "half" or "max"')
 
     for i in range(nx):	# includes flx_1st_k # based on implicit upwind matrices above.
         M[i,i] = 1. + dt*(np.roll(alpha*beta*ufp,-1)[i] - alpha[i]*beta[i]*ufm[i])/dxc[i]
@@ -2248,6 +2258,50 @@ def RK2QC(init, nt, dt, uf, dxc, solver='NumPy', kmax=2):
                         ddx(flx_1st_km1[i], flx_1st_km1[(i+1)%nx], dxc[i]) + \
                         ddx(flx_HOC_km1[i], flx_HOC_km1[(i+1)%nx], dxc[i])) # [i] defined at i
             field[it+1] = solverfn(M, fieldh_1st_km1, rhs, 1)    
+
+    return field
+
+
+def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max'):
+    """This scheme solves the non-predictor-corrector version (see above for that one) of the RK2_QC scheme. See HW notes sent on 27-11-2024 and AW notes 14-01-2025.
+    alpha = 'half' or 'max' (0.5 or max(0.5,1-1/c))
+    beta is set to 1 independent of the Courant number"""
+    # assumes u>0
+
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+    M = np.zeros((nx, nx))
+    flx_HO_n, rhs, abu = np.zeros(nx), np.zeros(nx), np.zeros(nx)
+
+    c = dt*uf/dxc # assumes uniform grid
+    solverfn = getattr(sv, solver)
+    beta = np.ones(len(init)) # beta[i] is at i-1/2
+    if set_alpha == 'max': # assumes uniform grid # alpha[i] is at i-1/2
+        alpha = np.maximum(0.5, 1. - 1./c)
+    elif set_alpha == 'half':
+        alpha = np.full(len(init), 0.5)
+    else:
+        print('Error: set_alpha must be either "half" or "max"')
+
+    ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
+    ufm = 0.5*(uf - abs(uf))
+    
+    for i in range(nx):
+        abu[i] = alpha[i]*beta[i]*ufp[i] # assumes u>0, i defined at i-1/2
+
+    for i in range(nx):
+        M[i,i] = 1. + dt*(5.*np.roll(abu,-1)[i] - 2.*abu[i])/(6.*dxc[i])
+        M[i,i-1] = -dt*(np.roll(abu,-1)[i] + 5.*abu[i])/(6.*dxc[i])
+        M[i,(i-2)] = dt*abu[i]/(6.*dxc[i])   
+        M[i,(i+1)%nx] = dt*np.roll(abu,-1)[i]/(3.*dxc[i])
+
+    for it in range(nt):
+        for i in range(nx):
+            flx_HO_n[i] = ((1 - alpha[i]) + alpha[i]*(1 - beta[i]))*uf[i]*quadh(field[it,i-2], field[it,i-1], field[it,i]) # [i] defined at i-1/2
+        for i in range(nx):
+            rhs[i] = field[it,i] - dt*(ddx(flx_HO_n[i], flx_HO_n[(i+1)%nx], dxc[i])) # [i] defined at i
+        field[it+1] = solverfn(M, field[it], rhs, 1) # 15-01-2025: probably only 'NumPy' works here properly as the matrix is not as sparse as before
 
     return field
 
