@@ -2262,10 +2262,10 @@ def RK2QC(init, nt, dt, uf, dxc, solver='NumPy', kmax=2, set_alpha='max', set_be
     return field
 
 
-def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max'):
+def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max', set_beta='one'):
     """This scheme solves the non-predictor-corrector version (see above for that one) of the RK2_QC scheme. See HW notes sent on 27-11-2024 and AW notes 14-01-2025.
     alpha = 'half' or 'max' (0.5 or max(0.5,1-1/c))
-    beta is set to 1 independent of the Courant number"""
+    beta is by default set to 1 independent of the Courant number, but can be set to 'var' to become 0 for C<0.8."""
     # assumes u>0
 
     nx = len(init)
@@ -2276,7 +2276,14 @@ def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max'):
 
     c = dt*uf/dxc # assumes uniform grid
     solverfn = getattr(sv, solver)
-    beta = np.ones(len(init)) # beta[i] is at i-1/2
+    if set_beta == 'one': # beta[i] is at i-1/2
+        beta = np.ones(len(init))
+    elif set_beta == 'var':
+        beta = np.zeros(len(init))
+        for i in range(nx):
+            beta[i] = 0. if c[i] < 0.8 else 1
+    else:
+        print('Error: set_beta must be either "one" or "var"')
     if set_alpha == 'max': # assumes uniform grid # alpha[i] is at i-1/2
         alpha = np.maximum(0.5, 1. - 1./c)
     elif set_alpha == 'half':
@@ -2302,6 +2309,60 @@ def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max'):
         for i in range(nx):
             rhs[i] = field[it,i] - dt*(ddx(flx_HO_n[i], flx_HO_n[(i+1)%nx], dxc[i])) # [i] defined at i
         field[it+1] = solverfn(M, field[it], rhs, 1) # 15-01-2025: probably only 'NumPy' works here properly as the matrix is not as sparse as before
+
+    return field
+
+
+def RK2QC_noPCiter(init, nt, dt, uf, dxc, solver='NumPy', kmax=2, set_alpha='max', set_beta='one'):
+    """This scheme solves an RK2QC scheme that is similar to the RK2QC and RK2QC_noPC schemes above. It is Eq.(99) in SLBweek20250109.pdf.
+    beta is by default set to 1 independent of the Courant number, but can be set to 'var' to become 0 for C<0.8.
+    Difference with RK2QC_noPC above: we iterate over the scheme twice, where the alpha terms are now iterated over: n and n+1 become k-1 and k for k=1,2. See the difference between equation Eq.(86) and (99) in SLBweek20250109.pdf"""
+    # assumes u>0
+
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+    M = np.zeros((nx, nx))
+    flx_HO_n, flx_HO_km1, rhs, abu = np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx)
+
+    c = dt*uf/dxc # assumes uniform grid
+    solverfn = getattr(sv, solver)
+    if set_beta == 'one': # beta[i] is at i-1/2
+        beta = np.ones(len(init))
+    elif set_beta == 'var':
+        beta = np.zeros(len(init))
+        for i in range(nx):
+            beta[i] = 0. if c[i] < 0.8 else 1
+    else:
+        print('Error: set_beta must be either "one" or "var"')
+    if set_alpha == 'max': # assumes uniform grid # alpha[i] is at i-1/2
+        alpha = np.maximum(0.5, 1. - 1./c)
+    elif set_alpha == 'half':
+        alpha = np.full(len(init), 0.5)
+    else:
+        print('Error: set_alpha must be either "half" or "max"')
+
+    ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
+    ufm = 0.5*(uf - abs(uf))
+    
+    for i in range(nx):
+        abu[i] = alpha[i]*beta[i]*ufp[i] # assumes u>0, i defined at i-1/2
+
+    for i in range(nx):
+        M[i,i] = 1. + dt*(5.*np.roll(abu,-1)[i] - 2.*abu[i])/(6.*dxc[i])
+        M[i,i-1] = -dt*(np.roll(abu,-1)[i] + 5.*abu[i])/(6.*dxc[i])
+        M[i,(i-2)] = dt*abu[i]/(6.*dxc[i])   
+        M[i,(i+1)%nx] = dt*np.roll(abu,-1)[i]/(3.*dxc[i])
+
+    for it in range(nt):
+        field[it+1] = field[it].copy() # not in eq, for code simplification
+        for k in range(kmax):
+            for i in range(nx):
+                flx_HO_n[i] = (1 - alpha[i])*uf[i]*quadh(field[it,i-2], field[it,i-1], field[it,i]) # [i] defined at i-1/2
+                flx_HO_km1[i] = alpha[i]*(1 - beta[i])*uf[i]*quadh(field[it+1,i-2], field[it+1,i-1], field[it+1,i]) # not it+1 in eq, for code simplification
+            for i in range(nx):
+                rhs[i] = field[it,i] - dt*(ddx(flx_HO_n[i], flx_HO_n[(i+1)%nx], dxc[i]) + ddx(flx_HO_km1[i], flx_HO_km1[(i+1)%nx], dxc[i])) # [i] defined at i
+            field[it+1] = solverfn(M, field[it], rhs, 1) # 15-01-2025: probably only 'NumPy' works here properly as the matrix is not as sparse as before
 
     return field
 

@@ -47,36 +47,42 @@ def main():
 
     # Input cases
     cases = [\
-        #{'scheme': 'aiUexcorr_testing'},
-        #{'scheme': 'aiUexcorr'},
-        ##{'scheme': 'aiMPDATA_gauge_solverlast', 'do_beta':'blend'},
-        {'scheme': 'RK2QC_noPC'},
-        {'scheme': 'RK2QC_noPC', 'set_alpha': 'half'},
+        ###{'scheme': 'RK2QC_noPC'},
+        ###{'scheme': 'RK2QC_noPC', 'set_alpha': 'half'},
+        ###{'scheme': 'RK2QC_noPC', 'set_beta':'var'},        
+        ###{'scheme': 'RK2QC_noPC', 'set_alpha':'half', 'set_beta':'var'},        
         #{'scheme': 'RK2QC'},
-        {'scheme': 'RK2QC', 'set_beta': 'one'},	
+        #{'scheme': 'RK2QC', 'set_beta': 'one'},	
         #{'scheme': 'RK2QC', 'set_alpha': 'half'},
-        {'scheme': 'RK2QC', 'set_alpha': 'half', 'set_beta': 'one'},
+        #{'scheme': 'RK2QC', 'set_alpha': 'half', 'set_beta': 'one'},
+        {'scheme': 'RK2QC_noPCiter'},
+        {'scheme': 'RK2QC_noPCiter', 'set_alpha': 'half'},
+        {'scheme': 'RK2QC_noPCiter', 'set_beta':'var'},        
+        {'scheme': 'RK2QC_noPCiter', 'set_alpha':'half', 'set_beta':'var'},          
         ]
     
     plot_args = [\
-        ##{'label':'aiMPDATAg_solverlast_chinomax(0,_)', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        #{'label':'aiUexcorr_testing', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        #{'label':'aiUexcorr', 'color':'green', 'marker':'+', 'linestyle':'-'},
-        {'label':'RK2_QC_noPC_amax_b1', 'color':'green', 'marker':'o', 'linestyle':'-'},
-        {'label':'RK2_QC_noPC_a0p5_b1', 'color':'blue', 'marker':'o', 'linestyle':'-'},
+        ##{'label':'RK2QC_noPC_amax_b1', 'color':'green', 'marker':'o', 'linestyle':'-'},
+        ##{'label':'RK2QC_noPC_a0p5_b1', 'color':'blue', 'marker':'o', 'linestyle':'-'},
+        ##{'label':'RK2QC_noPC_amax', 'color':'green', 'marker':'o', 'linestyle':'-'},
+        ##{'label':'RK2QC_noPC_a0p5', 'color':'blue', 'marker':'o', 'linestyle':'-'},
         #{'label':'RK2_QC_amax', 'color':'red', 'marker':'X', 'linestyle':'-'},
-        {'label':'RK2_QC_amax_b1', 'color':'red', 'marker':'+', 'linestyle':'-'},
+        #{'label':'RK2_QC_amax_b1', 'color':'red', 'marker':'+', 'linestyle':'-'},
         #{'label':'RK2_QC_a0p5', 'color':'purple', 'marker':'X', 'linestyle':'-'},
-        {'label':'RK2_QC_a0p5_b1', 'color':'purple', 'marker':'+', 'linestyle':'-'},
+        #{'label':'RK_2QC_a0p5_b1', 'color':'purple', 'marker':'+', 'linestyle':'-'},
+        {'label':'RK2QC_noPCiter_amax_b1', 'color':'green', 'marker':'o', 'linestyle':'--'},
+        {'label':'RK2QC_noPCiter_a0p5_b1', 'color':'blue', 'marker':'o', 'linestyle':'--'},
+        {'label':'RK2QC_noPCiter_amax', 'color':'green', 'marker':'o', 'linestyle':'--'},
+        {'label':'RK2QC_noPCiter_a0p5', 'color':'blue', 'marker':'o', 'linestyle':'--'},
         ]
 
     # Initial conditions
     analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
     dt = 0.01                   # time step
-    nt = 100#int(100/6.25)                  # number of time steps
+    nt = 16 #int(100/6.25)                  # number of time steps
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 6.25           # constant velocity
+    uconstant = 6.25#3.125#1.#6.25           # constant velocity
     coords = 'uniform'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]
