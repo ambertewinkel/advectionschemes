@@ -2262,7 +2262,7 @@ def RK2QC(init, nt, dt, uf, dxc, solver='NumPy', kmax=2, set_alpha='max', set_be
     return field
 
 
-def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max', set_beta='one'):
+def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max'):
     """This scheme solves the non-predictor-corrector version (see above for that one) of the RK2_QC scheme. See HW notes sent on 27-11-2024 and AW notes 14-01-2025.
     alpha = 'half' or 'max' (0.5 or max(0.5,1-1/c))
     beta is by default set to 1 independent of the Courant number, but can be set to 'var' to become 0 for C<0.8."""
@@ -2272,18 +2272,11 @@ def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max', set_beta=
     field = np.zeros((nt+1, nx))
     field[0] = init.copy()
     M = np.zeros((nx, nx))
-    flx_HO_n, rhs, abu = np.zeros(nx), np.zeros(nx), np.zeros(nx)
+    flx_HO_n, rhs, au = np.zeros(nx), np.zeros(nx), np.zeros(nx)
 
     c = dt*uf/dxc # assumes uniform grid
     solverfn = getattr(sv, solver)
-    if set_beta == 'one': # beta[i] is at i-1/2
-        beta = np.ones(len(init))
-    elif set_beta == 'var':
-        beta = np.zeros(len(init))
-        for i in range(nx):
-            beta[i] = 0. if c[i] < 0.8 else 1
-    else:
-        print('Error: set_beta must be either "one" or "var"')
+
     if set_alpha == 'max': # assumes uniform grid # alpha[i] is at i-1/2
         alpha = np.maximum(0.5, 1. - 1./c)
     elif set_alpha == 'half':
@@ -2294,18 +2287,17 @@ def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max', set_beta=
     ufp = 0.5*(uf + abs(uf)) # uf[i] is at i-1/2
     ufm = 0.5*(uf - abs(uf))
     
-    for i in range(nx):
-        abu[i] = alpha[i]*beta[i]*ufp[i] # assumes u>0, i defined at i-1/2
+    au = alpha*ufp # assumes u>0, i defined at i-1/2
 
     for i in range(nx):
-        M[i,i] = 1. + dt*(5.*np.roll(abu,-1)[i] - 2.*abu[i])/(6.*dxc[i])
-        M[i,i-1] = -dt*(np.roll(abu,-1)[i] + 5.*abu[i])/(6.*dxc[i])
-        M[i,(i-2)] = dt*abu[i]/(6.*dxc[i])   
-        M[i,(i+1)%nx] = dt*np.roll(abu,-1)[i]/(3.*dxc[i])
+        M[i,i] = 1. + dt*(5.*np.roll(au,-1)[i] - 2.*au[i])/(6.*dxc[i])
+        M[i,i-1] = -dt*(np.roll(au,-1)[i] + 5.*au[i])/(6.*dxc[i])
+        M[i,(i-2)] = dt*au[i]/(6.*dxc[i])   
+        M[i,(i+1)%nx] = dt*np.roll(au,-1)[i]/(3.*dxc[i])
 
     for it in range(nt):
         for i in range(nx):
-            flx_HO_n[i] = ((1 - alpha[i]) + alpha[i]*(1 - beta[i]))*uf[i]*quadh(field[it,i-2], field[it,i-1], field[it,i]) # [i] defined at i-1/2
+            flx_HO_n[i] = (1 - alpha[i])*uf[i]*quadh(field[it,i-2], field[it,i-1], field[it,i]) # [i] defined at i-1/2
         for i in range(nx):
             rhs[i] = field[it,i] - dt*(ddx(flx_HO_n[i], flx_HO_n[(i+1)%nx], dxc[i])) # [i] defined at i
         field[it+1] = solverfn(M, field[it], rhs, 1) # 15-01-2025: probably only 'NumPy' works here properly as the matrix is not as sparse as before
