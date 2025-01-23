@@ -40,41 +40,46 @@ def main():
     # Input booleans
     limitCto1 = False
     create_animation = False
-    check_orderofconvergence = False
+    check_orderofconvergence = True
     accuracy_in = 'space with C const' # 'space with dt const' or 'time with dx const' or 'space with C const'; (relevant only if check_orderofconvergence == True)
     date = dati.date.today().strftime("%Y%m%d")                   # date of the run
     datetime = dati.datetime.now().strftime("%d%m%Y-%H%M%S")      # date and time of the run
 
     # Input cases
     cases = [\
-        ###{'scheme': 'RK2QC_noPC'},
-        ###{'scheme': 'RK2QC_noPC', 'set_alpha': 'half'},
-        ###{'scheme': 'RK2QC_noPC', 'set_beta':'var'},        
-        ###{'scheme': 'RK2QC_noPC', 'set_alpha':'half', 'set_beta':'var'},        
+        {'scheme': 'RK2QC_noPC'},
+        {'scheme': 'RK2QC_noPC', 'set_alpha': 'half'},
+        #!{'scheme': 'RK2QC_noPC', 'set_beta':'var'},        
+        #!!{'scheme': 'RK2QC_noPC', 'set_alpha':'half', 'set_beta':'var'},        
         #{'scheme': 'RK2QC'},
         #{'scheme': 'RK2QC', 'set_beta': 'one'},	
         #{'scheme': 'RK2QC', 'set_alpha': 'half'},
         #{'scheme': 'RK2QC', 'set_alpha': 'half', 'set_beta': 'one'},
         {'scheme': 'RK2QC_noPCiter'},
         {'scheme': 'RK2QC_noPCiter', 'set_alpha': 'half'},
-        {'scheme': 'RK2QC_noPCiter', 'set_beta':'var'},        
-        {'scheme': 'RK2QC_noPCiter', 'set_alpha':'half', 'set_beta':'var'},          
+        #####{'scheme': 'RK2QC_noPCiter', 'set_beta':'var'},        
+        #!!{'scheme': 'RK2QC_noPCiter', 'set_alpha':'half', 'set_beta':'var'},          
         ]
     
     plot_args = [\
-        ##{'label':'RK2QC_noPC_amax_b1', 'color':'green', 'marker':'o', 'linestyle':'-'},
-        ##{'label':'RK2QC_noPC_a0p5_b1', 'color':'blue', 'marker':'o', 'linestyle':'-'},
-        ##{'label':'RK2QC_noPC_amax', 'color':'green', 'marker':'o', 'linestyle':'-'},
-        ##{'label':'RK2QC_noPC_a0p5', 'color':'blue', 'marker':'o', 'linestyle':'-'},
+        {'label':'RK2QC_noPC_amax_b1', 'color':'green', 'marker':'o', 'linestyle':'-'},
+        {'label':'RK2QC_noPC_a0p5_b1', 'color':'blue', 'marker':'o', 'linestyle':'-'},
+        #!{'label':'RK2QC_noPC_amax', 'color':'purple', 'marker':'+', 'linestyle':'-'},
+        #!!{'label':'RK2QC_noPC_a0p5', 'color':'red', 'marker':'+', 'linestyle':'-'},
         #{'label':'RK2_QC_amax', 'color':'red', 'marker':'X', 'linestyle':'-'},
         #{'label':'RK2_QC_amax_b1', 'color':'red', 'marker':'+', 'linestyle':'-'},
         #{'label':'RK2_QC_a0p5', 'color':'purple', 'marker':'X', 'linestyle':'-'},
         #{'label':'RK_2QC_a0p5_b1', 'color':'purple', 'marker':'+', 'linestyle':'-'},
-        {'label':'RK2QC_noPCiter_amax_b1', 'color':'green', 'marker':'o', 'linestyle':'--'},
-        {'label':'RK2QC_noPCiter_a0p5_b1', 'color':'blue', 'marker':'o', 'linestyle':'--'},
-        {'label':'RK2QC_noPCiter_amax', 'color':'green', 'marker':'o', 'linestyle':'--'},
-        {'label':'RK2QC_noPCiter_a0p5', 'color':'blue', 'marker':'o', 'linestyle':'--'},
+        {'label':'RK2QC_noPCiter_amax_b1', 'color':'yellow', 'marker':'X', 'linestyle':'--'},
+        {'label':'RK2QC_noPCiter_a0p5_b1', 'color':'cyan', 'marker':'X', 'linestyle':'--'},
+        #####{'label':'RK2QC_noPCiter_amax', 'color':'pink', 'marker':'x', 'linestyle':'--'},
+        #!!{'label':'RK2QC_noPCiter_a0p5', 'color':'orange', 'marker':'x', 'linestyle':'--'},
         ]
+    
+    # 21-01-2025 - RK2QC noPC options:
+    #c=0.4 amax = ap05 and bvar != b1 so four curves in total
+    #c=1.25 amax =ap05 and bvar = b1 so two lines in total
+    #c=2.5 amax != ap05 and bvar = b1 so four lines in total
 
     # Initial conditions
     analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
@@ -82,7 +87,7 @@ def main():
     nt = 16 #int(100/6.25)                  # number of time steps
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 6.25#3.125#1.#6.25           # constant velocity
+    uconstant = 6.25           # constant velocity
     coords = 'uniform'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]

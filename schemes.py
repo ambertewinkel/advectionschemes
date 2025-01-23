@@ -2386,3 +2386,57 @@ def ddx(fmh, fph, dxc):
     fph : f_{i+1/2}
     """
     return (fph - fmh)/dxc
+
+
+def butcher_PR05Vr():
+    gamma = 1. - 0.5*np.sqrt(2)
+    c = np.array((gamma, 1. - gamma, 0.5))
+    A = np.array(((gamma, 0., 0.), (1. - 2.*gamma, gamma, 0.), (0.5 - gamma, 0., gamma)))
+    b = np.array((1/6, 1/6, 2/3))
+    
+    return c, A, b
+
+def RK(init, nt, dt, uf, dxc, butcher, f, solver='NumPy'):
+    """This scheme implements a general diagonally implicit Runge-Kutta scheme based on the Butcher tableau provided. f is the function that computes the right-hand side of the ODE, i.e., here -d(u psi)/dx."""
+
+    c, A, b = butcher
+    s = len(c)
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+    k = np.zeros(s)
+    solverfn = getattr(sv, solver)
+
+    t = it*dt
+    for ik in range(s):
+        k_rhs[ik] = f(c[ik], A[ik])#$f(t + dt*c[ik], field[it,i] + dt*(np.sum(A[i,j]*k[j])))
+        k_lhs[ik] = f()
+
+        field[it+1] += dt*b[ik]*k[ik]
+
+    return field
+
+
+
+def f_QC(fieldarr, t, dt, c, karr, Aarrex, Aarrim, knum):
+    """The spatial discretisation for quasicubic."""
+    
+    im0ex1 = np.array([1 if i < knum else 0 for i in range(len(karr))])
+    nx = len(fieldarr)
+    for i in range(nx):
+        y_in[i] = fieldarr[i] + dt*np.sum(im0ex1*ddx(quad)) # assumes explicit and implicit can be split up easily
+        lhs[i] = 1. - 
+
+    
+
+    
+    k = - u * ddxfunction(quadhm and quadhp)
+    return k
+
+
+
+
+            #    flx_HO_n[i] = (1 - alpha[i])*uf[i]*quadh(field[it,i-2], field[it,i-1], field[it,i]) # [i] defined at i-1/2
+            #    flx_HO_km1[i] = alpha[i]*(1 - beta[i])*uf[i]*quadh(field[it+1,i-2], field[it+1,i-1], field[it+1,i]) # not it+1 in eq, for code simplification
+            #for i in range(nx):
+            #    rhs[i] = field[it,i] - dt*(ddx(flx_HO_n[i], flx_HO_n[(i+1)%nx], dxc[i]) + ddx(flx_HO_km1[i], flx_HO_km1[(i+1)%nx], dxc[i])) # [i] defined at i
