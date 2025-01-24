@@ -2262,7 +2262,7 @@ def RK2QC(init, nt, dt, uf, dxc, solver='NumPy', kmax=2, set_alpha='max', set_be
     return field
 
 
-def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max'):
+def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max', FCT=False):
     """This scheme solves the non-predictor-corrector version (see above for that one) of the RK2_QC scheme. See HW notes sent on 27-11-2024 and AW notes 14-01-2025.
     alpha = 'half' or 'max' (0.5 or max(0.5,1-1/c))
     beta is by default set to 1 independent of the Courant number, but can be set to 'var' to become 0 for C<0.8."""
@@ -2294,13 +2294,33 @@ def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max'):
         M[i,i-1] = -dt*(np.roll(au,-1)[i] + 5.*au[i])/(6.*dxc[i])
         M[i,(i-2)] = dt*au[i]/(6.*dxc[i])   
         M[i,(i+1)%nx] = dt*np.roll(au,-1)[i]/(3.*dxc[i])
-
+        
     for it in range(nt):
         for i in range(nx):
-            flx_HO_n[i] = (1 - alpha[i])*uf[i]*quadh(field[it,i-2], field[it,i-1], field[it,i]) # [i] defined at i-1/2
+            flx_HO_n[i] = dt*(1 - alpha[i])*uf[i]*quadh(field[it,i-2], field[it,i-1], field[it,i]) # [i] defined at i-1/2
         for i in range(nx):
-            rhs[i] = field[it,i] - dt*(ddx(flx_HO_n[i], flx_HO_n[(i+1)%nx], dxc[i])) # [i] defined at i
+            rhs[i] = field[it,i] - (ddx(flx_HO_n[i], flx_HO_n[(i+1)%nx], dxc[i])) # [i] defined at i
         field[it+1] = solverfn(M, field[it], rhs, 1) # 15-01-2025: probably only 'NumPy' works here properly as the matrix is not as sparse as before
+
+        if FCT == True: # low-order solution is adaptively implicit upwind. (assumes u>0 so actually FTBS&BTBS)
+            # Calculate low-order solution field_LO
+            M_LO = np.zeros((nx, nx)) 
+            theta = np.maximum(1. - 1./c, np.zeros(nx)) # [i] defined at i-1/2; theta: blend! Off-centring in time for aiUpwind
+            for i in prange(nx):
+                M_LO[i,i] = 1. + theta[i]*c[i]
+                M_LO[i,(i-1)%len(init)] = -1.*theta[i]*c[i]
+            rhs_LO = field[it] - c*(1. - theta)*(field[it] - np.roll(field[it],1))
+            field_LO = solverfn(M_LO, field[it], rhs_LO, 1)
+            
+            # Calculate low-order fluxes flx_LO
+            flx_LO = dt*uf*(theta*np.roll(field_LO,1) + (1. - theta)*np.roll(field[it],1)) # assumes u>0, [i] defined at i-1/2
+            
+            # Calculate high-order fluxes flx_HO
+            flx_HO_np1 = dt*uf*(alpha*quadh(np.roll(field[it+1],2), np.roll(field[it+1],1), field[it+1])) # assumes u>0, [i] defined at i-1/2
+            flx_HO = flx_HO_n + flx_HO_np1 # [i] defined at i-1/2
+            corr = flx_HO - flx_LO # flux between HO and LO, [i] defined at i-1/2
+            corr = lim.FCT(field_LO, corr, dxc, previous=[None for i in range(nx)])
+            field[it+1] = field_LO - (np.roll(corr,-1) - corr)/dxc
 
     return field
 
