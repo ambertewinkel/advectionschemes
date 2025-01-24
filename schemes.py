@@ -2318,8 +2318,11 @@ def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max', FCT=False
             # Calculate high-order fluxes flx_HO
             flx_HO_np1 = dt*uf*(alpha*quadh(np.roll(field[it+1],2), np.roll(field[it+1],1), field[it+1])) # assumes u>0, [i] defined at i-1/2
             flx_HO = flx_HO_n + flx_HO_np1 # [i] defined at i-1/2
+            
+            # Apply flux-corrected transport
+            previous = [field[it][i] if c[i] <= 1. else None for i in range(len(init))] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used.
             corr = flx_HO - flx_LO # flux between HO and LO, [i] defined at i-1/2
-            corr = lim.FCT(field_LO, corr, dxc, previous=[None for i in range(nx)])
+            corr = lim.FCT(field_LO, corr, dxc, previous)
             field[it+1] = field_LO - (np.roll(corr,-1) - corr)/dxc
 
     return field
