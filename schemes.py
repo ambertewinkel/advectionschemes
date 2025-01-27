@@ -2401,3 +2401,44 @@ def ddx(fmh, fph, dxc):
     fph : f_{i+1/2}
     """
     return (fph - fmh)/dxc
+
+
+def PR05TVr():
+    gamma = 1. - 0.5*np.sqrt(2)
+    A = np.array([[gamma, 0, 0],[1 - 2*gamma, gamma, 0],[0.5 - gamma, 0, gamma]])
+    b = np.array([1/6, 1/6, 2/3])
+    return A, b
+
+
+def IRK3QC(init, nt, dt, uf, dxc, butcher=PR05TVr, solver='NumPy'):
+    """
+    This scheme implements IRK3 from Pareschi and Russo 2005 Table V right Butcher tableau, combined with the QC spatial discretisation also used in the RK2QC scheme.
+    Assumes uniform grid
+    """
+    A, b = butcher()
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+    solverfn = getattr(sv, solver)
+    M = np.zeros((nx, nx))
+
+    for i in range(nx): # assumes u>0 # assumes A[0,0] = A[1,1] = A[2,2] (not always true!!!)
+        M[i,i] = 1. + dt*A[0,0]*(5.*np.roll(uf,-1)[i] - 2.*uf[i])/(6.*dxc[i]) 
+        M[i,i-1] = -dt*A[0,0]*(np.roll(uf,-1)[i] + 5.*uf[i])/(6.*dxc[i])
+        M[i,(i-2)] = dt*A[0,0]*uf[i]/(6.*dxc[i])   
+        M[i,(i+1)%nx] = dt*A[0,0]*np.roll(uf,-1)[i]/(3.*dxc[i])
+
+    for it in range(nt): # assumes u>0
+        field_k1 = solverfn(M, field[it], field[it], 1)
+        flx_k1 = quadh(np.roll(field_k1,2), np.roll(field_k1,1), field_k1) # [i] defined at i-1/2
+        rhs_k2 = field[it] - dt*uf*A[1,0]*ddx(flx_k1, np.roll(flx_k1,-1), dxc) # assumes u>0
+        field_k2 = solverfn(M, field[it], rhs_k2, 1)
+        flx_k2 = quadh(np.roll(field_k2,2), np.roll(field_k2,1), field_k2) # [i] defined at i-1/2
+        rhs_k3 = field[it] - dt*uf*A[2,0]*ddx(flx_k1, np.roll(flx_k1,-1), dxc) # assumes u>0
+        field_k3 = solverfn(M, field[it], rhs_k3, 1)
+        flx_k3 = quadh(np.roll(field_k3,2), np.roll(field_k3,1), field_k3) # [i] defined at i-1/2
+        field[it+1] = field[it] - dt*b[0]*uf*ddx(flx_k1, np.roll(flx_k1,-1), dxc) \
+            - dt*b[1]*uf*ddx(flx_k2, np.roll(flx_k2,-1), dxc) \
+            - dt*b[2]*uf*ddx(flx_k3, np.roll(flx_k3,-1), dxc) # assumes u>0
+
+    return field

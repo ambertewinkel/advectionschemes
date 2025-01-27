@@ -35,7 +35,7 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     limitCto1 = False
@@ -47,45 +47,26 @@ def main():
 
     # Input cases
     cases = [\
-        {'scheme': 'RK2QC_noPC'},
-        {'scheme': 'RK2QC_noPC', 'set_alpha': 'half'},
-        ###{'scheme': 'RK2QC_noPC', 'set_beta':'var'},        
-        ###{'scheme': 'RK2QC_noPC', 'set_alpha':'half', 'set_beta':'var'},        
-        #{'scheme': 'RK2QC'},
-        #{'scheme': 'RK2QC', 'set_beta': 'one'},	
-        #{'scheme': 'RK2QC', 'set_alpha': 'half'},
-        #{'scheme': 'RK2QC', 'set_alpha': 'half', 'set_beta': 'one'},
-        #!{'scheme': 'RK2QC_noPCiter'},
-        #!{'scheme': 'RK2QC_noPCiter', 'set_alpha': 'half'},
-        #!{'scheme': 'RK2QC_noPCiter', 'set_beta':'var'},        
-        #!{'scheme': 'RK2QC_noPCiter', 'set_alpha':'half', 'set_beta':'var'},    
-        {'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'FCT': True},
-
+        #{'scheme': 'RK2QC_noPC', 'set_alpha': 'half'},
+        #{'scheme': 'RK2QC_noPC'},
+        #{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'FCT': True},
+        {'scheme': 'IRK3QC'},
         ]
     
     plot_args = [\
-        {'label':'RK2QC_noPC_amax_b1', 'color':'green', 'marker':'o', 'linestyle':'-'},
-        {'label':'RK2QC_noPC_a0p5_b1', 'color':'blue', 'marker':'o', 'linestyle':'-'},
-        ##{'label':'RK2QC_noPC_amax', 'color':'green', 'marker':'o', 'linestyle':'-'},
-        ##{'label':'RK2QC_noPC_a0p5', 'color':'blue', 'marker':'o', 'linestyle':'-'},
-        #{'label':'RK2_QC_amax', 'color':'red', 'marker':'X', 'linestyle':'-'},
-        #{'label':'RK2_QC_amax_b1', 'color':'red', 'marker':'+', 'linestyle':'-'},
-        #{'label':'RK2_QC_a0p5', 'color':'purple', 'marker':'X', 'linestyle':'-'},
-        #{'label':'RK_2QC_a0p5_b1', 'color':'purple', 'marker':'+', 'linestyle':'-'},
-        #!{'label':'RK2QC_noPCiter_amax_b1', 'color':'green', 'marker':'o', 'linestyle':'--'},
-        #!{'label':'RK2QC_noPCiter_a0p5_b1', 'color':'blue', 'marker':'o', 'linestyle':'--'},
-        #!{'label':'RK2QC_noPCiter_amax', 'color':'green', 'marker':'o', 'linestyle':'--'},
-        #!{'label':'RK2QC_noPCiter_a0p5', 'color':'blue', 'marker':'o', 'linestyle':'--'},
-        {'label':'RK2QC_noPC_a0p5_b1_FCT', 'color':'red', 'marker':'x', 'linestyle':'-'},
+        #{'label':'AdImExCubic', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        #{'label':'AdImExCubic_amax', 'color':'green', 'marker':'x', 'linestyle':'-'},
+        #{'label':'AdImExCubic_FCT', 'color':'red', 'marker':'x', 'linestyle':'-'},
+        {'label':'IRK3QC', 'color':'blue', 'marker':'x', 'linestyle':'-'},
         ]
 
     # Initial conditions
-    analytic = an.sine         # initial condition, options: sine, cosbell, tophat, or combi
-    dt = 0.01                   # time step
-    nt = 2#32#16 #int(100/6.25)                  # number of time steps
+    analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 6.25#3.125#1.#6.25           # constant velocity
+    uconstant = 0.5#1.#3.125#6.25#3.125#6.25           # constant velocity
+    nt = int(100/uconstant)                  # number of time steps
+    dt = 0.01                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]
