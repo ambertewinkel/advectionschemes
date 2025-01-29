@@ -2440,22 +2440,12 @@ def IRK3QC(init, nt, dt, uf, dxc, butcher=PR05TVr, solver='NumPy'):
 
     for it in range(nt): # assumes u>0
         field_k1 = solverfn(M, field[it], field[it], 1)
-        print('field[it]', field[it])
-        print('Check whether matrix solve was correct, should be...')
-        print('field[it]?', np.dot(M, field_k1))
-        print()
         flx_k1 = quadh(np.roll(field_k1,2), np.roll(field_k1,1), field_k1) # [i] defined at i-1/2
         rhs_k2 = field[it] - dt*uf*A[1,0]*ddx(flx_k1, np.roll(flx_k1,-1), dxc) # assumes u>0
         field_k2 = solverfn(M, field[it], rhs_k2, 1)
-        print(rhs_k2)
-        print('? ==> ', np.dot(M, field_k2))
-        print()
         flx_k2 = quadh(np.roll(field_k2,2), np.roll(field_k2,1), field_k2) # [i] defined at i-1/2
         rhs_k3 = field[it] - dt*uf*A[2,0]*ddx(flx_k1, np.roll(flx_k1,-1), dxc) # assumes u>0
         field_k3 = solverfn(M, field[it], rhs_k3, 1)
-        print(rhs_k3)
-        print('? ==> ', np.dot(M, field_k3))
-        print()
         flx_k3 = quadh(np.roll(field_k3,2), np.roll(field_k3,1), field_k3) # [i] defined at i-1/2
         field[it+1] = field[it] - dt*b[0]*uf*ddx(flx_k1, np.roll(flx_k1,-1), dxc) \
             - dt*b[1]*uf*ddx(flx_k2, np.roll(flx_k2,-1), dxc) \
