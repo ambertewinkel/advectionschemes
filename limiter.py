@@ -92,10 +92,5 @@ def doubleFCT(field_LO, corr, dxc, previous):
     fieldlim = field_LO - (np.roll(corrlim,-1) - corrlim)/dxc # HO bounded solution after one FCT application
     newcorr = corr - corrlim
     newcorrlim = FCT(fieldlim, newcorr, dxc, previous, double=True, secondfield=field_LO) # second FCT application
-    plt.axhline(0, color='black', linestyle='--')
-    plt.plot(corr, label='A') # A = F^H - F^d
-    plt.plot(corrlim, label='CA')
-    plt.plot(corrlim + newcorrlim, label='CA + C$^{(2)}$A$^{(2)}$')
-    plt.legend()
-    plt.savefig('corr.pdf')
+    
     return corrlim + newcorrlim
