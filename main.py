@@ -40,37 +40,35 @@ def main():
     # Input booleans
     limitCto1 = False
     create_animation = False
-    check_orderofconvergence = False
+    check_orderofconvergence = True
     accuracy_in = 'space with C const' # 'space with dt const' or 'time with dx const' or 'space with C const'; (relevant only if check_orderofconvergence == True)
     date = dati.date.today().strftime("%Y%m%d")                   # date of the run
     datetime = dati.datetime.now().strftime("%d%m%Y-%H%M%S")      # date and time of the run
 
     # Input cases
     cases = [\
-        {'scheme': 'RK2QC_noPC', 'set_alpha': 'half'},
-        #{'scheme': 'RK2QC_noPC'},
-        {'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'FCT': True},
-        #{'scheme': 'IRK3QC'},
-        ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'nonnegative': True},
-        {'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'doubleFCT': True},
+        #{'scheme': 'RK2QC_noPC', 'set_alpha': 'half'},
+        #{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'FCT': True},
+        #{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'nonnegative': True},
+        #{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'doubleFCT': True},
+        {'scheme': 'IRK3QC'},
         ]
     
     plot_args = [\
-        {'label':'AdImExCubic', 'color':'blue', 'marker':'o', 'linestyle':'-'},
-        #{'label':'AdImExCubic_amax', 'color':'green', 'marker':'x', 'linestyle':'-'},
-        {'label':'AdImExCubic_FCT', 'color':'red', 'marker':'X', 'linestyle':'-'},
-        #{'label':'IRK3QC', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        ##{'label':'AdImExCubic_nn', 'color':'orange', 'marker':'x', 'linestyle':':'},
-        {'label':'AdImExCubic_dFCT', 'color':'purple', 'marker':'+', 'linestyle':':'},
+        #{'label':'AdImExCubic', 'color':'blue', 'marker':'o', 'linestyle':'-'},
+        #{'label':'AdImExCubic_FCT', 'color':'red', 'marker':'X', 'linestyle':'-'},
+        #{'label':'AdImExCubic_nn', 'color':'orange', 'marker':'x', 'linestyle':':'},
+        #{'label':'AdImExCubic_dFCT', 'color':'purple', 'marker':'+', 'linestyle':':'},
+        {'label':'IRK3QC', 'color':'blue', 'marker':'x', 'linestyle':'-'},
         ]
 
     # Initial conditions
-    analytic = an.sine         # initial condition, options: sine, cosbell, tophat, or combi
-    nx = 40                     # number of points in space
+    analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
+    nx = 400                     # number of points in space
     xmax = 1.                   # physical domain parameters
     uconstant = 1.#3.125#6.25           # constant velocity
     nt = 1#int(100/uconstant)                  # number of time steps
-    dt = 0.01                   # time step
+    dt = 0.001                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]
@@ -330,6 +328,15 @@ def main():
     ax3.set_title('RMSE')
     ax3.set_xlabel('Time')
     ax3.legend()
+
+    if nt == 1:
+        for c in range(len(cases)):        
+            s = plot_args[c]['label']
+            checkrmse = epm.rmse(locals()[f'psi_{s}_reg'][nt], locals()['psi_an_reg'][nt], dxc) 
+            checkl2 = epm.l2norm(locals()[f'psi_{s}_reg'][nt], locals()['psi_an_reg'][nt], dxc)
+            logging.info('')
+            logging.info(f'{plot_args[c]['label']} - RMSE {checkrmse}')
+            logging.info(f'{plot_args[c]['label']} - L2 norm {checkl2}')
 
     # Save plot for results (mass, min/max, RMSE) over time
     plt.savefig(outputdir + f'experiments.pdf')

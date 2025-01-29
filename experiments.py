@@ -44,6 +44,13 @@ def rmse(field, analytic, dx):
     return rmse
 
 
+def l2norm(field, analytic, dxc):
+    """This calculates the l2 norm from an output field compared to the analytic solution."""
+    numerator = np.sum(dxc*(field - analytic)*(field - analytic))
+    denominator = np.sum(dxc*analytic*analytic)
+    return np.sqrt(numerator/(denominator + 1.e-16))
+
+
 def totalmass(field, dx):
     """
     This function computes the total mass of the input field.
