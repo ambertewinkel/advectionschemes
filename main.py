@@ -35,7 +35,7 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     limitCto1 = False
@@ -64,11 +64,11 @@ def main():
 
     # Initial conditions
     analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
-    nx = 400                     # number of points in space
+    nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
     uconstant = 1.#3.125#6.25           # constant velocity
     nt = 1#int(100/uconstant)                  # number of time steps
-    dt = 0.001                   # time step
+    dt = 0.01                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]
@@ -320,23 +320,14 @@ def main():
         s = plot_args[c]['label']
         rmse_time = np.zeros(nt+1)
         for it in range(nt+1):     
-            rmse_time[it] = epm.rmse(locals()[f'psi_{s}_reg'][it], locals()['psi_an_reg'][it], dxc) 
+            rmse_time[it] = epm.l2norm(locals()[f'psi_{s}_reg'][it], locals()['psi_an_reg'][it], dxc) 
         logging.info('')
-        logging.info(f'{plot_args[c]['label']} - Max RMSE during the time integration: {np.max(rmse_time)}')
+        logging.info(f'{plot_args[c]['label']} - Max L2 norm during the time integration: {np.max(rmse_time)}')
         ax3.plot(np.arange(0,nt+1), rmse_time, **plot_args[c])
     ax3.set_yscale('log')
-    ax3.set_title('RMSE')
+    ax3.set_title('$l_2$')
     ax3.set_xlabel('Time')
     ax3.legend()
-
-    if nt == 1:
-        for c in range(len(cases)):        
-            s = plot_args[c]['label']
-            checkrmse = epm.rmse(locals()[f'psi_{s}_reg'][nt], locals()['psi_an_reg'][nt], dxc) 
-            checkl2 = epm.l2norm(locals()[f'psi_{s}_reg'][nt], locals()['psi_an_reg'][nt], dxc)
-            logging.info('')
-            logging.info(f'{plot_args[c]['label']} - RMSE {checkrmse}')
-            logging.info(f'{plot_args[c]['label']} - L2 norm {checkl2}')
 
     # Save plot for results (mass, min/max, RMSE) over time
     plt.savefig(outputdir + f'experiments.pdf')
@@ -359,12 +350,12 @@ def main():
                 nx = nx_arr[xi]
                 nt = nt_arr[xi]                
                 # Calculate RMSE for each grid spacing at the final time, assume uniform grid
-                rmse[xi] = epm.rmse(locals()[f'psi_{s}_{l}'][nt], locals()[f'psi_an_{l}'][nt], resolution[xi]) # Calculate RMSE for each grid spacing at the final time            
+                rmse[xi] = epm.l2norm(locals()[f'psi_{s}_{l}'][nt], locals()[f'psi_an_{l}'][nt], resolution[xi]) # Calculate RMSE for each grid spacing at the final time            
 
             # Plot error over grid spacing
             ax1.scatter(resolution, rmse, marker=plot_args[c]['marker'], label=f'Psi {plot_args[c]['label']}', color=plot_args[c]['color'])
             logging.info('')
-            logging.info(f'{cases[c]['scheme']} - RMSE array for the different resolutions (fine, coarse, reg): {rmse}')
+            logging.info(f'{cases[c]['scheme']} - L2 norm array for the different resolutions (fine, coarse, reg): {rmse}')
 
             # Order of accuracy lines in the plot for reference
             firstorder = rmse[0]*gridscale
@@ -377,17 +368,17 @@ def main():
         # Plot details
         ax1.set_xscale('log')
         ax1.set_yscale('log')
-        ax1.set_title(f'RMSE vs {var_acc} at t={nt*dt}')
-        ax1.set_ylabel('RMSE')
+        ax1.set_title(f'$l_2$ vs {var_acc} at t={nt*dt}')
+        ax1.set_ylabel('$l_2$')
         ax1.set_xlabel(var_acc)
         ax1.legend()
 
         # Save plot of error over grid spacing
         plt.tight_layout()
         if save_as == 'test':
-            plt.savefig(outputdir + 'RMSE.pdf')
+            plt.savefig(outputdir + 'L2.pdf')
         elif save_as == 'store':
-            plt.savefig(outputdir + f'RMSE_{var_acc}.pdf')
+            plt.savefig(outputdir + f'L2_{var_acc}.pdf')
         plt.close()
 
     ###########################
