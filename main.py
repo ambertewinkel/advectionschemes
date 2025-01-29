@@ -40,7 +40,7 @@ def main():
     # Input booleans
     limitCto1 = False
     create_animation = False
-    check_orderofconvergence = True
+    check_orderofconvergence = False
     accuracy_in = 'space with C const' # 'space with dt const' or 'time with dx const' or 'space with C const'; (relevant only if check_orderofconvergence == True)
     date = dati.date.today().strftime("%Y%m%d")                   # date of the run
     datetime = dati.datetime.now().strftime("%d%m%Y-%H%M%S")      # date and time of the run
@@ -64,11 +64,11 @@ def main():
 
     # Initial conditions
     analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
-    nx = 40                     # number of points in space
+    nx = 10                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 1.#3.125#6.25           # constant velocity
+    uconstant = 6.25           # constant velocity
     nt = 1#int(100/uconstant)                  # number of time steps
-    dt = 0.01                   # time step
+    dt = 0.0025                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching'
 
     schemenames = [case["scheme"] for case in cases]
