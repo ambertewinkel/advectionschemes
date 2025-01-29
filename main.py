@@ -40,32 +40,36 @@ def main():
     # Input booleans
     limitCto1 = False
     create_animation = False
-    check_orderofconvergence = True
+    check_orderofconvergence = False
     accuracy_in = 'space with C const' # 'space with dt const' or 'time with dx const' or 'space with C const'; (relevant only if check_orderofconvergence == True)
     date = dati.date.today().strftime("%Y%m%d")                   # date of the run
     datetime = dati.datetime.now().strftime("%d%m%Y-%H%M%S")      # date and time of the run
 
     # Input cases
     cases = [\
-        #{'scheme': 'RK2QC_noPC', 'set_alpha': 'half'},
+        {'scheme': 'RK2QC_noPC', 'set_alpha': 'half'},
         #{'scheme': 'RK2QC_noPC'},
-        #{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'FCT': True},
-        {'scheme': 'IRK3QC'},
+        {'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'FCT': True},
+        #{'scheme': 'IRK3QC'},
+        ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'nonnegative': True},
+        {'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'doubleFCT': True},
         ]
     
     plot_args = [\
-        #{'label':'AdImExCubic', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        {'label':'AdImExCubic', 'color':'blue', 'marker':'o', 'linestyle':'-'},
         #{'label':'AdImExCubic_amax', 'color':'green', 'marker':'x', 'linestyle':'-'},
-        #{'label':'AdImExCubic_FCT', 'color':'red', 'marker':'x', 'linestyle':'-'},
-        {'label':'IRK3QC', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        {'label':'AdImExCubic_FCT', 'color':'red', 'marker':'X', 'linestyle':'-'},
+        #{'label':'IRK3QC', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        ##{'label':'AdImExCubic_nn', 'color':'orange', 'marker':'x', 'linestyle':':'},
+        {'label':'AdImExCubic_dFCT', 'color':'purple', 'marker':'+', 'linestyle':':'},
         ]
 
     # Initial conditions
-    analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
+    analytic = an.sine         # initial condition, options: sine, cosbell, tophat, or combi
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 0.5#1.#3.125#6.25#3.125#6.25           # constant velocity
-    nt = int(100/uconstant)                  # number of time steps
+    uconstant = 1.#3.125#6.25           # constant velocity
+    nt = 1#int(100/uconstant)                  # number of time steps
     dt = 0.01                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching'
 

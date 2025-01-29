@@ -5,8 +5,9 @@
 import numpy as np
 from numba_config import jitflags
 from numba import njit
+import matplotlib.pyplot as plt
 
-def FCT(field_LO, corr, dxc, previous):
+def FCT(field_LO, corr, dxc, previous, double=False, secondfield=None):
     """
     This function limits the high-order correction based 
     on the low-order solution's local bounds. If previous=True, 
@@ -16,6 +17,8 @@ def FCT(field_LO, corr, dxc, previous):
     corr: high-order correction, corr[i] is defined at i-1/2
     dxc: cell width
     previous: previous time step field - if an element in previous is None, it is not used.
+    double: double FCT limiter, True if FCT is applied twice, see doubleFCT function below.
+    fieldlim: limited high-order field after one FCT application, only used if double==True.
     --- Output ---
     corrlim: limited high-order correction
     """
@@ -27,9 +30,15 @@ def FCT(field_LO, corr, dxc, previous):
             corr[i] = 0.
 
         # Determine local max and min
-        if previous[i] is not None:
+        if previous[i] is not None and double == False:
             fieldmax[i] = max([field_LO[i-1], field_LO[i], field_LO[(i+1)%n], previous[i-1], previous[i], previous[(i+1)%n]])
             fieldmin[i] = min([field_LO[i-1], field_LO[i], field_LO[(i+1)%n], previous[i-1], previous[i], previous[(i+1)%n]])
+        elif previous[i] is not None and double == True:
+            fieldmax[i] = max([field_LO[i-1], field_LO[i], field_LO[(i+1)%n], previous[i-1], previous[i], previous[(i+1)%n], secondfield[i-1], secondfield[i], secondfield[(i+1)%n]])
+            fieldmin[i] = min([field_LO[i-1], field_LO[i], field_LO[(i+1)%n], previous[i-1], previous[i], previous[(i+1)%n], secondfield[i-1], secondfield[i], secondfield[(i+1)%n]])
+        elif previous[i] is None and double == True:
+            fieldmax[i] = max([field_LO[i-1], field_LO[i], field_LO[(i+1)%n], secondfield[i-1], secondfield[i], secondfield[(i+1)%n]])
+            fieldmin[i] = min([field_LO[i-1], field_LO[i], field_LO[(i+1)%n], secondfield[i-1], secondfield[i], secondfield[(i+1)%n]])
         else:
             fieldmax[i] = max([field_LO[i-1], field_LO[i], field_LO[(i+1)%n]])
             fieldmin[i] = min([field_LO[i-1], field_LO[i], field_LO[(i+1)%n]])
@@ -50,3 +59,43 @@ def FCT(field_LO, corr, dxc, previous):
         corrlim[i] = C[i]*corr[i]
 
     return corrlim
+
+
+def nonneg(field, flx, dxc): # assumes constant dxc
+    """
+    This function implements nonnegativity as discussed with HW in the 27-01-2025 meeting.
+    field[i] defined at i, resulting field from the fluxes defined by flx
+    flx[i] defined at i-1/2, the flux that leads to field being as it is
+    """
+    for i in range(len(field)):
+        while field[i] < 0. and flx[i] < 0.:
+            addflx = -field[i]*dxc[i] # field[i] = negative, addflx = positive
+            flx[i] += addflx 
+            field[i] += addflx/dxc[i] # adjust field[i]
+            field[i-1] -= addflx/dxc[i] # adjust field[i-1] # assumes constant dxc
+            i = (i - 1)%len(field) # adjust field[i-1] and check in the same loop whether it has become negative, if so limit flx[i-2] and so on until no negative values are found
+        while field[i] < 0. and flx[(i + 1)%len(field)] > 0.:
+            rmvflx = field[i]*dxc[i] # field[i] = negative, rmvflx = negative
+            flx[(i + 1)%len(field)] += rmvflx 
+            field[i] -= rmvflx/dxc[i] # adjust field[i]
+            field[(i+1)%len(field)] += rmvflx/dxc[i] # adjust field[i+1] # assumes constant dxc
+            i = (i + 1)%len(field) # adjust field[i+1] and check in the same loop whether it has become negative, if so limit flx[i+2] and so on until no negative values are found       
+
+    return field
+
+
+def doubleFCT(field_LO, corr, dxc, previous):
+    """
+    This function implements double FCT as discussed with HW in the 27-01-2025 meeting.
+    """
+    corrlim = FCT(field_LO, corr, dxc, previous) # first FCT application
+    fieldlim = field_LO - (np.roll(corrlim,-1) - corrlim)/dxc # HO bounded solution after one FCT application
+    newcorr = corr - corrlim
+    newcorrlim = FCT(fieldlim, newcorr, dxc, previous, double=True, secondfield=field_LO) # second FCT application
+    plt.axhline(0, color='black', linestyle='--')
+    plt.plot(corr, label='A') # A = F^H - F^d
+    plt.plot(corrlim, label='CA')
+    plt.plot(corrlim + newcorrlim, label='CA + C$^{(2)}$A$^{(2)}$')
+    plt.legend()
+    plt.savefig('corr.pdf')
+    return corrlim + newcorrlim

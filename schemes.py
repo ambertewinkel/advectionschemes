@@ -2262,7 +2262,7 @@ def RK2QC(init, nt, dt, uf, dxc, solver='NumPy', kmax=2, set_alpha='max', set_be
     return field
 
 
-def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max', FCT=False):
+def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max', FCT=False, nonnegative=False, doubleFCT=False):
     """This scheme solves the non-predictor-corrector version (see above for that one) of the RK2_QC scheme. See HW notes sent on 27-11-2024 and AW notes 14-01-2025.
     alpha = 'half' or 'max' (0.5 or max(0.5,1-1/c))
     beta is by default set to 1 independent of the Courant number, but can be set to 'var' to become 0 for C<0.8."""
@@ -2302,7 +2302,17 @@ def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max', FCT=False
             rhs[i] = field[it,i] - (ddx(flx_HO_n[i], flx_HO_n[(i+1)%nx], dxc[i])) # [i] defined at i
         field[it+1] = solverfn(M, field[it], rhs, 1) # 15-01-2025: probably only 'NumPy' works here properly as the matrix is not as sparse as before
 
-        if FCT == True: # low-order solution is adaptively implicit upwind. (assumes u>0 so actually FTBS&BTBS)
+        if nonnegative == True:
+            flx_HO_np1 = dt*uf*(alpha*quadh(np.roll(field[it+1],2), np.roll(field[it+1],1), field[it+1])) # assumes u>0, [i] defined at i-1/2
+            flx_HO = flx_HO_n + flx_HO_np1 # [i] defined at i-1/2
+            field[it+1] = lim.nonneg(field[it+1], flx_HO, dxc)
+
+        if FCT == True or doubleFCT == True: # FCT: low-order solution is adaptively implicit upwind. (assumes u>0 so actually FTBS&BTBS) (doubleFCT = FCT applied twice)
+            if FCT == True:
+                FCTfunc = getattr(lim, 'FCT')
+            elif doubleFCT == True:
+                FCTfunc = getattr(lim, 'doubleFCT')
+        
             # Calculate low-order solution field_LO
             M_LO = np.zeros((nx, nx)) 
             theta = np.maximum(1. - 1./c, np.zeros(nx)) # [i] defined at i-1/2; theta: blend! Off-centring in time for aiUpwind
@@ -2322,9 +2332,9 @@ def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max', FCT=False
             # Apply flux-corrected transport
             previous = [field[it][i] if c[i] <= 1. else None for i in range(len(init))] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used.
             corr = flx_HO - flx_LO # flux between HO and LO, [i] defined at i-1/2
-            corr = lim.FCT(field_LO, corr, dxc, previous)
+            corr = FCTfunc(field_LO, corr, dxc, previous)
             field[it+1] = field_LO - (np.roll(corr,-1) - corr)/dxc
-
+        
     return field
 
 
