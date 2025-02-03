@@ -2262,10 +2262,10 @@ def RK2QC(init, nt, dt, uf, dxc, solver='NumPy', kmax=2, set_alpha='max', set_be
     return field
 
 
-def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max', FCT=False, nonnegative=False, doubleFCT=False):
+def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max', FCT=False, nonnegative=False, doubleFCT=False, doubleFCT_noupdate=False, FCTnonneg=False):
     """This scheme solves the non-predictor-corrector version (see above for that one) of the RK2_QC scheme. See HW notes sent on 27-11-2024 and AW notes 14-01-2025.
     alpha = 'half' or 'max' (0.5 or max(0.5,1-1/c))
-    beta is by default set to 1 independent of the Courant number, but can be set to 'var' to become 0 for C<0.8."""
+    """
     # assumes u>0
 
     nx = len(init)
@@ -2307,11 +2307,15 @@ def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max', FCT=False
             flx_HO = flx_HO_n + flx_HO_np1 # [i] defined at i-1/2
             field[it+1] = lim.nonneg(field[it+1], flx_HO, dxc)
 
-        if FCT == True or doubleFCT == True: # FCT: low-order solution is adaptively implicit upwind. (assumes u>0 so actually FTBS&BTBS) (doubleFCT = FCT applied twice)
+        if FCT == True or doubleFCT == True or doubleFCT_noupdate == True or FCTnonneg == True: # FCT: low-order solution is adaptively implicit upwind. (assumes u>0 so actually FTBS&BTBS) (doubleFCT = FCT applied twice)
             if FCT == True:
                 FCTfunc = getattr(lim, 'FCT')
             elif doubleFCT == True:
                 FCTfunc = getattr(lim, 'doubleFCT')
+            elif doubleFCT_noupdate == True:
+                FCTfunc = getattr(lim, 'doubleFCT_noupdate')
+            elif FCTnonneg == True:
+                FCTfunc = getattr(lim, 'FCTnonneg')
         
             # Calculate low-order solution field_LO
             M_LO = np.zeros((nx, nx)) 
@@ -2450,5 +2454,24 @@ def IRK3QC(init, nt, dt, uf, dxc, butcher=PR05TVr, solver='NumPy'):
         field[it+1] = field[it] - dt*b[0]*uf*ddx(flx_k1, np.roll(flx_k1,-1), dxc) \
             - dt*b[1]*uf*ddx(flx_k2, np.roll(flx_k2,-1), dxc) \
             - dt*b[2]*uf*ddx(flx_k3, np.roll(flx_k3,-1), dxc) # assumes u>0
+
+    return field
+
+
+def PPM(init, nt, dt, uf, dxc):
+    """This scheme implements the piecewise parabolic method (PPM) by Colella and Woodward 1984. See HW notes MULES vs FCT 31-01-2025."""
+
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+    c = dt*uf/dxc # assumes uniform grid
+    fieldh, fieldprime, field6 = np.zeros(nx), np.zeros(nx), np.zeros(nx)
+
+    for it in range(nt):
+        fieldprime = 7./12.*(np.roll(field[it],1) + field[it]) - 1./12.*(np.roll(field[it],-1) + np.roll(field[it],2)) # [i] defined at i-1/2
+        field6 = 6.*(field[it] - 0.5*(np.roll(fieldprime,-1) + fieldprime)) # [i] defined at i
+        dfield = np.roll(fieldprime, -1) - fieldprime # [i] defined at i
+        fieldh = fieldprime - 0.5*np.roll(c,1)*(np.roll(dfield,1) - (1. - 2./3.*np.roll(c,1))*np.roll(field6,1)) # [i] defined at i-1/2
+        field[it+1] = field[it] - c*(np.roll(fieldh,-1) - fieldh)
 
     return field
