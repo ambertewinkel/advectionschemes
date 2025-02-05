@@ -14,13 +14,13 @@ def FCT(field_LO, corr, dxc, previous, double=False, secondfield=None):
     then also the previous time step field can determine the max/min bounds.
     --- Input --- 
     field_LO: low-order solution
-    corr: high-order correction, corr[i] is defined at i-1/2
+    corr: high-order correction, corr[i] is defined at i-1/2, A in Zalesak 1979
     dxc: cell width
     previous: previous time step field - if an element in previous is None, it is not used.
     double: double FCT limiter, True if FCT is applied twice, see doubleFCT function below.
-    fieldlim: limited high-order field after one FCT application, only used if double==True.
+    secondfield: additional field (e.g. initial low-order solution) to determine the max/min values, only used if double==True.
     --- Output ---
-    corrlim: limited high-order correction
+    corrlim: limited high-order correction, C*A in Zalesak 1979
     """
     n = len(field_LO)
     corrlim, C, fieldmax, fieldmin, Pp, Qp, Rp, Pm, Qm, Rm = np.zeros(n), np.zeros(n), np.zeros(n),  np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n)
@@ -94,3 +94,62 @@ def doubleFCT(field_LO, corr, dxc, previous):
     newcorrlim = FCT(fieldlim, newcorr, dxc, previous, double=True, secondfield=field_LO) # second FCT application
     
     return corrlim + newcorrlim
+
+
+def FCTnonneg(field_LO, corr, dxc, previous):
+    """
+    This function limits the high-order correction based 
+    set bounds such that the field does not go negative. The lower bound is 0.0 and the upper bound is 1000000
+    --- Input --- 
+    field_LO: low-order solution
+    corr: high-order correction, corr[i] is defined at i-1/2, A in Zalesak 1979
+    dxc: cell width
+    --- Output ---
+    corrlim: limited high-order correction, C*A in Zalesak 1979
+    """
+    n = len(field_LO)
+    corrlim, C, Pp, Qp, Rp, Pm, Qm, Rm = np.zeros(n),  np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n)
+    fieldmin, fieldmax = 0.0, 1000000.0
+
+    for i in range(n):
+        if corr[i]*(field_LO[i] - field_LO[i-1]) <= 0. and (corr[i]*(field_LO[(i+1)%n] - field_LO[i]) <= 0. or corr[i]*(field_LO[i-1] - field_LO[i-2]) <= 0.):
+            corr[i] = 0.
+
+        Pp[i] = max([0., corr[i]]) - min([0., corr[(i+1)%n]])
+        Qp[i] = (fieldmax - field_LO[i])*dxc[i]
+        Rp[i] = min([1., Qp[i]/Pp[i]]) if Pp[i] > 0. else 0.
+        
+        Pm[i] = max([0., corr[(i+1)%n]]) - min([0., corr[i]])
+        Qm[i] = (field_LO[i] - fieldmin)*dxc[i]
+        Rm[i] = min([1., Qm[i]/Pm[i]]) if Pm[i] > 0. else 0.
+
+    for i in range(n):
+        # Determine C at face i-1/2
+        C[i] = min([Rp[i-1], Rm[i]]) if corr[i] < 0. else min([Rp[i], Rm[i-1]])
+
+        # Determine limited correction
+        corrlim[i] = C[i]*corr[i]
+
+    return corrlim
+
+
+def doubleFCT_noupdate(field_LO, corr, dxc, previous, nFCT=1):
+    corrlim = FCT(field_LO, corr, dxc, previous) # first FCT application
+    fieldlim = field_LO - (np.roll(corrlim,-1) - corrlim)/dxc # HO bounded solution after one FCT application
+    newcorr = corr - corrlim
+    newcorrlim = FCT(fieldlim, newcorr, dxc, previous) # second FCT application
+
+    return corrlim + newcorrlim
+
+
+def multiFCT_noupdate(field_LO, corr, dxc, previous, nFCT=1):
+    totalcorrlim = np.zeros(len(corr))
+    newcorr = corr.copy()
+    boundedfield = field_LO.copy()
+    for f in range(nFCT):
+        corrlim = FCT(boundedfield, newcorr, dxc, previous)
+        boundedfield = field_LO - (np.roll(corrlim,-1) - corrlim)/dxc # HO bounded solution after one FCT application
+        newcorr = corr - corrlim
+        totalcorrlim += corrlim
+    
+    return totalcorrlim
