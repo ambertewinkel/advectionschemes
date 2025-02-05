@@ -35,7 +35,7 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     limitCto1 = False
@@ -69,13 +69,14 @@ def main():
         ]
 
     # Initial conditions
-    analytic = an.sine         # initial condition, options: sine, cosbell, tophat, or combi
-    nx = 80                     # number of points in space
+    analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
+    nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 4.5#0.16#1.#3.125#10.1#1.26#3.125#6.125#3.125#6.25           # constant velocity
-    nt = 2#32#int(100/uconstant)                  # number of time steps
-    dt = 0.03125                   # time step
+    uconstant = 1.#3.125#10.1#1.26#3.125#6.125#3.125#6.25           # constant velocity
+    nt = 100#32#int(100/uconstant)                  # number of time steps
+    dt = 0.01#0.03125                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching'
+    cconstant = uconstant*dt/(xmax/nx)  # Courant number # only used for title in final.pdf
 
     schemenames = [case["scheme"] for case in cases]
     schemenames_settings = str(analytic.__name__) + f'_t{nt*dt:.4f}_u{uconstant:.4f}_' + "-".join(schemenames)
@@ -254,85 +255,13 @@ def main():
     
     plt.figure(figsize=(7,4))
     # Plotting the final time step for each scheme in the same plot
-    #plt.plot(xc, locals()['psi_an_reg'][nt], label='Analytic', linestyle='-', color='k')
+    plt.plot(xc, locals()['psi_an_reg'][nt], label='Analytic', linestyle='-', color='k')
     for c in range(len(cases)):        
         s = plot_args[c]['label']
-        #plt.plot(xc, locals()[f'psi_{s}_reg'][nt], **plot_args[c])
-    
-    #print(xc)
-    
-    # This below one was at xf I think and not at xc, as are my results (at xc)
-#    HW = [ 0.00000000e+00,  6.41232261e-05, -3.22195057e-04,  1.86434921e-03,
-#  1.37517174e-02,  3.80609946e-02,  7.36806200e-02,  1.19797643e-01,
-#  1.75276511e-01,  2.38751148e-01,  3.08658599e-01,  3.83277510e-01,
-#  4.60770517e-01,  5.39229483e-01,  6.16722490e-01,  6.91341401e-01,
-#  7.61248852e-01,  8.24723489e-01,  8.80202357e-01,  9.26319380e-01,
-#  9.61939005e-01,  9.86184159e-01,  9.98457846e-01,  9.98457846e-01,
-#  9.86184159e-01,  9.61939005e-01,  9.26319380e-01,  8.80202357e-01,
-#  8.24723489e-01,  7.61248852e-01,  6.91341401e-01,  6.16722490e-01,
-#  5.39229483e-01,  4.60770517e-01,  3.83277510e-01,  3.08658599e-01,
-#  2.38751148e-01,  1.75276511e-01,  1.19797643e-01,  7.36806200e-02,
-#  3.80609946e-02,  1.37517174e-02,  1.86434921e-03, -3.22195057e-04,
-#  6.41232261e-05,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00,
-#  1.04166667e-02, -8.33333333e-02,  5.00000000e-01,  1.08333333e+00,
-#  9.89583333e-01,  1.00000000e+00,  1.00000000e+00,  1.00000000e+00,
-#  1.00000000e+00,  1.00000000e+00,  1.00000000e+00,  1.00000000e+00,
-#  1.00000000e+00,  1.00000000e+00,  1.00000000e+00,  1.00000000e+00,
-#  9.89583333e-01,  1.08333333e+00,  5.00000000e-01, -8.33333333e-02,
-#  1.04166667e-02,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00,
-#  0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00,
-#  0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]
-
- 
-#    HW = [ 1.60555535e-05, -5.93316664e-07,  4.11781316e-07,  6.15723644e-03, # c=2.5
-#  2.44564696e-02,  5.44974717e-02,  9.54921691e-02,  1.46447192e-01,
-#  2.06107858e-01,  2.73005124e-01,  3.45491757e-01,  4.21782896e-01,
-#  5.00000000e-01,  5.78217104e-01,  6.54508243e-01,  7.26994876e-01,
-#  7.93892142e-01,  8.53552808e-01,  9.04507831e-01,  9.45502528e-01,
-#  9.75527475e-01,  9.93843357e-01,  9.99999176e-01,  9.93843357e-01,
-#  9.75527475e-01,  9.45502528e-01,  9.04507831e-01,  8.53552808e-01,
-#  7.93892142e-01,  7.26994876e-01,  6.54508243e-01,  5.78217104e-01,
-#  5.00000000e-01,  4.21782896e-01,  3.45491757e-01,  2.73005124e-01,
-#  2.06107858e-01,  1.46447192e-01,  9.54921691e-02,  5.44974717e-02,
-#  2.44564696e-02,  6.15723644e-03,  4.11781316e-07, -5.93316664e-07,
-#  1.60555535e-05,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00,
-#  1.04166667e-02, -8.33333333e-02,  5.00000000e-01,  1.08333333e+00,
-#  9.89583333e-01,  1.00000000e+00,  1.00000000e+00,  1.00000000e+00,
-#  1.00000000e+00,  1.00000000e+00,  1.00000000e+00,  1.00000000e+00,
-#  1.00000000e+00,  1.00000000e+00,  1.00000000e+00,  1.00000000e+00,
-#  9.89583333e-01,  1.08333333e+00,  5.00000000e-01, -8.33333333e-02,
-#  1.04166667e-02,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00,
-#  0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00,
-#  0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]
-    
-    HW = [ 1.17387857e-04,  7.45272029e-03,  2.69457357e-02,  5.81178958e-02, # c=0.4
-  1.00158329e-01,  1.52044191e-01,  2.12497880e-01,  2.80030826e-01,
-  3.52980142e-01,  4.29549576e-01,  5.07853732e-01,  5.85964504e-01,
-  6.61958544e-01,  7.33964628e-01,  8.00209726e-01,  8.59062663e-01,
-  9.09074287e-01,  9.49013144e-01,  9.77895807e-01,  9.95011090e-01,
-  9.99937556e-01,  9.92553901e-01,  9.73041934e-01,  9.41882104e-01,
-  8.99841671e-01,  8.47955809e-01,  7.87502120e-01,  7.19969174e-01,
-  6.47019858e-01,  5.70450424e-01,  4.92146268e-01,  4.14035496e-01,
-  3.38041456e-01,  2.66035372e-01,  1.99790274e-01,  1.40937337e-01,
-  9.09257129e-02,  5.09868560e-02,  2.20856968e-02,  4.98342860e-03,
- -5.49439112e-05, -6.62099973e-06,  1.23306651e-05,  0.00000000e+00,
-  0.00000000e+00,  0.00000000e+00,  1.20000000e-02, -9.20000000e-02,
-  6.20000000e-01,  1.06800000e+00,  9.92000000e-01,  1.00000000e+00,
-  1.00000000e+00,  1.00000000e+00,  1.00000000e+00,  1.00000000e+00,
-  1.00000000e+00,  1.00000000e+00,  1.00000000e+00,  1.00000000e+00,
-  1.00000000e+00,  1.00000000e+00,  9.88000000e-01,  1.09200000e+00,
-  3.80000000e-01, -6.80000000e-02,  8.00000000e-03,  0.00000000e+00,
-  0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00,
-  0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00,
-  0.00000000e+00,  0.00000000e+00,  1.84959976e-05,  5.48183174e-06]
-
-    
-
-
-    plt.plot(xc, HW, color='grey', linestyle='-')#, label='HW')
-    ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt}', \
+        plt.plot(xc, locals()[f'psi_{s}_reg'][nt], **plot_args[c])
+    ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with C={cconstant}', \
                      'x', '$\\Psi$', 0., xmax, True, -0.1, 1.1)
-
+        
     #####################
     #### Experiments ####
     #####################
@@ -431,7 +360,7 @@ def main():
                 rmse[xi] = epm.l2norm(locals()[f'psi_{s}_{l}'][nt], locals()[f'psi_an_{l}'][nt], resolution[xi]) # Calculate RMSE for each grid spacing at the final time            
 
             # Plot error over grid spacing
-            ax1.scatter(resolution, rmse, marker=plot_args[c]['marker'], label=f'Psi {plot_args[c]['label']}', color=plot_args[c]['color'])
+            ax1.scatter(resolution, rmse, marker=plot_args[c]['marker'], label=f'$\\Psi$ {plot_args[c]['label']}', color=plot_args[c]['color'])
             logging.info('')
             logging.info(f'{cases[c]['scheme']} - L2 norm array for the different resolutions (fine, coarse, reg): {rmse}')
 

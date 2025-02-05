@@ -2459,7 +2459,7 @@ def IRK3QC(init, nt, dt, uf, dxc, butcher=PR05TVr, solver='NumPy'):
 
 
 def PPM(init, nt, dt, uf, dxc):
-    """This scheme implements the piecewise parabolic method (PPM) by Colella and Woodward 1984. See HW notes MULES vs FCT 31-01-2025."""
+    """This scheme implements the piecewise parabolic method (PPM) by Colella and Woodward 1984. See HW notes MULES vs FCT 31-01-2025. Also works for large Courant numbers."""
 
     nx = len(init)
     field = np.zeros((nt+1, nx))
@@ -2478,26 +2478,7 @@ def PPM(init, nt, dt, uf, dxc):
             ksum[j] = 0.
             for k in range(j - intc[j] + 1, j + 1):
                 ksum[j] += field[it,k%nx] # [j] defined at j+1/2
-        fieldh = 1./np.roll(c,1)*np.roll(ksum,1) + np.roll(dc,1)/np.roll(c,1)*np.roll(fieldh_dc,intc[0]) # assumes uniform c #np.roll(np.roll(dc,1)/np.roll(c,1)*np.roll(fieldh_dc,intc),6) # [i] defined at i-1/2
+        fieldh = 1./np.roll(c,1)*np.roll(ksum,1) + np.roll(dc,1)/np.roll(c,1)*np.roll(fieldh_dc,intc[0]) # assumes uniform c # [i] defined at i-1/2
         field[it+1] = field[it] - c*(np.roll(fieldh,-1) - fieldh)
-        ##print()
-        ##print('For C = ', c)
-        #print('fieldprime', fieldprime)
-        #print('field6', field6)
-        #print('dfield', dfield)
-        ##print('fieldh_dc', fieldh_dc)
-        ##print('ksum', ksum)
-        ##print('fieldh', fieldh)
-        ##print('field', field[it+1])
 
-        #print(intc)
-
-        #print('First part of flux', 1./np.roll(c,1)*np.roll(ksum,1))
-        #print('Second part of flux', np.roll(np.roll(dc,1)/np.roll(c,1)*np.roll(fieldh_dc,intc),2))
-        #plt.plot(1./np.roll(c,1)*np.roll(ksum,1), label='First AW')
-        #plt.plot(np.roll(np.roll(dc,1)/np.roll(c,1)*np.roll(fieldh_dc,intc),2), label='Second AW')
-        #plt.legend()
-        #plt.show()
-
-    #print('field', field[1])
     return field
