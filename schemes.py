@@ -2465,13 +2465,39 @@ def PPM(init, nt, dt, uf, dxc):
     field = np.zeros((nt+1, nx))
     field[0] = init.copy()
     c = dt*uf/dxc # assumes uniform grid
-    fieldh, fieldprime, field6 = np.zeros(nx), np.zeros(nx), np.zeros(nx)
+    intc = c.astype(int)
+    dc = c - intc.astype(float)
+    fieldh, fieldprime, field6, ksum = np.zeros(nx), np.zeros(nx), np.zeros(nx), np.zeros(nx)
 
     for it in range(nt):
         fieldprime = 7./12.*(np.roll(field[it],1) + field[it]) - 1./12.*(np.roll(field[it],-1) + np.roll(field[it],2)) # [i] defined at i-1/2
         field6 = 6.*(field[it] - 0.5*(np.roll(fieldprime,-1) + fieldprime)) # [i] defined at i
         dfield = np.roll(fieldprime, -1) - fieldprime # [i] defined at i
-        fieldh = fieldprime - 0.5*np.roll(c,1)*(np.roll(dfield,1) - (1. - 2./3.*np.roll(c,1))*np.roll(field6,1)) # [i] defined at i-1/2
+        fieldh_dc = fieldprime - 0.5*np.roll(dc,1)*(np.roll(dfield,1) - (1. - 2./3.*np.roll(dc,1))*np.roll(field6,1)) # [i] defined at i-1/2
+        for j in range(nx):
+            ksum[j] = 0.
+            for k in range(j - intc[j] + 1, j + 1):
+                ksum[j] += field[it,k%nx] # [j] defined at j+1/2
+        fieldh = 1./np.roll(c,1)*np.roll(ksum,1) + np.roll(dc,1)/np.roll(c,1)*np.roll(fieldh_dc,intc[0]) # assumes uniform c #np.roll(np.roll(dc,1)/np.roll(c,1)*np.roll(fieldh_dc,intc),6) # [i] defined at i-1/2
         field[it+1] = field[it] - c*(np.roll(fieldh,-1) - fieldh)
+        ##print()
+        ##print('For C = ', c)
+        #print('fieldprime', fieldprime)
+        #print('field6', field6)
+        #print('dfield', dfield)
+        ##print('fieldh_dc', fieldh_dc)
+        ##print('ksum', ksum)
+        ##print('fieldh', fieldh)
+        ##print('field', field[it+1])
 
+        #print(intc)
+
+        #print('First part of flux', 1./np.roll(c,1)*np.roll(ksum,1))
+        #print('Second part of flux', np.roll(np.roll(dc,1)/np.roll(c,1)*np.roll(fieldh_dc,intc),2))
+        #plt.plot(1./np.roll(c,1)*np.roll(ksum,1), label='First AW')
+        #plt.plot(np.roll(np.roll(dc,1)/np.roll(c,1)*np.roll(fieldh_dc,intc),2), label='Second AW')
+        #plt.legend()
+        #plt.show()
+
+    #print('field', field[1])
     return field
