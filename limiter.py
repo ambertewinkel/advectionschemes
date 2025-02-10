@@ -6,6 +6,8 @@ import numpy as np
 from numba_config import jitflags
 from numba import njit
 import matplotlib.pyplot as plt
+from scipy.sparse import diags
+from scipy.sparse.linalg import spsolve
 
 def FCT(field_LO, corr, dxc, previous, double=False, secondfield=None):
     """
@@ -309,3 +311,197 @@ def multiFCT(fieldlow, flxlow, fieldit, corr, dxc, previous, nFCT=1):
 
     return corrlim #corrcp#corrlim
 
+
+############## HW CODE ##############
+
+
+def advect(phi, c, flux, options=None):
+    """Advect cell values phi using Courant number c using flux"""
+    F = flux
+    if callable(flux):
+        F = flux(phi, c, options=options)
+    return phi - c*(F - np.roll(F,1))
+    
+    
+def PPMflux(phi, c,options=None):
+    """Returns the PPM fluxes for cell values phi for Courant number c.
+    Face j is at j+1/2 between cells j and j+1"""
+    # Integer and remainder parts of the Courant number
+    #print(phi)
+    cI = int(c)
+    cR = c - cI
+    # phi interpolated onto faces
+    phiI = 1/12*(-np.roll(phi,1) + 7*phi + 7*np.roll(phi,-1) - np.roll(phi,-2))
+    # Move face interpolants to the departure faces
+    if cI > 0:
+        phiI = np.roll(phiI,cI)
+    # Interface fluxes
+    F = np.zeros_like(phi)
+    # Contribution to the fluxes from full cells between the face and the departure point
+    nx = len(F)
+    for j in range(nx):
+        for i in range(j-cI+1,j+1):
+            F[j] += phi[i%nx]/c
+        #F[j] += sum(phi[j-cI+1:j+1])
+    # Ratio of remnamt to total Courant number
+    cS = 1
+    if c > 1:
+        cS = cR/c
+    # Contribution from the departure cell
+    #print('First part of flux', F)
+    
+    #print('Second part of flux', cS*( (1 - 2*cR + cR**2)*phiI \
+    #         + (3*cR - 2*cR**2)*np.roll(phi,cI) \
+    #         + (-cR + cR**2)*np.roll(phiI,1)))
+    #plt.plot(F, label='First HW')
+    #plt.plot(cS*( (1 - 2*cR + cR**2)*phiI \
+    #            + (3*cR - 2*cR**2)*np.roll(phi,cI) \
+    #            + (-cR + cR**2)*np.roll(phiI,1)), label='Second HW')
+    #plt.legend()
+    #plt.show()
+    
+    F += cS*( (1 - 2*cR + cR**2)*phiI \
+             + (3*cR - 2*cR**2)*np.roll(phi,cI) \
+             + (-cR + cR**2)*np.roll(phiI,1))
+    return F
+
+
+def findMinMax(phid, phi, minPhi, maxPhi):
+    """Return phiMin and phiMax for bounded solutions. 
+    If minPhi and maxPhi are not none, these are the values
+    If phi is not None, find nearest neighbours of phid and phi to determin phiMin and phiMax
+    Suitable for c<=1
+    If phi is None, just use phid. Suitable for all c but more diffusive."""
+    phiMax = maxPhi
+    if phiMax is None:
+        phiMax = phid
+        if phi is not None:
+            phiMax = np.maximum(phi, phiMax)
+        phiMax = np.maximum(np.roll(phiMax,1), np.maximum(phiMax, np.roll(phiMax,-1)))
+    
+    phiMin = minPhi
+    if phiMin is None:
+        phiMin = phid
+        if phi is not None:
+            phiMin = np.minimum(phi, phiMin)
+        phiMin = np.minimum(np.roll(phiMin,1), np.minimum(phiMin, np.roll(phiMin,-1)))
+
+    return phiMin, phiMax
+
+
+def upwindMatrix(c, a, nx):
+    # Matrix for implicit solution of
+    # phi_j^{n+1} = phi_j^n - (1-a)*c(phi_j^n - phi_{j-1}^n)
+    #                       - a*c*(phi_j^{n+1} - phi_{j-1}^{n+1}
+    return diags([-a*c*np.ones(nx-1),  # The diagonal for j-1
+                 (1+a*c)*np.ones(nx), # The diagonal for j
+                 [-a*c]], # The top right corner for j-1
+                 [-1,0,nx-1], # the locations of each of the diagonals
+                 shape=(nx,nx), format = 'csr')
+
+
+def alpha(c):
+    "Off-centering for implicit solution"
+    return 1-1/np.maximum(c, 1)
+
+
+def upwindFlux(phi, c, options=None):
+    """Returns the first-order upwind fluxes for cell values phi and Courant number c
+    Implicit or explicit depending on Courant number"""
+    if not isinstance(options, dict):
+        options = {}
+    explicit =  options["explicit"] if "explicit" in options else (c <= 1)
+    if explicit:
+        return phi
+    nx = len(phi)
+    # Off centering for Implicit-Explicit
+    a = alpha(c)
+    M = upwindMatrix(c, a, nx)
+    # Solve the implicit problem
+    phiNew = spsolve(M, phi - (1-a)*c*(phi - np.roll(phi,1)))
+    # Back-substitute to get the implicit fluxes
+    return (1-a)*phi + a*phiNew
+
+
+def FCT_HW(phi, c, options={"HO":PPMflux, "LO":upwindFlux, "nCorr":1, 
+                         "minPhi": None, "maxPhi": None}):
+    """Returns the corrected high-order fluxes with nCorr corrections"""
+    # Sort out options
+    if not isinstance(options, dict):
+        options = {}
+    HO =  options["HO"] if "HO" in options else PPMflux
+    LO =  options["LO"] if "LO" in options else upwindFlux
+    nCorr = options["nCorr"] if "nCorr" in options else 1
+    minPhi = options["minPhi"] if "minPhi" in options else None
+    maxPhi = options["maxPhi"] if "maxPhi" in options else None
+    
+    # First approximation of the bounded flux and the full HO flux
+    fluxB = LO(phi,c, options=options)
+    fluxH = HO(phi,c, options=options)
+
+    # The first bounded solution
+    phid = advect(phi, c, fluxB)
+
+    # The allowable min and max
+    if c <= 1:
+        phiMin, phiMax = findMinMax(phid, phi, minPhi, maxPhi)
+    else:
+        phiMin, phiMax = findMinMax(phid, None, minPhi, maxPhi)
+
+    #print('phiMin', phiMin)
+    #print('phiMax', phiMax)
+
+    #plt.plot(fluxH - fluxB, label='corr', color='k')
+    #plt.plot(fluxB, label='flx_LO')
+    #plt.plot(fluxH, label='flx_HO')
+    #plt.legend()
+    #plt.show()
+    total = np.zeros(len(phi))
+    # Add a corrected HO flux
+    for it in range(nCorr):
+        # The antidiffusive fluxes
+        A = fluxH - fluxB
+
+        # Sums of influxes ad outfluxes
+        Pp = c*(np.maximum(0, np.roll(A,1)) - np.minimum(0, A))
+        Pm = c*(np.maximum(0, A) - np.minimum(0, np.roll(A,1)))
+
+        # The allowable rise and fall using an updated bounded solution
+        if it > 0:
+            phid = advect(phi, c, fluxB)
+            #if it == 2:
+                #print(phid)
+            #    break
+        Qp = phiMax - phid
+        Qm = phid - phiMin
+        if it == 1:
+            d=21
+            #print('Qp', Qp)
+            #print('Qm', Qm)
+            print('it = ', it, 'i=', d)
+            print('phiMax', phiMax[d])
+            print('phid', phid[d])
+            print('Qp', Qp[d])
+
+        # Ratios of allowable to HO fluxes
+        Rp = np.where(Pp > 1e-12, np.minimum(1, Qp/np.maximum(Pp,1e-12)), 0)
+        Rm = np.where(Pm > 1e-12, np.minimum(1, Qm/np.maximum(Pm,1e-12)), 0)
+
+        # The flux limiter
+        C = np.where(A >= 0, np.minimum(np.roll(Rp,-1), Rm),
+                             np.minimum(Rp, np.roll(Rm,-1)))
+        fluxB = fluxB + C*A
+
+        total += C*A
+        ##if it == 1:
+            #plt.plot(C, label='C iter '+str(it+1))
+            ##plt.plot(Rp, label='Rp iter '+str(it+1))
+            ##plt.plot(Rm, label='Rm iter '+str(it+1))
+            #plt.plot(A, label='A iter '+str(it+1))
+            #plt.plot(C*A, label='CA iter '+str(it+1))
+        ##    print('iter', it+1, 'CA', C*A)
+        #plt.plot(total, label='Total after iteration '+str(it+1))
+    #plt.legend()
+    #plt.show()
+        
+    return fluxB
