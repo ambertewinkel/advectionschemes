@@ -2528,3 +2528,22 @@ def PPM(init, nt, dt, uf, dxc, FCT=False, doubleFCT=False, doubleFCT_noupdate=Fa
             field[it+1] = field_LO - (np.roll(corr,-1) - corr)/dxc
 
     return field
+
+
+def FCTPPM_HW(init, nt, dt, uf, dxc, nFCT=1):
+    """This is a wrapper function that calls the scheme defined in limiter.py written by HW and its dependent functions. It runs PPM with FCT applied nFCT times (see inside function)."""
+
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+    c = (dt*uf/dxc)[0] # assumes uniform grid
+
+    options = {"HO":lim.PPMflux, "LO":lim.upwindFlux, "nCorr":nFCT, "minPhi": None, "maxPhi": None}
+    for it in range(nt):
+        field[it+1] = lim.FCT_HW(field[it], c, options=options)
+
+    return field
+
+
+
+

@@ -63,7 +63,7 @@ def main():
         ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'doubleFCT': True},
         ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'doubleFCT_noupdate': True},
         ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'FCTnonneg': True},
-        
+        {'scheme': 'FCTPPM_HW', 'nFCT': 9},
         #{'scheme': 'IRK3QC'},
         ]
     
@@ -72,7 +72,7 @@ def main():
         #{'label':'PPM', 'color':'blue', 'marker':'o', 'linestyle':'-'},
         #{'label':'PPM', 'color':'red', 'marker':'X', 'linestyle':'-'},
         #{'label':'PPM_mFCT1', 'color':'green', 'marker':'x', 'linestyle':'-'},
-        {'label':'PPM_mFCT9', 'color':'yellow', 'marker':'+', 'linestyle':'-'},
+        {'label':'PPM_mFCT9', 'color':'red', 'marker':'+', 'linestyle':'-'},
         #{'label':'AdImExCubic_mFCT3', 'color':'limegreen', 'marker':'x', 'linestyle':'-'},
         #{'label':'AdImExCubic_mFCT4', 'color':'springgreen', 'marker':'x', 'linestyle':'-'},
         #{'label':'AdImExCubic_mFCT5', 'color':'aquamarine', 'marker':'x', 'linestyle':'-'},
@@ -84,6 +84,7 @@ def main():
         ##{'label':'AdImExCubic_dFCT', 'color':'purple', 'marker':'+', 'linestyle':':'},
         ##{'label':'AdImExCubic_dFCT_noupdate', 'color':'green', 'marker':'x', 'linestyle':'-'},
         ##{'label':'AdImExCubic_FCTnonneg', 'color':'black', 'marker':'x', 'linestyle':'-'},
+        {'label':'FCT9PPM_HW', 'color':'blue', 'marker':'x', 'linestyle':'-'},
         #{'label':'IRK3QC', 'color':'blue', 'marker':'x', 'linestyle':'-'},
         ]
 
