@@ -2262,7 +2262,7 @@ def RK2QC(init, nt, dt, uf, dxc, solver='NumPy', kmax=2, set_alpha='max', set_be
     return field
 
 
-def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max', FCT=False, nonnegative=False, doubleFCT=False, doubleFCT_noupdate=False, FCTnonneg=False):
+def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max', FCT=False, nonnegative=False, doubleFCT=False, doubleFCT_noupdate=False, FCTnonneg=False, multiFCT=False, nFCT=1):
     """This scheme solves the non-predictor-corrector version (see above for that one) of the RK2_QC scheme. See HW notes sent on 27-11-2024 and AW notes 14-01-2025.
     alpha = 'half' or 'max' (0.5 or max(0.5,1-1/c))
     """
@@ -2307,15 +2307,17 @@ def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max', FCT=False
             flx_HO = flx_HO_n + flx_HO_np1 # [i] defined at i-1/2
             field[it+1] = lim.nonneg(field[it+1], flx_HO, dxc)
 
-        if FCT == True or doubleFCT == True or doubleFCT_noupdate == True or FCTnonneg == True: # FCT: low-order solution is adaptively implicit upwind. (assumes u>0 so actually FTBS&BTBS) (doubleFCT = FCT applied twice)
+        if FCT == True or doubleFCT == True or doubleFCT_noupdate == True or FCTnonneg == True or multiFCT == True: # FCT: low-order solution is adaptively implicit upwind. (assumes u>0 so actually FTBS&BTBS) (doubleFCT = FCT applied twice)
             if FCT == True:
                 FCTfunc = getattr(lim, 'FCT')
             elif doubleFCT == True:
-                FCTfunc = getattr(lim, 'doubleFCT')
-            elif doubleFCT_noupdate == True:
-                FCTfunc = getattr(lim, 'doubleFCT_noupdate')
+                FCTfunc = getattr(lim, 'doubleFCT_updateminmax')
+            #elif doubleFCT_noupdate == True:
+            #    FCTfunc = getattr(lim, 'doubleFCT_noupdate')
             elif FCTnonneg == True:
                 FCTfunc = getattr(lim, 'FCTnonneg')
+            elif multiFCT == True:
+                FCTfunc = getattr(lim, 'multiFCT')
         
             # Calculate low-order solution field_LO
             M_LO = np.zeros((nx, nx)) 
@@ -2336,7 +2338,10 @@ def RK2QC_noPC(init, nt, dt, uf, dxc, solver='NumPy', set_alpha='max', FCT=False
             # Apply flux-corrected transport
             previous = [field[it][i] if c[i] <= 1. else None for i in range(len(init))] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used.
             corr = flx_HO - flx_LO # flux between HO and LO, [i] defined at i-1/2
-            corr = FCTfunc(field_LO, corr, dxc, previous)
+            if multiFCT == True:
+                corr = FCTfunc(field_LO, flx_LO, field[it], corr, dxc, previous, nFCT)
+            else:
+                corr = FCTfunc(field_LO, corr, dxc, previous)
             field[it+1] = field_LO - (np.roll(corr,-1) - corr)/dxc
         
     return field
@@ -2458,7 +2463,7 @@ def IRK3QC(init, nt, dt, uf, dxc, butcher=PR05TVr, solver='NumPy'):
     return field
 
 
-def PPM(init, nt, dt, uf, dxc):
+def PPM(init, nt, dt, uf, dxc, FCT=False, doubleFCT=False, doubleFCT_noupdate=False, FCTnonneg=False, multiFCT=False, nFCT=1):
     """This scheme implements the piecewise parabolic method (PPM) by Colella and Woodward 1984. See HW notes MULES vs FCT 31-01-2025. Also works for large Courant numbers."""
 
     nx = len(init)
@@ -2480,5 +2485,46 @@ def PPM(init, nt, dt, uf, dxc):
                 ksum[j] += field[it,k%nx] # [j] defined at j+1/2
         fieldh = 1./np.roll(c,1)*np.roll(ksum,1) + np.roll(dc,1)/np.roll(c,1)*np.roll(fieldh_dc,intc[0]) # assumes uniform c # [i] defined at i-1/2
         field[it+1] = field[it] - c*(np.roll(fieldh,-1) - fieldh)
+
+        if FCT == True or doubleFCT == True or doubleFCT_noupdate == True or FCTnonneg == True or multiFCT == True: # FCT: low-order solution is adaptively implicit upwind. (assumes u>0 so actually FTBS&BTBS) (doubleFCT = FCT applied twice)
+            if FCT == True:
+                FCTfunc = getattr(lim, 'FCT')
+            elif doubleFCT == True:
+                FCTfunc = getattr(lim, 'doubleFCT_updateminmax')
+            #elif doubleFCT_noupdate == True:
+            #    FCTfunc = getattr(lim, 'doubleFCT_noupdate')
+            elif FCTnonneg == True:
+                FCTfunc = getattr(lim, 'FCTnonneg')
+            elif multiFCT == True:
+                FCTfunc = getattr(lim, 'multiFCT')
+        
+            # Calculate low-order solution field_LO
+            M_LO = np.zeros((nx, nx)) 
+            theta = np.maximum(1. - 1./c, np.zeros(nx)) # [i] defined at i-1/2; theta: blend! Off-centring in time for aiUpwind
+            for i in prange(nx):
+                M_LO[i,i] = 1. + theta[i]*c[i]
+                M_LO[i,(i-1)%len(init)] = -1.*theta[i]*c[i]
+            rhs_LO = field[it] - c*(1. - theta)*(field[it] - np.roll(field[it],1))
+            field_LO = np.linalg.solve(M_LO, rhs_LO)
+            
+            # Calculate low-order fluxes flx_LO
+            flx_LO = dt*uf*(theta*np.roll(field_LO,1) + (1. - theta)*np.roll(field[it],1)) # assumes u>0, [i] defined at i-1/2
+            # Calculate high-order fluxes flx_HO
+            #flx_HO_np1 = dt*uf*(alpha*quadh(np.roll(field[it+1],2), np.roll(field[it+1],1), field[it+1])) # assumes u>0, [i] defined at i-1/2
+            #flx_HO = flx_HO_n + flx_HO_np1 # [i] defined at i-1/2
+            
+            # Apply flux-corrected transport
+            previous = [field[it][i] if c[i] <= 1. else None for i in range(len(init))] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used.
+            corr = fieldh*uf*dt - flx_LO # flux between HO and LO, [i] defined at i-1/2 #!!! change to fix corr values: including the uf*dt factor here, notice the different definition of fieldh and flx_LO in terms of c/dx factors.
+            #plt.plot(corr, label='corr outside function')
+            #plt.plot(flx_LO, label='flx_LO outside function')
+            #plt.legend()
+            #plt.show()
+            #print(uf*dt)
+            if multiFCT == True:
+                corr = FCTfunc(field_LO, flx_LO, field[it], corr, dxc, previous, nFCT)
+            else:
+                corr = FCTfunc(field_LO, corr, dxc, previous)
+            field[it+1] = field_LO - (np.roll(corr,-1) - corr)/dxc
 
     return field

@@ -35,32 +35,51 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     limitCto1 = False
     create_animation = False
-    check_orderofconvergence = True
+    check_orderofconvergence = False
     accuracy_in = 'space with C const' # 'space with dt const' or 'time with dx const' or 'space with C const'; (relevant only if check_orderofconvergence == True)
     date = dati.date.today().strftime("%Y%m%d")                   # date of the run
     datetime = dati.datetime.now().strftime("%d%m%Y-%H%M%S")      # date and time of the run
 
     # Input cases
     cases = [\
-        {'scheme': 'PPM'}
-        ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half'},
-        ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'FCT': True},
+        #{'scheme': 'PPM'}
+        #{'scheme': 'PPM'},
+        #{'scheme': 'PPM', 'FCT': True},
+        #{'scheme': 'PPM', 'multiFCT': True},
+        {'scheme': 'PPM', 'multiFCT': True, 'nFCT': 9},
+        #{'scheme': 'RK2QC_noPC', 'multiFCT': True, 'nFCT': 3},
+        #{'scheme': 'RK2QC_noPC', 'multiFCT': True, 'nFCT': 4},
+        #{'scheme': 'RK2QC_noPC', 'multiFCT': True, 'nFCT': 5},
+        #{'scheme': 'RK2QC_noPC', 'multiFCT': True, 'nFCT': 6},
+        #{'scheme': 'RK2QC_noPC', 'multiFCT': True, 'nFCT': 7},
+        #{'scheme': 'RK2QC_noPC', 'multiFCT': True, 'nFCT': 8},
+        #{'scheme': 'RK2QC_noPC', 'multiFCT': True, 'nFCT': 9},
         ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'nonnegative': True},
         ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'doubleFCT': True},
         ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'doubleFCT_noupdate': True},
         ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'FCTnonneg': True},
+        
         #{'scheme': 'IRK3QC'},
         ]
     
     plot_args = [\
-        {'label':'PPM', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        ##{'label':'AdImExCubic', 'color':'blue', 'marker':'o', 'linestyle':'-'},
-        ##{'label':'AdImExCubic_FCT', 'color':'red', 'marker':'X', 'linestyle':'-'},
+        #{'label':'PPM', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        #{'label':'PPM', 'color':'blue', 'marker':'o', 'linestyle':'-'},
+        #{'label':'PPM', 'color':'red', 'marker':'X', 'linestyle':'-'},
+        #{'label':'PPM_mFCT1', 'color':'green', 'marker':'x', 'linestyle':'-'},
+        {'label':'PPM_mFCT9', 'color':'yellow', 'marker':'+', 'linestyle':'-'},
+        #{'label':'AdImExCubic_mFCT3', 'color':'limegreen', 'marker':'x', 'linestyle':'-'},
+        #{'label':'AdImExCubic_mFCT4', 'color':'springgreen', 'marker':'x', 'linestyle':'-'},
+        #{'label':'AdImExCubic_mFCT5', 'color':'aquamarine', 'marker':'x', 'linestyle':'-'},
+        #{'label':'AdImExCubic_mFCT6', 'color':'turquoise', 'marker':'x', 'linestyle':'-'},
+        #{'label':'AdImExCubic_mFCT7', 'color':'cyan', 'marker':'x', 'linestyle':'-'},
+        #{'label':'AdImExCubic_mFCT8', 'color':'lightblue', 'marker':'x', 'linestyle':'-'},
+        #{'label':'AdImExCubic_mFCT9', 'color':'royalblue', 'marker':'x', 'linestyle':'-'},
         ##{'label':'AdImExCubic_nn', 'color':'orange', 'marker':'x', 'linestyle':':'},
         ##{'label':'AdImExCubic_dFCT', 'color':'purple', 'marker':'+', 'linestyle':':'},
         ##{'label':'AdImExCubic_dFCT_noupdate', 'color':'green', 'marker':'x', 'linestyle':'-'},
@@ -70,16 +89,16 @@ def main():
 
     # Initial conditions
     analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
-    nx = 40                     # number of points in space
+    nx = 80                     # number of points in space
     xmax = 1.                   # physical domain parameters
     uconstant = 1.#3.125#10.1#1.26#3.125#6.125#3.125#6.25           # constant velocity
-    nt = 100#32#int(100/uconstant)                  # number of time steps
-    dt = 0.01#0.03125                   # time step
+    nt = 1#32#int(100/uconstant)                  # number of time steps
+    dt = 0.03125                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching'
     cconstant = uconstant*dt/(xmax/nx)  # Courant number # only used for title in final.pdf
 
     schemenames = [case["scheme"] for case in cases]
-    schemenames_settings = str(analytic.__name__) + f'_t{nt*dt:.4f}_u{uconstant:.4f}_' + "-".join(schemenames)
+    schemenames_settings = str(analytic.__name__) + f'_t{nt*dt:.4f}_u{uconstant:.4f}_' + 'RK2QC_noPC_FCT' #"-".join(schemenames)
     
     ##################################
     #### Setup output and logging ####
