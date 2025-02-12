@@ -47,7 +47,7 @@ def main():
 
     # Input cases
     cases = [\
-        {'scheme': 'PPM'}
+        {'scheme': 'PPM'},
         ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half'},
         ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'FCT': True},
         ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'nonnegative': True},
@@ -55,17 +55,23 @@ def main():
         ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'doubleFCT_noupdate': True},
         ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'FCTnonneg': True},
         #{'scheme': 'IRK3QC'},
+        #{'scheme': 'test_IRK3QC_loops'}
+        {'scheme': 'SSP3QC'},
+        {'scheme': 'ARS3QC'},
         ]
     
     plot_args = [\
-        {'label':'PPM', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        {'label':'PPM', 'color':'red', 'marker':'+', 'linestyle':'-'},
         ##{'label':'AdImExCubic', 'color':'blue', 'marker':'o', 'linestyle':'-'},
         ##{'label':'AdImExCubic_FCT', 'color':'red', 'marker':'X', 'linestyle':'-'},
         ##{'label':'AdImExCubic_nn', 'color':'orange', 'marker':'x', 'linestyle':':'},
         ##{'label':'AdImExCubic_dFCT', 'color':'purple', 'marker':'+', 'linestyle':':'},
         ##{'label':'AdImExCubic_dFCT_noupdate', 'color':'green', 'marker':'x', 'linestyle':'-'},
         ##{'label':'AdImExCubic_FCTnonneg', 'color':'black', 'marker':'x', 'linestyle':'-'},
-        #{'label':'IRK3QC', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        #{'label':'IRK3QC', 'color':'red', 'marker':'x', 'linestyle':'-'},
+        #{'label':'test_IRK3QC_loops', 'color':'blue', 'marker':'x', 'linestyle':'-'}
+        {'label':'SSP3QC', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        {'label':'ARS3QC', 'color':'purple', 'marker':'x', 'linestyle':'--'},
         ]
 
     # Initial conditions

@@ -2482,3 +2482,95 @@ def PPM(init, nt, dt, uf, dxc):
         field[it+1] = field[it] - c*(np.roll(fieldh,-1) - fieldh)
 
     return field
+
+
+def QCmatrix(nx, dt, dx, u, alpha):
+    """This function returns the matrix M for the quasi-cubic scheme. That is, the quasicubic approximation at time level n+1, which is then on the LHS combined with the field[n+1,i] term."""
+    M = np.zeros((nx, nx))
+
+    for i in range(nx): # assumes u>0 # assumes A[0,0] = A[1,1] = A[2,2] (not always true!!!)
+        M[i,i] = 1. + dt*alpha*(5.*np.roll(u,-1)[i] - 2.*u[i])/(6.*dx[i]) 
+        M[i,i-1] = -dt*alpha*(np.roll(u,-1)[i] + 5.*u[i])/(6.*dx[i])
+        M[i,(i-2)] = dt*alpha*u[i]/(6.*dx[i])   
+        M[i,(i+1)%nx] = dt*alpha*np.roll(u,-1)[i]/(3.*dx[i])
+
+    return M
+
+
+def butcherSSP3433():
+    """Right implicit Butcher tableau of the SSP3(4,3,3) scheme (Table VI from Pareschi and Russo 2005)."""
+    alpha, beta, eta = 0.24169426078821, 0.06042356519705, 0.12915286960590
+    A = np.array([[alpha, 0, 0, 0], [-alpha, alpha, 0, 0], [0, 1 - alpha, alpha, 0], [beta, eta, 0.5 - beta - eta - alpha, alpha]])
+    b = np.array([0, 1/6, 1/6, 2/3])
+    return A, b
+
+
+def SSP3QC(init, nt, dt, uf, dxc):
+    """This scheme implements the timestepping from the right Butcher tableau of the SSP3(4,3,3) scheme (Table VI from Pareschi and Russo 2005), combined with the QC spatial discretisation also used in the RK2QC scheme. Assumes u>0 constant."""
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+    A, b = butcherSSP3433()
+    M = QCmatrix(nx, dt, dxc, uf, A[0,0]) # assumes the matrix is the same for the multiple solves, i.e., A[0,0] = A[1,1] = A[2,2] = A[3,3] (not always true)
+    flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
+
+    for it in range(nt):
+        field_k = field[it].copy()
+        for ik in range(len(b)):
+            rhs_k = field[it] + dt*np.dot(A[ik,:ik], f[:ik,:])
+            field_k = np.linalg.solve(M, rhs_k)
+            flx[ik,:] = quadh(np.roll(field_k,2), np.roll(field_k,1), field_k) # [i] defined at i-1/2
+            f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
+        field[it+1] = field[it] + dt*np.dot(b, f)
+
+    return field
+
+
+def test_IRK3QC_loops(init, nt, dt, uf, dxc): # 12-02-2025: indeed matches IRK3QC above, as it should
+    """This scheme implements the timestepping from the right Butcher tableau of the SSP3(4,3,3) scheme (Table VI from Pareschi and Russo 2005), combined with the QC spatial discretisation also used in the RK2QC scheme. Assumes u>0 constant."""
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+    A, b = PR05TVr()
+    M = QCmatrix(nx, dt, dxc, uf, A[0,0]) # assumes the matrix is the same for the multiple solves, i.e., A[0,0] = A[1,1] = A[2,2] = A[3,3] (not always true)
+    flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
+    print()
+    for it in range(nt):
+        field_k = field[it].copy()
+        for ik in range(len(b)):
+            rhs_k = field[it] + dt*np.dot(A[ik,:ik], f[:ik,:])
+            field_k = np.linalg.solve(M, rhs_k)
+            flx[ik,:] = quadh(np.roll(field_k,2), np.roll(field_k,1), field_k) # [i] defined at i-1/2
+            f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
+        field[it+1] = field[it] + dt*np.dot(b, f)
+    return field
+
+
+def butcherARS3233():
+    """Right implicit Butcher tableau of the ARS3(2,3,3) scheme (see Weller, Lock, Wood 2013)."""
+    gamma = 0.5 + np.sqrt(3)/6
+    A = np.array([[0, 0, 0], [0, gamma, 0], [0, 1 - 2*gamma, gamma]])
+    #b = np.array([0, gamma, 1 - gamma])
+    b = np.array([0, 0.5, 0.5])
+    return A, b
+
+
+def ARS3QC(init, nt, dt, uf, dxc):
+    """This scheme implements the timestepping from the right Butcher tableau of the ARS3(2,3,3) scheme (see Weller, Lock, Wood 2013), combined with the QC spatial discretisation also used in the RK2QC scheme. Assumes u>0 constant."""
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+    A, b = butcherARS3233()
+    flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
+
+    for it in range(nt):
+        field_k = field[it].copy()
+        for ik in range(len(b)):
+            M = QCmatrix(nx, dt, dxc, uf, A[ik,ik]) # Note that for this RK scheme the diagonal elements are not all the same!
+            rhs_k = field[it] + dt*np.dot(A[ik,:ik], f[:ik,:])
+            field_k = np.linalg.solve(M, rhs_k)
+            flx[ik,:] = quadh(np.roll(field_k,2), np.roll(field_k,1), field_k) # [i] defined at i-1/2
+            f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
+        field[it+1] = field[it] + dt*np.dot(b, f)
+
+    return field
