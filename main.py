@@ -56,10 +56,12 @@ def main():
         ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'FCTnonneg': True},
         #{'scheme': 'IRK3QC'},
         #{'scheme': 'test_IRK3QC_loops'}
-        {'scheme': 'SSP3QC'},
-        {'scheme': 'ARS3QC'},
+        ###{'scheme': 'SSP3QC'},
+        ###{'scheme': 'ARS3QC'},
         {'scheme': 'SSP3C4'},
         {'scheme': 'ARS3C4'},
+        {'scheme': 'UJ3QC'},
+        {'scheme': 'UJ3C4'},
         ]
     
     plot_args = [\
@@ -72,17 +74,19 @@ def main():
         ##{'label':'AdImExCubic_FCTnonneg', 'color':'black', 'marker':'x', 'linestyle':'-'},
         #{'label':'IRK3QC', 'color':'red', 'marker':'x', 'linestyle':'-'},
         #{'label':'test_IRK3QC_loops', 'color':'blue', 'marker':'x', 'linestyle':'-'}
-        {'label':'SSP3QC', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        {'label':'ARS3QC', 'color':'purple', 'marker':'x', 'linestyle':'--'},
+        ###{'label':'SSP3QC', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        ###{'label':'ARS3QC', 'color':'purple', 'marker':'x', 'linestyle':'--'},
         {'label':'SSP3C4', 'color':'green', 'marker':'+', 'linestyle':'-'},
         {'label':'ARS3C4', 'color':'orange', 'marker':'x', 'linestyle':'-'},
+        {'label':'UJ3QC_1p6', 'color':'pink', 'marker':'x', 'linestyle':'-'},
+        {'label':'UJ3C4_1p6', 'color':'blue', 'marker':'x', 'linestyle':'-'}
         ]
 
     # Initial conditions
     analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 1.#3.125#6.25           # constant velocity
+    uconstant = 3.125#6.25           # constant velocity
     nt = int(100/uconstant)                  # number of time steps
     dt = 0.01#0.03125                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching'

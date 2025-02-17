@@ -2615,11 +2615,66 @@ def SSP3C4(init, nt, dt, uf, dxc):
 
 
 def ARS3C4(init, nt, dt, uf, dxc):
-    """This scheme implements the timestepping from the right Butcher tableau of the ARS3(2,3,3) scheme (see Weller, Lock, Wood 2013), combined with the QC spatial discretisation also used in the RK2QC scheme. Assumes u>0 constant."""
+    """This scheme implements the timestepping from the right Butcher tableau of the ARS3(2,3,3) scheme (see Weller, Lock, Wood 2013), combined with the fourth order centred spatial discretisation. Assumes u>0 constant."""
     nx = len(init)
     field = np.zeros((nt+1, nx))
     field[0] = init.copy()
     A, b = butcherARS3233()
+    flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
+
+    for it in range(nt):
+        field_k = field[it].copy()
+        for ik in range(len(b)):
+            M = centred4matrix(nx, dt, dxc, uf, A[ik,ik]) # Note that for this RK scheme the diagonal elements are not all the same!
+            rhs_k = field[it] + dt*np.dot(A[ik,:ik], f[:ik,:])
+            field_k = np.linalg.solve(M, rhs_k)
+            flx[ik,:] = centred4(field_k) # [i] defined at i-1/2
+            f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
+        field[it+1] = field[it] + dt*np.dot(b, f)
+
+    return field
+
+
+def doublebutcherUJ31e32(c):
+    """Double butcher tableau from Ullrich and Jablonowski 2012. See the Weller Lock and Wood (2013) UJ3(1+e,3,2) scheme."""   
+    if c > 1.6: # I initially set this to 1
+        # Implicit
+        A = np.array([[0., 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.5]])
+        b = np.array([0.5, 0., 0., 0., 0., 0.5])
+    else:
+        # Explicit
+        A = np.array([[0., 0., 0., 0., 0., 0.],[0., 0., 0., 0., 0., 0.],[0., 1., 0., 0., 0., 0.],[0., 0.25, 0.25, 0., 0., 0.],[0., 1/6, 1/6, 2/3, 0., 0.],[0., 1/6, 1/6, 2/3, 0., 0.]])
+        b = np.array([0., 1/6, 1/6, 2/3, 0., 0.])
+    return A, b
+
+
+def UJ3QC(init, nt, dt, uf, dxc):
+    """This scheme implements the timestepping from the Double butcher tableau from Ullrich and Jablonowski 2012, combined with the QC spatial discretisation also used in the RK2QC scheme. Assumes u>0 constant."""
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+    A, b = doublebutcherUJ31e32((uf*dt/dxc)[0]) # assumes constant c. Include a spatial loop in the timestepping somehow? !!!
+    flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
+
+    for it in range(nt):
+        field_k = field[it].copy()
+        for ik in range(len(b)):
+            M = QCmatrix(nx, dt, dxc, uf, A[ik,ik]) # Note that for this RK scheme the diagonal elements are not all the same!
+            rhs_k = field[it] + dt*np.dot(A[ik,:ik], f[:ik,:])
+            field_k = np.linalg.solve(M, rhs_k)
+            flx[ik,:] = quadh(np.roll(field_k,2), np.roll(field_k,1), field_k) # [i] defined at i-1/2
+            f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
+        field[it+1] = field[it] + dt*np.dot(b, f)
+
+    return field
+
+
+def UJ3C4(init, nt, dt, uf, dxc):
+    """This scheme implements the timestepping from the double butcher tableau from Ullrich and Jablonowski 2012, combined with the fourth order centred spatial discretisation. Assumes u>0 constant."""
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+    A, b = doublebutcherUJ31e32((uf*dt/dxc)[0]) # assumes constant c. Include a spatial loop in the timestepping somehow? !!!
     flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
 
     for it in range(nt):
