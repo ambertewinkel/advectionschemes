@@ -422,7 +422,7 @@ def main():
     logging.info('')
 
 
-def callscheme(case, nt, dt, uf, dxc, psi_in):
+def callscheme(case, nt, dt, uf, dxc, psi_in, verbose=True):
     """Takes all the input variables and the scheme name and calls the scheme with the appropriate input arguments."""
 
     # Tranlate the scheme name to a function in schemes.py
@@ -434,15 +434,16 @@ def callscheme(case, nt, dt, uf, dxc, psi_in):
     params = ut.without_keys(case, exclude)
 
     # Call the scheme
-    print(f'Running {sc} with parameters {params}')
-    startscheme = timeit.default_timer()
+    if verbose == True: print(f'Running {sc} with parameters {params}')
+    #startscheme = timeit.default_timer()
     #print(f'--> Starting runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.4f} s, {nt}, {len(psi_in)}')
     psi = fn(psi_in.copy(), nt, dt, uf, dxc, **params)
     #plt.plot(psi[-1])
     #plt.title('After exiting the scheme function')
     #plt.show()
-    logging.info(f'Final psi for {sc} with parameters {params} and nx={len(psi_in)}: {psi[-1]}')
-    logging.info('')
+    if verbose == True:
+        logging.info(f'Final psi for {sc} with parameters {params} and nx={len(psi_in)}: {psi[-1]}')
+        logging.info('')
     #print(f'--> Runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.4f} s, {nt}, {len(psi[-1])}')
 
     return psi
