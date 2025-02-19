@@ -170,11 +170,16 @@ def MULES(field, flx_HO, c, flx_b=upwindFlux, nIter=1, minField=None, maxField=N
     Input: field = previous timesteps field
     Output:
     """
-    if callable(flx_b): # else: it is already just a flux value
+    if flx_b is upwindFlux: # else: it is already just a flux value
         flx_b = flx_b(field, c) # sets flx_b is at i+1/2
-
-    # Calculate the low-order bounded solution
-    field_b = advect(field, c, flx_b) # assumes flx_b is at i+1/2
+        # Calculate the low-order bounded solution
+        field_b = advect(field, c, flx_b) # this function assumes flx_b is at i+1/2
+        flx_b = np.roll(flx_b,1) # flx_b[i] is now at i-1/2
+    else: 
+        if callable(flx_b):
+            flx_b = flx_b(field, c) # flx_b[i] is here at i-1/2
+        # Calculate the low-order bounded solution
+        field_b = advect(field, c, np.roll(flx_b,-1)) # this function assumes flx_b is at i+1/2
 
     # The allowable min and max
     if c[0] <= 1: # assumes uniform Courant number
@@ -183,7 +188,7 @@ def MULES(field, flx_HO, c, flx_b=upwindFlux, nIter=1, minField=None, maxField=N
         minval, maxval = findMinMax(field_b, None, minField, maxField)
 
     # Calculate the flux correction
-    corr = flx_HO - np.roll(flx_b,1) # no roll if not upwindflux
+    corr = flx_HO - flx_b # no roll if not upwindflux
 
     Qp = maxval - field_b
     Qm = field_b - minval
@@ -198,4 +203,4 @@ def MULES(field, flx_HO, c, flx_b=upwindFlux, nIter=1, minField=None, maxField=N
         Rm = np.where(Pm > 0., np.minimum(1., (Qm + Ppprime)/(Pm + 1e-12)), 0.) #np.minimum(1., (Qm + Ppprime)/Pm) if Pm > 0. else 0.
         l = np.minimum(l, np.where(corr >= 0., np.minimum(Rp, np.roll(Rm,1)), np.minimum(np.roll(Rp,1), Rm)))
 
-    return np.roll(flx_b,1) + l*corr  # no roll if not upwindflux
+    return flx_b + l*corr  # no roll if not upwindflux
