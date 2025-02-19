@@ -2507,7 +2507,7 @@ def butcherSSP3433():
     return A, b
 
 
-def SSP3QC(init, nt, dt, uf, dxc):
+def SSP3QC(init, nt, dt, uf, dxc, MULES=False, nIter=1):
     """This scheme implements the timestepping from the right Butcher tableau of the SSP3(4,3,3) scheme (Table VI from Pareschi and Russo 2005), combined with the QC spatial discretisation also used in the RK2QC scheme. Assumes u>0 constant."""
     nx = len(init)
     field = np.zeros((nt+1, nx))
@@ -2515,15 +2515,20 @@ def SSP3QC(init, nt, dt, uf, dxc):
     A, b = butcherSSP3433()
     M = QCmatrix(nx, dt, dxc, uf, A[0,0]) # assumes the matrix is the same for the multiple solves, i.e., A[0,0] = A[1,1] = A[2,2] = A[3,3] (not always true)
     flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
+    c = dt*uf/dxc # assumes uniform grid
 
     for it in range(nt):
         field_k = field[it].copy()
+        flx_HO = np.zeros(nx)
         for ik in range(len(b)):
             rhs_k = field[it] + dt*np.dot(A[ik,:ik], f[:ik,:])
             field_k = np.linalg.solve(M, rhs_k)
             flx[ik,:] = quadh(np.roll(field_k,2), np.roll(field_k,1), field_k) # [i] defined at i-1/2
             f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
-        field[it+1] = field[it] + dt*np.dot(b, f)
+            flx_HO += flx[ik,:]*b[ik]
+        if MULES == True:
+            flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter)
+        field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc)
 
     return field
 
@@ -2556,23 +2561,28 @@ def butcherARS3233():
     return A, b
 
 
-def ARS3QC(init, nt, dt, uf, dxc):
+def ARS3QC(init, nt, dt, uf, dxc, MULES=False, nIter=1):
     """This scheme implements the timestepping from the right Butcher tableau of the ARS3(2,3,3) scheme (see Weller, Lock, Wood 2013), combined with the QC spatial discretisation also used in the RK2QC scheme. Assumes u>0 constant."""
     nx = len(init)
     field = np.zeros((nt+1, nx))
     field[0] = init.copy()
     A, b = butcherARS3233()
     flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
+    c = dt*uf/dxc # assumes uniform grid
 
     for it in range(nt):
         field_k = field[it].copy()
+        flx_HO = np.zeros(nx)
         for ik in range(len(b)):
             M = QCmatrix(nx, dt, dxc, uf, A[ik,ik]) # Note that for this RK scheme the diagonal elements are not all the same!
             rhs_k = field[it] + dt*np.dot(A[ik,:ik], f[:ik,:])
             field_k = np.linalg.solve(M, rhs_k)
             flx[ik,:] = quadh(np.roll(field_k,2), np.roll(field_k,1), field_k) # [i] defined at i-1/2
             f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
-        field[it+1] = field[it] + dt*np.dot(b, f)
+            flx_HO += flx[ik,:]*b[ik]
+        if MULES == True:
+            flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter)
+        field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc)
 
     return field
 
@@ -2580,6 +2590,7 @@ def ARS3QC(init, nt, dt, uf, dxc):
 def centred4(field):
     """Returns the flux for the centred fourth order spatial discretisation. Output defined at i-1/2."""
     return (-np.roll(field,-1) + 7.*field + 7.*np.roll(field,1) - np.roll(field,2))/12.
+
 
 def centred4matrix(nx, dt, dx, u, alpha):
     """This function returns the matrix M for the quasi-cubic scheme. That is, the quasicubic approximation at time level n+1, which is then on the LHS combined with the field[n+1,i] term."""
@@ -2595,7 +2606,7 @@ def centred4matrix(nx, dt, dx, u, alpha):
     return M
 
 
-def SSP3C4(init, nt, dt, uf, dxc):
+def SSP3C4(init, nt, dt, uf, dxc, MULES=False, nIter=1): # I tested the accuracy of changing the setup for MULES and that didn't changed the results (up to a rounding error many digits after the comma)
     """This scheme implements the timestepping from the right Butcher tableau of the SSP3(4,3,3) scheme (Table VI from Pareschi and Russo 2005), combined with the centred fourth order spatial discretisation. Assumes u>0 constant."""
     nx = len(init)
     field = np.zeros((nt+1, nx))
@@ -2603,36 +2614,46 @@ def SSP3C4(init, nt, dt, uf, dxc):
     A, b = butcherSSP3433()
     M = centred4matrix(nx, dt, dxc, uf, A[0,0]) # assumes the matrix is the same for the multiple solves, i.e., A[0,0] = A[1,1] = A[2,2] = A[3,3] (not always true)
     flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
+    c = dt*uf/dxc
 
     for it in range(nt):
         field_k = field[it].copy()
+        flx_HO = np.zeros(nx)
         for ik in range(len(b)):
             rhs_k = field[it] + dt*np.dot(A[ik,:ik], f[:ik,:])
             field_k = np.linalg.solve(M, rhs_k)
             flx[ik,:] = centred4(field_k) # [i] defined at i-1/2
             f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
-        field[it+1] = field[it] + dt*np.dot(b, f)
+            flx_HO += flx[ik,:]*b[ik]
+        if MULES == True:
+            flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter)
+        field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc)
 
     return field
 
 
-def ARS3C4(init, nt, dt, uf, dxc):
+def ARS3C4(init, nt, dt, uf, dxc, MULES=False, nIter=1):
     """This scheme implements the timestepping from the right Butcher tableau of the ARS3(2,3,3) scheme (see Weller, Lock, Wood 2013), combined with the fourth order centred spatial discretisation. Assumes u>0 constant."""
     nx = len(init)
     field = np.zeros((nt+1, nx))
     field[0] = init.copy()
     A, b = butcherARS3233()
     flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
+    c = dt*uf/dxc
 
     for it in range(nt):
         field_k = field[it].copy()
+        flx_HO = np.zeros(nx)
         for ik in range(len(b)):
             M = centred4matrix(nx, dt, dxc, uf, A[ik,ik]) # Note that for this RK scheme the diagonal elements are not all the same!
             rhs_k = field[it] + dt*np.dot(A[ik,:ik], f[:ik,:])
             field_k = np.linalg.solve(M, rhs_k)
             flx[ik,:] = centred4(field_k) # [i] defined at i-1/2
             f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
-        field[it+1] = field[it] + dt*np.dot(b, f)
+            flx_HO += flx[ik,:]*b[ik]
+        if MULES == True:
+            flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter)
+        field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc)
 
     return field
 
@@ -2650,43 +2671,53 @@ def doublebutcherUJ31e32(c):
     return A, b
 
 
-def UJ3QC(init, nt, dt, uf, dxc):
+def UJ3QC(init, nt, dt, uf, dxc, MULES=False, nIter=1):
     """This scheme implements the timestepping from the Double butcher tableau from Ullrich and Jablonowski 2012, combined with the QC spatial discretisation also used in the RK2QC scheme. Assumes u>0 constant."""
     nx = len(init)
     field = np.zeros((nt+1, nx))
     field[0] = init.copy()
     A, b = doublebutcherUJ31e32((uf*dt/dxc)[0]) # assumes constant c. Include a spatial loop in the timestepping somehow? !!!
     flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
+    c = dt*uf/dxc
 
     for it in range(nt):
         field_k = field[it].copy()
+        flx_HO = np.zeros(nx)
         for ik in range(len(b)):
             M = QCmatrix(nx, dt, dxc, uf, A[ik,ik]) # Note that for this RK scheme the diagonal elements are not all the same!
             rhs_k = field[it] + dt*np.dot(A[ik,:ik], f[:ik,:])
             field_k = np.linalg.solve(M, rhs_k)
             flx[ik,:] = quadh(np.roll(field_k,2), np.roll(field_k,1), field_k) # [i] defined at i-1/2
             f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
-        field[it+1] = field[it] + dt*np.dot(b, f)
+            flx_HO += flx[ik,:]*b[ik]
+        if MULES == True:
+            flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter)
+        field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc)
 
     return field
 
 
-def UJ3C4(init, nt, dt, uf, dxc):
+def UJ3C4(init, nt, dt, uf, dxc, MULES=False, nIter=1):
     """This scheme implements the timestepping from the double butcher tableau from Ullrich and Jablonowski 2012, combined with the fourth order centred spatial discretisation. Assumes u>0 constant."""
     nx = len(init)
     field = np.zeros((nt+1, nx))
     field[0] = init.copy()
     A, b = doublebutcherUJ31e32((uf*dt/dxc)[0]) # assumes constant c. Include a spatial loop in the timestepping somehow? !!!
     flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
+    c = dt*uf/dxc
 
     for it in range(nt):
         field_k = field[it].copy()
+        flx_HO = np.zeros(nx)
         for ik in range(len(b)):
             M = centred4matrix(nx, dt, dxc, uf, A[ik,ik]) # Note that for this RK scheme the diagonal elements are not all the same!
             rhs_k = field[it] + dt*np.dot(A[ik,:ik], f[:ik,:])
             field_k = np.linalg.solve(M, rhs_k)
             flx[ik,:] = centred4(field_k) # [i] defined at i-1/2
             f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
-        field[it+1] = field[it] + dt*np.dot(b, f)
+            flx_HO += flx[ik,:]*b[ik]
+        if MULES == True:
+            flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter)
+        field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc)
 
     return field

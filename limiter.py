@@ -171,7 +171,7 @@ def MULES(field, flx_HO, c, flx_b=upwindFlux, nIter=1, minField=None, maxField=N
     Output:
     """
     if flx_b is upwindFlux: # else: it is already just a flux value
-        flx_b = flx_b(field, c) # sets flx_b is at i+1/2
+        flx_b = flx_b(field, c) # sets flx_b at i+1/2
         # Calculate the low-order bounded solution
         field_b = advect(field, c, flx_b) # this function assumes flx_b is at i+1/2
         flx_b = np.roll(flx_b,1) # flx_b[i] is now at i-1/2
@@ -188,7 +188,7 @@ def MULES(field, flx_HO, c, flx_b=upwindFlux, nIter=1, minField=None, maxField=N
         minval, maxval = findMinMax(field_b, None, minField, maxField)
 
     # Calculate the flux correction
-    corr = flx_HO - flx_b # no roll if not upwindflux
+    corr = flx_HO - flx_b
 
     Qp = maxval - field_b
     Qm = field_b - minval
@@ -199,8 +199,8 @@ def MULES(field, flx_HO, c, flx_b=upwindFlux, nIter=1, minField=None, maxField=N
     for ni in range(nIter):
         Ppprime = c*(np.maximum(0., l*corr) - np.minimum(0., np.roll(l*corr,-1)))
         Pmprime = c*(np.maximum(0., np.roll(l*corr,-1)) - np.minimum(0., l*corr))
-        Rp = np.where(Pp > 0., np.minimum(1., (Qp + Pmprime)/(Pp + 1e-12)), 0.) #np.minimum(1., (Qp + Pmprime)/Pp) if Pp > 0. else 0.
-        Rm = np.where(Pm > 0., np.minimum(1., (Qm + Ppprime)/(Pm + 1e-12)), 0.) #np.minimum(1., (Qm + Ppprime)/Pm) if Pm > 0. else 0.
+        Rp = np.where(Pp > 0., np.minimum(1., (Qp + Pmprime)/(Pp + 1e-12)), 0.)
+        Rm = np.where(Pm > 0., np.minimum(1., (Qm + Ppprime)/(Pm + 1e-12)), 0.)
         l = np.minimum(l, np.where(corr >= 0., np.minimum(Rp, np.roll(Rm,1)), np.minimum(np.roll(Rp,1), Rm)))
 
-    return flx_b + l*corr  # no roll if not upwindflux
+    return flx_b + l*corr

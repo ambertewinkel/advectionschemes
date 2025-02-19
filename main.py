@@ -47,10 +47,13 @@ def main():
 
     # Input cases
     cases = [\
-        {'scheme': 'PPM'},
-        {'scheme': 'PPM', 'MULES': True, 'nIter': 1},
-        {'scheme': 'PPM', 'MULES': True, 'nIter': 2},
-        {'scheme': 'PPM', 'MULES': True, 'nIter': 3},
+        #!{'scheme': 'SSP3C4'},
+        {'scheme': 'SSP3C4', 'MULES': True, 'nIter':0},
+        #!{'scheme': 'SSP3C4', 'MULES': True, 'nIter':1},
+        #{'scheme': 'PPM'},
+        #{'scheme': 'PPM', 'MULES': True, 'nIter': 1},
+        #{'scheme': 'PPM', 'MULES': True, 'nIter': 2},
+        #{'scheme': 'PPM', 'MULES': True, 'nIter': 3},
         ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half'},
         ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'FCT': True},
         ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'nonnegative': True},
@@ -68,10 +71,13 @@ def main():
         ]
     
     plot_args = [\
-        {'label':'PPM', 'color':'red', 'marker':'+', 'linestyle':'--'},
-        {'label':'PPM_MULES1', 'color':'blue', 'marker':'x', 'linestyle':'--'},
-        {'label':'PPM_MULES2', 'color':'orange', 'marker':'x', 'linestyle':'--'},
-        {'label':'PPM_MULES3', 'color':'purple', 'marker':'x', 'linestyle':'--'},
+        #!{'label':'SSP3C4', 'color':'blue', 'marker':'+', 'linestyle':'-'},
+        {'label':'SSP3C4_MULES0', 'color':'red', 'marker':'x', 'linestyle':'-'},
+        #!{'label':'SSP3C4_MULES1', 'color':'green', 'marker':'x', 'linestyle':'-'},
+        #{'label':'PPM', 'color':'red', 'marker':'+', 'linestyle':'--'},
+        #{'label':'PPM_MULES1', 'color':'blue', 'marker':'x', 'linestyle':'--'},
+        #{'label':'PPM_MULES2', 'color':'orange', 'marker':'x', 'linestyle':'--'},
+        #{'label':'PPM_MULES3', 'color':'purple', 'marker':'x', 'linestyle':'--'},
         ##{'label':'AdImExCubic', 'color':'blue', 'marker':'o', 'linestyle':'-'},
         ##{'label':'AdImExCubic_FCT', 'color':'red', 'marker':'X', 'linestyle':'-'},
         ##{'label':'AdImExCubic_nn', 'color':'orange', 'marker':'x', 'linestyle':':'},
@@ -90,11 +96,11 @@ def main():
 
     # Initial conditions
     analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
-    nx = 80                     # number of points in space
+    nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
     uconstant = 1.#6.25           # constant velocity
-    nt = 32#int(100/uconstant)                  # number of time steps
-    dt = 0.03125                   # time step
+    nt = 100#32#int(100/uconstant)                  # number of time steps
+    dt = 0.01#0.03125                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching'
     cconstant = uconstant*dt/(xmax/nx)  # Courant number # only used for title in final.pdf
 
