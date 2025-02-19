@@ -2458,7 +2458,7 @@ def IRK3QC(init, nt, dt, uf, dxc, butcher=PR05TVr, solver='NumPy'):
     return field
 
 
-def PPM(init, nt, dt, uf, dxc):
+def PPM(init, nt, dt, uf, dxc, MULES=False, nIter=1):
     """This scheme implements the piecewise parabolic method (PPM) by Colella and Woodward 1984. See HW notes MULES vs FCT 31-01-2025. Also works for large Courant numbers."""
 
     nx = len(init)
@@ -2479,6 +2479,8 @@ def PPM(init, nt, dt, uf, dxc):
             for k in range(j - intc[j] + 1, j + 1):
                 ksum[j] += field[it,k%nx] # [j] defined at j+1/2
         fieldh = 1./np.roll(c,1)*np.roll(ksum,1) + np.roll(dc,1)/np.roll(c,1)*np.roll(fieldh_dc,intc[0]) # assumes uniform c # [i] defined at i-1/2
+        if MULES == True:
+            fieldh = lim.MULES(field[it], fieldh, c, nIter=nIter)
         field[it+1] = field[it] - c*(np.roll(fieldh,-1) - fieldh)
 
     return field

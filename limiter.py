@@ -6,6 +6,8 @@ import numpy as np
 from numba_config import jitflags
 from numba import njit
 import matplotlib.pyplot as plt
+from scipy.sparse import diags
+from scipy.sparse.linalg import spsolve
 
 def FCT(field_LO, corr, dxc, previous, double=False, secondfield=None):
     """
@@ -94,3 +96,106 @@ def doubleFCT(field_LO, corr, dxc, previous):
     newcorrlim = FCT(fieldlim, newcorr, dxc, previous, double=True, secondfield=field_LO) # second FCT application
     
     return corrlim + newcorrlim
+
+
+def advect(phi, c, flux, options=None): # Author: HW
+    """Advect cell values phi using Courant number c using flux"""
+    F = flux
+    if callable(flux):
+        F = flux(phi, c, options=options)
+    return phi - c*(F - np.roll(F,1))
+
+
+def findMinMax(phid, phi, minPhi, maxPhi): # Author: HW
+    """Return phiMin and phiMax for bounded solutions. 
+    If minPhi and maxPhi are not none, these are the values
+    If phi is not None, find nearest neighbours of phid and phi to determin phiMin and phiMax
+    Suitable for c<=1
+    If phi is None, just use phid. Suitable for all c but more diffusive."""
+    phiMax = maxPhi
+    if phiMax is None:
+        phiMax = phid
+        if phi is not None:
+            phiMax = np.maximum(phi, phiMax)
+        phiMax = np.maximum(np.roll(phiMax,1), np.maximum(phiMax, np.roll(phiMax,-1)))
+    
+    phiMin = minPhi
+    if phiMin is None:
+        phiMin = phid
+        if phi is not None:
+            phiMin = np.minimum(phi, phiMin)
+        phiMin = np.minimum(np.roll(phiMin,1), np.minimum(phiMin, np.roll(phiMin,-1)))
+
+    return phiMin, phiMax
+
+
+def upwindMatrix(c, a, nx): # Author: HW
+    # Matrix for implicit solution of
+    # phi_j^{n+1} = phi_j^n - (1-a)*c(phi_j^n - phi_{j-1}^n)
+    #                       - a*c*(phi_j^{n+1} - phi_{j-1}^{n+1}
+    c = c[0] # !!! assumes uniform Courant number
+    a = a[0] # !!! assumes uniform Courant number
+    return diags([-a*c*np.ones(nx-1),  # The diagonal for j-1
+                 (1+a*c)*np.ones(nx), # The diagonal for j
+                 [-a*c]], # The top right corner for j-1
+                 [-1,0,nx-1], # the locations of each of the diagonals
+                 shape=(nx,nx), format = 'csr')
+
+
+def alpha(c): # Author: HW
+    "Off-centering for implicit solution"
+    return 1-1/np.maximum(c, 1)
+
+
+def upwindFlux(phi, c, options=None): # Author: HW
+    """Returns the first-order upwind fluxes for cell values phi and Courant number c
+    Implicit or explicit depending on Courant number"""
+    if not isinstance(options, dict):
+        options = {}
+    explicit =  options["explicit"] if "explicit" in options else (c[0] <= 1) # assumes uniform Courant number
+    if explicit:
+        return phi
+    nx = len(phi)
+    # Off centering for Implicit-Explicit
+    a = alpha(c)
+    M = upwindMatrix(c, a, nx)
+    # Solve the implicit problem
+    phiNew = spsolve(M, phi - (1-a)*c*(phi - np.roll(phi,1)))
+    # Back-substitute to get the implicit fluxes
+    return (1-a)*phi + a*phiNew
+
+
+def MULES(field, flx_HO, c, flx_b=upwindFlux, nIter=1, minField=None, maxField=None):
+    """This function implements the MULES limiter as in 31-01-2025 MULES vs FCT pdf. It allows for multiple iterations of MULES.
+    Input: field = previous timesteps field
+    Output:
+    """
+    if callable(flx_b): # else: it is already just a flux value
+        flx_b = flx_b(field, c) # sets flx_b is at i+1/2
+
+    # Calculate the low-order bounded solution
+    field_b = advect(field, c, flx_b) # assumes flx_b is at i+1/2
+
+    # The allowable min and max
+    if c[0] <= 1: # assumes uniform Courant number
+        minval, maxval = findMinMax(field_b, field, minField, maxField)
+    else:
+        minval, maxval = findMinMax(field_b, None, minField, maxField)
+
+    # Calculate the flux correction
+    corr = flx_HO - np.roll(flx_b,1) # no roll if not upwindflux
+
+    Qp = maxval - field_b
+    Qm = field_b - minval
+    Pp = c*(np.maximum(0, corr) - np.minimum(0, np.roll(corr,-1)))
+    Pm = c*(np.maximum(0, np.roll(corr,-1)) - np.minimum(0, corr))
+    
+    l = np.ones(len(corr))
+    for ni in range(nIter):
+        Ppprime = c*(np.maximum(0., l*corr) - np.minimum(0., np.roll(l*corr,-1)))
+        Pmprime = c*(np.maximum(0., np.roll(l*corr,-1)) - np.minimum(0., l*corr))
+        Rp = np.where(Pp > 0., np.minimum(1., (Qp + Pmprime)/(Pp + 1e-12)), 0.) #np.minimum(1., (Qp + Pmprime)/Pp) if Pp > 0. else 0.
+        Rm = np.where(Pm > 0., np.minimum(1., (Qm + Ppprime)/(Pm + 1e-12)), 0.) #np.minimum(1., (Qm + Ppprime)/Pm) if Pm > 0. else 0.
+        l = np.minimum(l, np.where(corr >= 0., np.minimum(Rp, np.roll(Rm,1)), np.minimum(np.roll(Rp,1), Rm)))
+
+    return np.roll(flx_b,1) + l*corr  # no roll if not upwindflux

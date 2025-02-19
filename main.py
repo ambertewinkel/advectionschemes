@@ -35,12 +35,12 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     limitCto1 = False
     create_animation = False
-    check_orderofconvergence = True
+    check_orderofconvergence = False
     accuracy_in = 'space with C const' # 'space with dt const' or 'time with dx const' or 'space with C const'; (relevant only if check_orderofconvergence == True)
     date = dati.date.today().strftime("%Y%m%d")                   # date of the run
     datetime = dati.datetime.now().strftime("%d%m%Y-%H%M%S")      # date and time of the run
@@ -48,6 +48,9 @@ def main():
     # Input cases
     cases = [\
         {'scheme': 'PPM'},
+        {'scheme': 'PPM', 'MULES': True, 'nIter': 1},
+        {'scheme': 'PPM', 'MULES': True, 'nIter': 2},
+        {'scheme': 'PPM', 'MULES': True, 'nIter': 3},
         ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half'},
         ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'FCT': True},
         ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'nonnegative': True},
@@ -58,14 +61,17 @@ def main():
         #{'scheme': 'test_IRK3QC_loops'}
         ###{'scheme': 'SSP3QC'},
         ###{'scheme': 'ARS3QC'},
-        {'scheme': 'SSP3C4'},
-        {'scheme': 'ARS3C4'},
-        {'scheme': 'UJ3QC'},
-        {'scheme': 'UJ3C4'},
+        #!{'scheme': 'SSP3C4'},
+        #!{'scheme': 'ARS3C4'},
+        #!{'scheme': 'UJ3QC'},
+        #!{'scheme': 'UJ3C4'},
         ]
     
     plot_args = [\
-        {'label':'PPM', 'color':'red', 'marker':'+', 'linestyle':'-'},
+        {'label':'PPM', 'color':'red', 'marker':'+', 'linestyle':'--'},
+        {'label':'PPM_MULES1', 'color':'blue', 'marker':'x', 'linestyle':'--'},
+        {'label':'PPM_MULES2', 'color':'orange', 'marker':'x', 'linestyle':'--'},
+        {'label':'PPM_MULES3', 'color':'purple', 'marker':'x', 'linestyle':'--'},
         ##{'label':'AdImExCubic', 'color':'blue', 'marker':'o', 'linestyle':'-'},
         ##{'label':'AdImExCubic_FCT', 'color':'red', 'marker':'X', 'linestyle':'-'},
         ##{'label':'AdImExCubic_nn', 'color':'orange', 'marker':'x', 'linestyle':':'},
@@ -76,19 +82,19 @@ def main():
         #{'label':'test_IRK3QC_loops', 'color':'blue', 'marker':'x', 'linestyle':'-'}
         ###{'label':'SSP3QC', 'color':'blue', 'marker':'x', 'linestyle':'-'},
         ###{'label':'ARS3QC', 'color':'purple', 'marker':'x', 'linestyle':'--'},
-        {'label':'SSP3C4', 'color':'green', 'marker':'+', 'linestyle':'-'},
-        {'label':'ARS3C4', 'color':'orange', 'marker':'x', 'linestyle':'-'},
-        {'label':'UJ3QC_1p6', 'color':'pink', 'marker':'x', 'linestyle':'-'},
-        {'label':'UJ3C4_1p6', 'color':'blue', 'marker':'x', 'linestyle':'-'}
+        #!{'label':'SSP3C4', 'color':'green', 'marker':'+', 'linestyle':'-'},
+        #!{'label':'ARS3C4', 'color':'orange', 'marker':'x', 'linestyle':'-'},
+        #!{'label':'UJ3QC_1p6', 'color':'pink', 'marker':'x', 'linestyle':'-'},
+        #!{'label':'UJ3C4_1p6', 'color':'blue', 'marker':'x', 'linestyle':'-'}
         ]
 
     # Initial conditions
     analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
-    nx = 40                     # number of points in space
+    nx = 80                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 3.125#6.25           # constant velocity
-    nt = int(100/uconstant)                  # number of time steps
-    dt = 0.01#0.03125                   # time step
+    uconstant = 1.#6.25           # constant velocity
+    nt = 32#int(100/uconstant)                  # number of time steps
+    dt = 0.03125                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching'
     cconstant = uconstant*dt/(xmax/nx)  # Courant number # only used for title in final.pdf
 
