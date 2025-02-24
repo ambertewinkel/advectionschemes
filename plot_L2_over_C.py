@@ -25,8 +25,8 @@ def plot():
     cases = [\
         {'scheme': 'PPM'},
         {'scheme': 'SSP3QC'},
-        {'scheme': 'ARS3QC'},
         {'scheme': 'SSP3C4'},
+        {'scheme': 'ARS3QC'},
         {'scheme': 'ARS3C4'},
         {'scheme': 'UJ3QC'},
         {'scheme': 'UJ3C4'},
@@ -34,12 +34,12 @@ def plot():
     
     plot_args = [\
         {'label':'PPM', 'color':'red', 'marker':'+', 'linestyle':'-'},
-        {'label':'SSP3QC', 'color':'cyan', 'marker':'x', 'linestyle':'-'},
-        {'label':'ARS3QC', 'color':'purple', 'marker':'x', 'linestyle':'-'},
-        {'label':'SSP3C4', 'color':'green', 'marker':'+', 'linestyle':'-'},
-        {'label':'ARS3C4', 'color':'orange', 'marker':'x', 'linestyle':'-'},
-        {'label':'UJ3QC', 'color':'pink', 'marker':'x', 'linestyle':'-'},
-        {'label':'UJ3C4', 'color':'blue', 'marker':'x', 'linestyle':'-'}
+        {'label':'Im SSP3QC', 'color':'cyan', 'marker':'x', 'linestyle':'-'},
+        {'label':'Im SSP3C4', 'color':'green', 'marker':'+', 'linestyle':'-'},
+        {'label':'Im ARS3QC', 'color':'purple', 'marker':'x', 'linestyle':'-'},
+        {'label':'Im ARS3C4', 'color':'orange', 'marker':'+', 'linestyle':'-'},
+        {'label':'ImEx UJ3QC', 'color':'pink', 'marker':'x', 'linestyle':'-'},
+        {'label':'ImEx UJ3C4', 'color':'blue', 'marker':'+', 'linestyle':'-'}
         ]    
 
     # Setup 
@@ -92,11 +92,10 @@ def plot():
         plt.plot(c, locals()[f'L2_{plot_args[case]["label"]}'], label=plot_args[case]["label"], color=plot_args[case]["color"], marker=plot_args[case]["marker"], linestyle=plot_args[case]["linestyle"])
     plt.xlabel('Courant number')
     plt.ylabel('L2 norm')
-    plt.tight_layout()
-    #plt.xscale('log')
     plt.yscale('log')
     plt.legend()
     plt.title(f'L2 norm over C for dt={dt} and u={u}')
+    plt.tight_layout()
     plt.savefig(plotname)
     plt.close()
 

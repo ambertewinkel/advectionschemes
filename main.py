@@ -35,7 +35,7 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     limitCto1 = False
@@ -47,11 +47,20 @@ def main():
 
     # Input cases
     cases = [\
-        #!{'scheme': 'SSP3C4'},
-        {'scheme': 'SSP3C4', 'MULES': True, 'nIter':0},
-        #!{'scheme': 'SSP3C4', 'MULES': True, 'nIter':1},
-        #{'scheme': 'PPM'},
-        #{'scheme': 'PPM', 'MULES': True, 'nIter': 1},
+        {'scheme': 'ARS3', 'SD':'fourth22'},
+        {'scheme': 'ARS3', 'SD':'fourth31'},
+        {'scheme': 'ARS3', 'SD':'fourth301'},
+        {'scheme': 'ARS3', 'SD':'fifth302'},
+        {'scheme': 'ARS3', 'SD':'fifth41'},
+        {'scheme': 'ARS3', 'SD':'fifth401'},
+        #{'scheme': 'UJ3C4', 'MULES': True, 'nIter':0},
+        #!{'scheme': 'UJ3C4', 'MULES': True, 'nIter':1},
+        #{'scheme': 'SSP3C4'},
+        #{'scheme': 'SSP3C4', 'MULES': True, 'nIter':0},
+        #{'scheme': 'SSP3C4', 'MULES': True, 'nIter':1},
+        #{'scheme': 'SSP3C4', 'MULES': True, 'nIter':2},
+        #!{'scheme': 'PPM'},
+        #!{'scheme': 'PPM', 'MULES': True, 'nIter': 1},
         #{'scheme': 'PPM', 'MULES': True, 'nIter': 2},
         #{'scheme': 'PPM', 'MULES': True, 'nIter': 3},
         ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half'},
@@ -71,11 +80,21 @@ def main():
         ]
     
     plot_args = [\
-        #!{'label':'SSP3C4', 'color':'blue', 'marker':'+', 'linestyle':'-'},
-        {'label':'SSP3C4_MULES0', 'color':'red', 'marker':'x', 'linestyle':'-'},
-        #!{'label':'SSP3C4_MULES1', 'color':'green', 'marker':'x', 'linestyle':'-'},
-        #{'label':'PPM', 'color':'red', 'marker':'+', 'linestyle':'--'},
-        #{'label':'PPM_MULES1', 'color':'blue', 'marker':'x', 'linestyle':'--'},
+        {'label':'ARS3C4-fourth22', 'color':'blue', 'marker':'+', 'linestyle':'-'},
+        {'label':'ARS3fourth31', 'color':'red', 'marker':'+', 'linestyle':'-'},
+        {'label':'ARS3fourth301', 'color':'green', 'marker':'+', 'linestyle':'-'},
+        {'label':'ARS3fifth302', 'color':'orange', 'marker':'+', 'linestyle':'-'},
+        {'label':'ARS3fifth41', 'color':'purple', 'marker':'+', 'linestyle':'-'},
+        {'label':'ARS3fifth401', 'color':'pink', 'marker':'+', 'linestyle':'-'},
+        #!{'label':'ImEx UJ3C4', 'color':'blue', 'marker':'+', 'linestyle':'-'},
+        #{'label':'ImEx UJ3C4_MULES0', 'color':'red', 'marker':'x', 'linestyle':'-'},
+        #!{'label':'ImEx UJ3C4_MULES1', 'color':'lightblue', 'marker':'x', 'linestyle':'-'},        
+        #{'label':'Im SSP3C4', 'color':'green', 'marker':'+', 'linestyle':'-'},
+        #{'label':'SSP3C4_MULES0', 'color':'red', 'marker':'x', 'linestyle':'-'},
+        #{'label':'Im SSP3C4_MULES1', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        #{'label':'SSP3C4_MULES2', 'color':'orange', 'marker':'x', 'linestyle':'-'},
+        #!{'label':'PPM', 'color':'red', 'marker':'+', 'linestyle':'--'},
+        #!{'label':'PPM_MULES1', 'color':'orange', 'marker':'x', 'linestyle':'--'},
         #{'label':'PPM_MULES2', 'color':'orange', 'marker':'x', 'linestyle':'--'},
         #{'label':'PPM_MULES3', 'color':'purple', 'marker':'x', 'linestyle':'--'},
         ##{'label':'AdImExCubic', 'color':'blue', 'marker':'o', 'linestyle':'-'},
@@ -98,8 +117,8 @@ def main():
     analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 1.#6.25           # constant velocity
-    nt = 100#32#int(100/uconstant)                  # number of time steps
+    uconstant = 0.5#1.#3.125#6.25           # constant velocity
+    nt = int(100/uconstant)                  # number of time steps
     dt = 0.01#0.03125                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching'
     cconstant = uconstant*dt/(xmax/nx)  # Courant number # only used for title in final.pdf
@@ -395,10 +414,10 @@ def main():
             secondorder = rmse[0]*gridscale*gridscale
             thirdorder = rmse[0]*gridscale*gridscale*gridscale
             fourthorder = rmse[0]*gridscale*gridscale*gridscale*gridscale
-            ax1.plot(gridsizes, firstorder, color='black', linestyle=':')
-            ax1.plot(gridsizes, secondorder, color='black', linestyle=':')
-            ax1.plot(gridsizes, thirdorder, color='black', linestyle=':')
-            ax1.plot(gridsizes, fourthorder, color='black', linestyle=':')
+            ax1.plot(gridsizes, firstorder, color='grey', linestyle=':', linewidth=0.5)
+            ax1.plot(gridsizes, secondorder, color='grey', linestyle='-', linewidth=0.5)
+            ax1.plot(gridsizes, thirdorder, color='black', linestyle=':', linewidth=0.5)
+            ax1.plot(gridsizes, fourthorder, color='black', linestyle='-', linewidth=0.5)
         
         # Plot details
         ax1.set_xscale('log')
