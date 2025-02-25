@@ -47,12 +47,19 @@ def main():
 
     # Input cases
     cases = [\
-        {'scheme': 'ARS3', 'SD':'fourth22'},
-        {'scheme': 'ARS3', 'SD':'fourth31'},
-        {'scheme': 'ARS3', 'SD':'fourth301'},
-        {'scheme': 'ARS3', 'SD':'fifth302'},
-        {'scheme': 'ARS3', 'SD':'fifth41'},
-        {'scheme': 'ARS3', 'SD':'fifth401'},
+        {'scheme': 'UJ3', 'SD':'fourth301_new'},
+        #{'scheme': 'UJ3', 'SD':'fourth40'},
+        #{'scheme': 'UJ3', 'SD':'fifth50'},              
+        #{'scheme': 'SSP3', 'SD':'fourth40'},
+        #{'scheme': 'SSP3', 'SD':'fifth50'},              
+        #{'scheme': 'ARS3', 'SD':'fourth40'},
+        #{'scheme': 'ARS3', 'SD':'fifth50'},        
+        ####{'scheme': 'ARS3', 'SD':'fourth22'},
+        ####{'scheme': 'ARS3', 'SD':'fourth31_new'},
+        ####{'scheme': 'ARS3', 'SD':'fourth301_new'},
+        ####{'scheme': 'ARS3', 'SD':'fifth302_new'},
+        ####{'scheme': 'ARS3', 'SD':'fifth41_new'},
+        ####{'scheme': 'ARS3', 'SD':'fifth401_new'},
         #{'scheme': 'UJ3C4', 'MULES': True, 'nIter':0},
         #!{'scheme': 'UJ3C4', 'MULES': True, 'nIter':1},
         #{'scheme': 'SSP3C4'},
@@ -80,12 +87,19 @@ def main():
         ]
     
     plot_args = [\
-        {'label':'ARS3C4-fourth22', 'color':'blue', 'marker':'+', 'linestyle':'-'},
-        {'label':'ARS3fourth31', 'color':'red', 'marker':'+', 'linestyle':'-'},
-        {'label':'ARS3fourth301', 'color':'green', 'marker':'+', 'linestyle':'-'},
-        {'label':'ARS3fifth302', 'color':'orange', 'marker':'+', 'linestyle':'-'},
-        {'label':'ARS3fifth41', 'color':'purple', 'marker':'+', 'linestyle':'-'},
-        {'label':'ARS3fifth401', 'color':'pink', 'marker':'+', 'linestyle':'-'},
+        {'label':'UJ3fourth301_Clim1p6', 'color':'blue', 'marker':'+', 'linestyle':'-'},
+        #{'label':'ImEx UJ3fourth40', 'color':'cyan', 'marker':'+', 'linestyle':'-'},
+        #{'label':'ImEx UJ3fifth50', 'color':'dodgerblue', 'marker':'+', 'linestyle':'-'},        
+        #{'label':'Im SSP3fourth40', 'color':'chocolate', 'marker':'+', 'linestyle':'-'},
+        #{'label':'Im SSP3fifth50', 'color':'saddlebrown', 'marker':'+', 'linestyle':'-'},        
+        #{'label':'Im ARS3fourth40', 'color':'springgreen', 'marker':'+', 'linestyle':'-'},
+        #{'label':'Im ARS3fifth50', 'color':'darkgreen', 'marker':'+', 'linestyle':'-'},
+        ####{'label':'ARS3C4-fourth22', 'color':'blue', 'marker':'+', 'linestyle':'-'},
+        ####{'label':'ARS3fourth31_new', 'color':'red', 'marker':'+', 'linestyle':'-'},
+        ####{'label':'ARS3fourth301_new', 'color':'green', 'marker':'+', 'linestyle':'-'},
+        ####{'label':'ARS3fifth302_new', 'color':'orange', 'marker':'+', 'linestyle':'-'},
+        ####{'label':'ARS3fifth41_new', 'color':'purple', 'marker':'+', 'linestyle':'-'},
+        ####{'label':'ARS3fifth401_new', 'color':'pink', 'marker':'+', 'linestyle':'-'},
         #!{'label':'ImEx UJ3C4', 'color':'blue', 'marker':'+', 'linestyle':'-'},
         #{'label':'ImEx UJ3C4_MULES0', 'color':'red', 'marker':'x', 'linestyle':'-'},
         #!{'label':'ImEx UJ3C4_MULES1', 'color':'lightblue', 'marker':'x', 'linestyle':'-'},        
@@ -117,7 +131,7 @@ def main():
     analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 0.5#1.#3.125#6.25           # constant velocity
+    uconstant = 3.125#6.25           # constant velocity
     nt = int(100/uconstant)                  # number of time steps
     dt = 0.01#0.03125                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching'

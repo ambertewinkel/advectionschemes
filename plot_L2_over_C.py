@@ -24,22 +24,34 @@ def plot():
     # Cases to analyse
     cases = [\
         {'scheme': 'PPM'},
-        {'scheme': 'SSP3QC'},
-        {'scheme': 'SSP3C4'},
-        {'scheme': 'ARS3QC'},
-        {'scheme': 'ARS3C4'},
-        {'scheme': 'UJ3QC'},
-        {'scheme': 'UJ3C4'},
+        {'scheme': 'SSP3', 'SD':'fourth301_new'},
+        {'scheme': 'SSP3', 'SD':'fifth302_new'},
+        {'scheme': 'ARS3', 'SD':'fourth301_new'},
+        {'scheme': 'ARS3', 'SD':'fifth302_new'},
+        {'scheme': 'UJ3', 'SD':'fourth301_new'},
+        {'scheme': 'UJ3', 'SD':'fifth302_new'},
+        #{'scheme': 'SSP3QC'},
+        #{'scheme': 'SSP3C4'},
+        #{'scheme': 'ARS3QC'},
+        #{'scheme': 'ARS3C4'},
+        #{'scheme': 'UJ3QC'},
+        #{'scheme': 'UJ3C4'},
         ]
     
     plot_args = [\
         {'label':'PPM', 'color':'red', 'marker':'+', 'linestyle':'-'},
-        {'label':'Im SSP3QC', 'color':'cyan', 'marker':'x', 'linestyle':'-'},
-        {'label':'Im SSP3C4', 'color':'green', 'marker':'+', 'linestyle':'-'},
-        {'label':'Im ARS3QC', 'color':'purple', 'marker':'x', 'linestyle':'-'},
-        {'label':'Im ARS3C4', 'color':'orange', 'marker':'+', 'linestyle':'-'},
-        {'label':'ImEx UJ3QC', 'color':'pink', 'marker':'x', 'linestyle':'-'},
-        {'label':'ImEx UJ3C4', 'color':'blue', 'marker':'+', 'linestyle':'-'}
+        {'label':'Im SSP3fourth301', 'color':'cyan', 'marker':'x', 'linestyle':'-'},
+        {'label':'Im SSP3fifth302', 'color':'dodgerblue', 'marker':'+', 'linestyle':'-'},
+        {'label':'Im ARS3fourth301', 'color':'springgreen', 'marker':'x', 'linestyle':'-'},
+        {'label':'Im ARS3fifth302', 'color':'darkgreen', 'marker':'+', 'linestyle':'-'},
+        {'label':'ImEx UJ3fourth301', 'color':'pink', 'marker':'x', 'linestyle':'-'},
+        {'label':'ImEx UJ3fifth302', 'color':'purple', 'marker':'+', 'linestyle':'-'},
+        #{'label':'Im SSP3QC', 'color':'cyan', 'marker':'x', 'linestyle':'-'},
+        #{'label':'Im SSP3C4', 'color':'green', 'marker':'+', 'linestyle':'-'},
+        #{'label':'Im ARS3QC', 'color':'purple', 'marker':'x', 'linestyle':'-'},
+        #{'label':'Im ARS3C4', 'color':'orange', 'marker':'+', 'linestyle':'-'},
+        #{'label':'ImEx UJ3QC', 'color':'pink', 'marker':'x', 'linestyle':'-'},
+        #{'label':'ImEx UJ3C4', 'color':'blue', 'marker':'+', 'linestyle':'-'}
         ]    
 
     # Setup 
