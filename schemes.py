@@ -2413,6 +2413,12 @@ def PR05TVr():
     return A, b
 
 
+def PR05TVl():
+    A = np.array([[0, 0, 0],[1, 0, 0],[0.25, 0.25, 0]])
+    b = np.array([1/6, 1/6, 2/3])
+    return A, b
+
+
 def IRK3QC(init, nt, dt, uf, dxc, butcher=PR05TVr, solver='NumPy'):
     """
     This scheme implements IRK3 from Pareschi and Russo 2005 Table V right Butcher tableau, combined with the QC spatial discretisation also used in the RK2QC scheme.
@@ -2443,6 +2449,91 @@ def IRK3QC(init, nt, dt, uf, dxc, butcher=PR05TVr, solver='NumPy'):
         field[it+1] = field[it] - dt*b[0]*uf*ddx(flx_k1, np.roll(flx_k1,-1), dxc) \
             - dt*b[1]*uf*ddx(flx_k2, np.roll(flx_k2,-1), dxc) \
             - dt*b[2]*uf*ddx(flx_k3, np.roll(flx_k3,-1), dxc) # assumes u>0
+
+    return field
+
+
+def RK3QC(init, nt, dt, uf, dxc, butcher=PR05TVl, solver='NumPy'):
+    """
+    This scheme implements RK3 from Pareschi and Russo 2005 Table V left Butcher tableau, combined with the QC spatial discretisation also used in the RK2QC scheme.
+    Assumes uniform grid
+    """
+    A, b = butcher()
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+    solverfn = getattr(sv, solver)
+    M = np.zeros((nx, nx))
+
+    for i in range(nx): # assumes u>0 # assumes A[0,0] = A[1,1] = A[2,2] (not always true!!!)
+        M[i,i] = 1. + dt*A[0,0]*(5.*np.roll(uf,-1)[i] - 2.*uf[i])/(6.*dxc[i]) 
+        M[i,i-1] = -dt*A[0,0]*(np.roll(uf,-1)[i] + 5.*uf[i])/(6.*dxc[i])
+        M[i,(i-2)] = dt*A[0,0]*uf[i]/(6.*dxc[i])   
+        M[i,(i+1)%nx] = dt*A[0,0]*np.roll(uf,-1)[i]/(3.*dxc[i])
+
+    for it in range(nt): # assumes u>0
+        field_k1 = solverfn(M, field[it], field[it], 1)
+        flx_k1 = sd.quadh(np.roll(field_k1,2), np.roll(field_k1,1), field_k1) # [i] defined at i-1/2
+        rhs_k2 = field[it] - dt*uf*A[1,0]*ddx(flx_k1, np.roll(flx_k1,-1), dxc) # assumes u>0
+        field_k2 = solverfn(M, field[it], rhs_k2, 1)
+        flx_k2 = sd.quadh(np.roll(field_k2,2), np.roll(field_k2,1), field_k2) # [i] defined at i-1/2
+        rhs_k3 = field[it] - dt*uf*A[2,0]*ddx(flx_k1, np.roll(flx_k1,-1), dxc) - dt*uf*A[2,1]*ddx(flx_k2, np.roll(flx_k2,-1), dxc) # assumes u>0
+        field_k3 = solverfn(M, field[it], rhs_k3, 1)
+        flx_k3 = sd.quadh(np.roll(field_k3,2), np.roll(field_k3,1), field_k3) # [i] defined at i-1/2
+        field[it+1] = field[it] - dt*b[0]*uf*ddx(flx_k1, np.roll(flx_k1,-1), dxc) \
+            - dt*b[1]*uf*ddx(flx_k2, np.roll(flx_k2,-1), dxc) \
+            - dt*b[2]*uf*ddx(flx_k3, np.roll(flx_k3,-1), dxc) # assumes u>0
+
+    return field
+
+
+def lExrImRK3QC(init, nt, dt, uf, dxc, butcherIm=PR05TVr, butcherEx=PR05TVl, solver='NumPy'):
+    """
+    This scheme implements the Pareschi and Russo 2005 Table V left and right Butcher tableaus, combined with the QC spatial discretisation also used in the RK2QC scheme.
+    Assumes uniform grid
+    """
+    AIm, bIm = butcherIm()
+    AEx, bEx = butcherEx()
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+    solverfn = getattr(sv, solver)
+    M = np.zeros((nx, nx))
+
+    # Setting the left half of the domain to be explicit (beta=0) and the right half implicit (beta=1)
+    beta = np.ones(len(init)) # beta[i] is at i-1/2
+    for i in range(int(nx/2)):
+        beta[i] = 0. 
+
+    for i in range(nx): # assumes u>0 # assumes A[0,0] = A[1,1] = A[2,2] (not always true!!!) # this also assumes that the implicit/explicit regions don't change throughout the simulation
+        M[i,(i-2)] = dt*AIm[0,0]*beta[i]*uf[i]/(6.*dxc[i])   
+        M[i,i-1] = -dt*AIm[0,0]*(np.roll(beta*uf,-1)[i] + 5.*beta[i]*uf[i])/(6.*dxc[i])
+        M[i,i] = 1. + dt*AIm[0,0]*(5.*np.roll(beta*uf,-1)[i] - 2.*beta[i]*uf[i])/(6.*dxc[i]) 
+        M[i,(i+1)%nx] = dt*AIm[0,0]*np.roll(beta*uf,-1)[i]/(3.*dxc[i])
+
+    for it in range(nt): # assumes u>0
+        field_k1 = solverfn(M, field[it], field[it], 1)
+        
+        flx_k1 = sd.quadh(np.roll(field_k1,2), np.roll(field_k1,1), field_k1) # [i] defined at i-1/2
+        rhs_k2_Im = - dt*uf*AIm[1,0]*ddx(beta*flx_k1, np.roll(beta*flx_k1,-1), dxc)
+        rhs_k2_Ex = - dt*uf*AEx[1,0]*ddx((1-beta)*flx_k1, np.roll((1-beta)*flx_k1,-1), dxc)
+        rhs_k2 = field[it] + rhs_k2_Im + rhs_k2_Ex # assumes u>0
+        field_k2 = solverfn(M, field[it], rhs_k2, 1)
+        
+        flx_k2 = sd.quadh(np.roll(field_k2,2), np.roll(field_k2,1), field_k2) # [i] defined at i-1/2
+        rhs_k3_Im = - dt*uf*AIm[2,0]*ddx(beta*flx_k1, np.roll(beta*flx_k1,-1), dxc) - dt*uf*AIm[2,1]*ddx(beta*flx_k2, np.roll(beta*flx_k2,-1), dxc)
+        rhs_k3_Ex = - dt*uf*AEx[2,0]*ddx((1-beta)*flx_k1, np.roll((1-beta)*flx_k1,-1), dxc) - dt*uf*AEx[2,1]*ddx((1-beta)*flx_k2, np.roll((1-beta)*flx_k2,-1), dxc)
+        rhs_k3 = field[it] + rhs_k3_Im + rhs_k3_Ex  # assumes u>0
+        field_k3 = solverfn(M, field[it], rhs_k3, 1)
+        
+        flx_k3 = sd.quadh(np.roll(field_k3,2), np.roll(field_k3,1), field_k3) # [i] defined at i-1/2
+        rhs_final_Im =  - dt*bIm[0]*uf*ddx(beta*flx_k1, np.roll(beta*flx_k1,-1), dxc) \
+            - dt*bIm[1]*uf*ddx(beta*flx_k2, np.roll(beta*flx_k2,-1), dxc) \
+            - dt*bIm[2]*uf*ddx(beta*flx_k3, np.roll(beta*flx_k3,-1), dxc) # assumes u>0
+        rhs_final_Ex = - dt*bEx[0]*uf*ddx((1-beta)*flx_k1, np.roll((1-beta)*flx_k1,-1), dxc) \
+            - dt*bEx[1]*uf*ddx((1-beta)*flx_k2, np.roll((1-beta)*flx_k2,-1), dxc) \
+            - dt*bEx[2]*uf*ddx((1-beta)*flx_k3, np.roll((1-beta)*flx_k3,-1), dxc) # assumes u>0
+        field[it+1] = field[it] + rhs_final_Im + rhs_final_Ex
 
     return field
 

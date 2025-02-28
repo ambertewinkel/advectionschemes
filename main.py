@@ -39,7 +39,7 @@ def main():
     
     # Input booleans
     limitCto1 = False
-    create_animation = False
+    create_animation = True
     check_orderofconvergence = False
     accuracy_in = 'space with C const' # 'space with dt const' or 'time with dx const' or 'space with C const'; (relevant only if check_orderofconvergence == True)
     date = dati.date.today().strftime("%Y%m%d")                   # date of the run
@@ -47,92 +47,37 @@ def main():
 
     # Input cases
     cases = [\
-        {'scheme': 'UJ3', 'SD':'fourth301_new'},
-        #{'scheme': 'UJ3', 'SD':'fourth40'},
-        #{'scheme': 'UJ3', 'SD':'fifth50'},              
-        #{'scheme': 'SSP3', 'SD':'fourth40'},
-        #{'scheme': 'SSP3', 'SD':'fifth50'},              
-        #{'scheme': 'ARS3', 'SD':'fourth40'},
-        #{'scheme': 'ARS3', 'SD':'fifth50'},        
-        ####{'scheme': 'ARS3', 'SD':'fourth22'},
-        ####{'scheme': 'ARS3', 'SD':'fourth31_new'},
-        ####{'scheme': 'ARS3', 'SD':'fourth301_new'},
-        ####{'scheme': 'ARS3', 'SD':'fifth302_new'},
-        ####{'scheme': 'ARS3', 'SD':'fifth41_new'},
-        ####{'scheme': 'ARS3', 'SD':'fifth401_new'},
-        #{'scheme': 'UJ3C4', 'MULES': True, 'nIter':0},
-        #!{'scheme': 'UJ3C4', 'MULES': True, 'nIter':1},
-        #{'scheme': 'SSP3C4'},
-        #{'scheme': 'SSP3C4', 'MULES': True, 'nIter':0},
-        #{'scheme': 'SSP3C4', 'MULES': True, 'nIter':1},
-        #{'scheme': 'SSP3C4', 'MULES': True, 'nIter':2},
-        #!{'scheme': 'PPM'},
-        #!{'scheme': 'PPM', 'MULES': True, 'nIter': 1},
-        #{'scheme': 'PPM', 'MULES': True, 'nIter': 2},
-        #{'scheme': 'PPM', 'MULES': True, 'nIter': 3},
-        ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half'},
-        ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'FCT': True},
-        ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'nonnegative': True},
-        ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'doubleFCT': True},
-        ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'doubleFCT_noupdate': True},
-        ##{'scheme': 'RK2QC_noPC', 'set_alpha': 'half', 'FCTnonneg': True},
-        #{'scheme': 'IRK3QC'},
-        #{'scheme': 'test_IRK3QC_loops'}
-        ###{'scheme': 'SSP3QC'},
-        ###{'scheme': 'ARS3QC'},
-        #!{'scheme': 'SSP3C4'},
-        #!{'scheme': 'ARS3C4'},
-        #!{'scheme': 'UJ3QC'},
-        #!{'scheme': 'UJ3C4'},
+        {'scheme': 'lExrImRK3QC'},
+        {'scheme': 'RK3QC'},
+        {'scheme': 'IRK3QC'},
+        #{'scheme': 'PPM'},
+        #{'scheme': 'SSP3', 'SD':'fourth301'},
+        #{'scheme': 'SSP3', 'SD':'fifth302'},        
+        #{'scheme': 'ARS3', 'SD':'fourth301'},
+        #{'scheme': 'ARS3', 'SD':'fifth302'},        
+        #{'scheme': 'UJ3', 'SD':'fourth301'},
+        #{'scheme': 'UJ3', 'SD':'fifth302'},
         ]
     
     plot_args = [\
-        {'label':'UJ3fourth301_Clim1p6', 'color':'blue', 'marker':'+', 'linestyle':'-'},
-        #{'label':'ImEx UJ3fourth40', 'color':'cyan', 'marker':'+', 'linestyle':'-'},
-        #{'label':'ImEx UJ3fifth50', 'color':'dodgerblue', 'marker':'+', 'linestyle':'-'},        
-        #{'label':'Im SSP3fourth40', 'color':'chocolate', 'marker':'+', 'linestyle':'-'},
-        #{'label':'Im SSP3fifth50', 'color':'saddlebrown', 'marker':'+', 'linestyle':'-'},        
-        #{'label':'Im ARS3fourth40', 'color':'springgreen', 'marker':'+', 'linestyle':'-'},
-        #{'label':'Im ARS3fifth50', 'color':'darkgreen', 'marker':'+', 'linestyle':'-'},
-        ####{'label':'ARS3C4-fourth22', 'color':'blue', 'marker':'+', 'linestyle':'-'},
-        ####{'label':'ARS3fourth31_new', 'color':'red', 'marker':'+', 'linestyle':'-'},
-        ####{'label':'ARS3fourth301_new', 'color':'green', 'marker':'+', 'linestyle':'-'},
-        ####{'label':'ARS3fifth302_new', 'color':'orange', 'marker':'+', 'linestyle':'-'},
-        ####{'label':'ARS3fifth41_new', 'color':'purple', 'marker':'+', 'linestyle':'-'},
-        ####{'label':'ARS3fifth401_new', 'color':'pink', 'marker':'+', 'linestyle':'-'},
-        #!{'label':'ImEx UJ3C4', 'color':'blue', 'marker':'+', 'linestyle':'-'},
-        #{'label':'ImEx UJ3C4_MULES0', 'color':'red', 'marker':'x', 'linestyle':'-'},
-        #!{'label':'ImEx UJ3C4_MULES1', 'color':'lightblue', 'marker':'x', 'linestyle':'-'},        
-        #{'label':'Im SSP3C4', 'color':'green', 'marker':'+', 'linestyle':'-'},
-        #{'label':'SSP3C4_MULES0', 'color':'red', 'marker':'x', 'linestyle':'-'},
-        #{'label':'Im SSP3C4_MULES1', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        #{'label':'SSP3C4_MULES2', 'color':'orange', 'marker':'x', 'linestyle':'-'},
-        #!{'label':'PPM', 'color':'red', 'marker':'+', 'linestyle':'--'},
-        #!{'label':'PPM_MULES1', 'color':'orange', 'marker':'x', 'linestyle':'--'},
-        #{'label':'PPM_MULES2', 'color':'orange', 'marker':'x', 'linestyle':'--'},
-        #{'label':'PPM_MULES3', 'color':'purple', 'marker':'x', 'linestyle':'--'},
-        ##{'label':'AdImExCubic', 'color':'blue', 'marker':'o', 'linestyle':'-'},
-        ##{'label':'AdImExCubic_FCT', 'color':'red', 'marker':'X', 'linestyle':'-'},
-        ##{'label':'AdImExCubic_nn', 'color':'orange', 'marker':'x', 'linestyle':':'},
-        ##{'label':'AdImExCubic_dFCT', 'color':'purple', 'marker':'+', 'linestyle':':'},
-        ##{'label':'AdImExCubic_dFCT_noupdate', 'color':'green', 'marker':'x', 'linestyle':'-'},
-        ##{'label':'AdImExCubic_FCTnonneg', 'color':'black', 'marker':'x', 'linestyle':'-'},
-        #{'label':'IRK3QC', 'color':'red', 'marker':'x', 'linestyle':'-'},
-        #{'label':'test_IRK3QC_loops', 'color':'blue', 'marker':'x', 'linestyle':'-'}
-        ###{'label':'SSP3QC', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        ###{'label':'ARS3QC', 'color':'purple', 'marker':'x', 'linestyle':'--'},
-        #!{'label':'SSP3C4', 'color':'green', 'marker':'+', 'linestyle':'-'},
-        #!{'label':'ARS3C4', 'color':'orange', 'marker':'x', 'linestyle':'-'},
-        #!{'label':'UJ3QC_1p6', 'color':'pink', 'marker':'x', 'linestyle':'-'},
-        #!{'label':'UJ3C4_1p6', 'color':'blue', 'marker':'x', 'linestyle':'-'}
+        {'label':'lEx-rIm RK3QC', 'color':'red', 'marker':'x', 'linestyle':'-'},
+        {'label':'Ex RK3QC', 'color':'blue', 'marker':'x', 'linestyle':'-'},
+        {'label':'Im RK3QC', 'color':'green', 'marker':'+', 'linestyle':'-'},
+        #{'label':'PPM', 'color':'red', 'marker':'+', 'linestyle':'-'},
+        #{'label':'Im SSP3fourth301', 'color':'cyan', 'marker':'x', 'linestyle':'-'},
+        #{'label':'Im SSP3fifth302', 'color':'dodgerblue', 'marker':'+', 'linestyle':'-'},
+        #{'label':'Im ARS3fourth301', 'color':'springgreen', 'marker':'x', 'linestyle':'-'},
+        #{'label':'Im ARS3fifth302', 'color':'darkgreen', 'marker':'+', 'linestyle':'-'},
+        #{'label':'ImEx UJ3fourth301', 'color':'pink', 'marker':'x', 'linestyle':'-'},
+        #{'label':'ImEx UJ3fifth302', 'color':'purple', 'marker':'+', 'linestyle':'-'},
         ]
 
     # Initial conditions
-    analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
+    analytic = an.sine         # initial condition, options: sine, cosbell, tophat, or combi
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 3.125#6.25           # constant velocity
-    nt = int(100/uconstant)                  # number of time steps
+    uconstant = 1.#3.125#6.25           # constant velocity
+    nt = 3*int(100/uconstant)                  # number of time steps
     dt = 0.01#0.03125                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching'
     cconstant = uconstant*dt/(xmax/nx)  # Courant number # only used for title in final.pdf
