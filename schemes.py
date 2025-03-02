@@ -2419,7 +2419,7 @@ def PR05TVl():
     return A, b
 
 
-def IRK3QC(init, nt, dt, uf, dxc, butcher=PR05TVr, solver='NumPy'):
+def ImRK3QC(init, nt, dt, uf, dxc, butcher=PR05TVr, solver='NumPy'):
     """
     This scheme implements IRK3 from Pareschi and Russo 2005 Table V right Butcher tableau, combined with the QC spatial discretisation also used in the RK2QC scheme.
     Assumes uniform grid
@@ -2490,7 +2490,7 @@ def RK3QC(init, nt, dt, uf, dxc, butcher=PR05TVl, solver='NumPy'):
 def lExrImRK3QC(init, nt, dt, uf, dxc, butcherIm=PR05TVr, butcherEx=PR05TVl, solver='NumPy'):
     """
     This scheme implements the Pareschi and Russo 2005 Table V left and right Butcher tableaus, combined with the QC spatial discretisation also used in the RK2QC scheme.
-    Assumes uniform grid
+    Assumes uniform grid. The default is to implement the explicit tableau in the left half of the spatial domain and the implicit tableau in the right half of the spatial domain. 
     """
     AIm, bIm = butcherIm()
     AEx, bEx = butcherEx()
@@ -2566,7 +2566,7 @@ def PPM(init, nt, dt, uf, dxc, MULES=False, nIter=1):
     return field
 
 
-def butcherSSP3433():
+def butcherImSSP3433():
     """Right implicit Butcher tableau of the SSP3(4,3,3) scheme (Table VI from Pareschi and Russo 2005)."""
     alpha, beta, eta = 0.24169426078821, 0.06042356519705, 0.12915286960590
     A = np.array([[alpha, 0, 0, 0], [-alpha, alpha, 0, 0], [0, 1 - alpha, alpha, 0], [beta, eta, 0.5 - beta - eta - alpha, alpha]])
@@ -2574,12 +2574,12 @@ def butcherSSP3433():
     return A, b
 
 
-def SSP3QC(init, nt, dt, uf, dxc, MULES=False, nIter=1):
+def ImSSP3QC(init, nt, dt, uf, dxc, MULES=False, nIter=1):
     """This scheme implements the timestepping from the right Butcher tableau of the SSP3(4,3,3) scheme (Table VI from Pareschi and Russo 2005), combined with the QC spatial discretisation also used in the RK2QC scheme. Assumes u>0 constant."""
     nx = len(init)
     field = np.zeros((nt+1, nx))
     field[0] = init.copy()
-    A, b = butcherSSP3433()
+    A, b = butcherImSSP3433()
     M = sd.QCmatrix(nx, dt, dxc, uf, A[0,0]) # assumes the matrix is the same for the multiple solves, i.e., A[0,0] = A[1,1] = A[2,2] = A[3,3] (not always true)
     flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
     c = dt*uf/dxc # assumes uniform grid
@@ -2620,7 +2620,7 @@ def test_IRK3QC_loops(init, nt, dt, uf, dxc): # 12-02-2025: indeed matches IRK3Q
     return field
 
 
-def butcherARS3233():
+def butcherImARS3233():
     """Right implicit Butcher tableau of the ARS3(2,3,3) scheme (see Weller, Lock, Wood 2013 - note the b definition is incorrect in that paper)."""
     gamma = 0.5 + np.sqrt(3)/6
     A = np.array([[0, 0, 0], [0, gamma, 0], [0, 1 - 2*gamma, gamma]])
@@ -2628,12 +2628,12 @@ def butcherARS3233():
     return A, b
 
 
-def ARS3QC(init, nt, dt, uf, dxc, MULES=False, nIter=1):
+def ImARS3QC(init, nt, dt, uf, dxc, MULES=False, nIter=1):
     """This scheme implements the timestepping from the right Butcher tableau of the ARS3(2,3,3) scheme (see Weller, Lock, Wood 2013), combined with the QC spatial discretisation also used in the RK2QC scheme. Assumes u>0 constant."""
     nx = len(init)
     field = np.zeros((nt+1, nx))
     field[0] = init.copy()
-    A, b = butcherARS3233()
+    A, b = butcherImARS3233()
     flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
     c = dt*uf/dxc # assumes uniform grid
 
@@ -2654,12 +2654,12 @@ def ARS3QC(init, nt, dt, uf, dxc, MULES=False, nIter=1):
     return field
 
 
-def SSP3C4(init, nt, dt, uf, dxc, MULES=False, nIter=1): # I tested the accuracy of changing the setup for MULES and that didn't changed the results (up to a rounding error many digits after the comma)
+def ImSSP3C4(init, nt, dt, uf, dxc, MULES=False, nIter=1): # I tested the accuracy of changing the setup for MULES and that didn't changed the results (up to a rounding error many digits after the comma)
     """This scheme implements the timestepping from the right Butcher tableau of the SSP3(4,3,3) scheme (Table VI from Pareschi and Russo 2005), combined with the centred fourth order spatial discretisation. Assumes u>0 constant."""
     nx = len(init)
     field = np.zeros((nt+1, nx))
     field[0] = init.copy()
-    A, b = butcherSSP3433()
+    A, b = butcherImSSP3433()
     M = sd.Mfourth22(nx, dt, dxc, uf, A[0,0]) # assumes the matrix is the same for the multiple solves, i.e., A[0,0] = A[1,1] = A[2,2] = A[3,3] (not always true)
     flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
     c = dt*uf/dxc
@@ -2680,12 +2680,12 @@ def SSP3C4(init, nt, dt, uf, dxc, MULES=False, nIter=1): # I tested the accuracy
     return field
 
 
-def ARS3C4(init, nt, dt, uf, dxc, MULES=False, nIter=1):
+def ImARS3C4(init, nt, dt, uf, dxc, MULES=False, nIter=1):
     """This scheme implements the timestepping from the right Butcher tableau of the ARS3(2,3,3) scheme (see Weller, Lock, Wood 2013), combined with the fourth order centred spatial discretisation. Assumes u>0 constant."""
     nx = len(init)
     field = np.zeros((nt+1, nx))
     field[0] = init.copy()
-    A, b = butcherARS3233()
+    A, b = butcherImARS3233()
     flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
     c = dt*uf/dxc
 
@@ -2706,27 +2706,28 @@ def ARS3C4(init, nt, dt, uf, dxc, MULES=False, nIter=1):
     return field
 
 
-def doublebutcherUJ31e32(c):
-    """Double butcher tableau from Ullrich and Jablonowski 2012. See the Weller Lock and Wood (2013) UJ3(1+e,3,2) scheme."""   
-    if c > 1.6: # I initially set this to 1
-        # Implicit
-        A = np.array([[0., 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.5]])
-        b = np.array([0.5, 0., 0., 0., 0., 0.5])
-    else:
-        # Explicit
-        A = np.array([[0., 0., 0., 0., 0., 0.],[0., 0., 0., 0., 0., 0.],[0., 1., 0., 0., 0., 0.],[0., 0.25, 0.25, 0., 0., 0.],[0., 1/6, 1/6, 2/3, 0., 0.],[0., 1/6, 1/6, 2/3, 0., 0.]])
-        b = np.array([0., 1/6, 1/6, 2/3, 0., 0.])
+def butcherExUJ31e32(c):
+    """Left (explicit) butcher tableau from Ullrich and Jablonowski 2012. See the Weller Lock and Wood (2013) UJ3(1+e,3,2) scheme."""   
+    A = np.array([[0., 0., 0., 0., 0., 0.],[0., 0., 0., 0., 0., 0.],[0., 1., 0., 0., 0., 0.],[0., 0.25, 0.25, 0., 0., 0.],[0., 1/6, 1/6, 2/3, 0., 0.],[0., 1/6, 1/6, 2/3, 0., 0.]])
+    b = np.array([0., 1/6, 1/6, 2/3, 0., 0.])
     return A, b
 
 
-def UJ3QC(init, nt, dt, uf, dxc, MULES=False, nIter=1):
+def butcherImUJ31e32(c):
+    """Right (implicit) butcher tableau from Ullrich and Jablonowski 2012. See the Weller Lock and Wood (2013) UJ3(1+e,3,2) scheme."""   
+    A = np.array([[0., 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.5]])
+    b = np.array([0.5, 0., 0., 0., 0., 0.5])
+    return A, b
+
+
+def ImExUJ3QC(init, nt, dt, uf, dxc, MULES=False, nIter=1):
     """This scheme implements the timestepping from the Double butcher tableau from Ullrich and Jablonowski 2012, combined with the QC spatial discretisation also used in the RK2QC scheme. Assumes u>0 constant."""
     nx = len(init)
     field = np.zeros((nt+1, nx))
     field[0] = init.copy()
-    A, b = doublebutcherUJ31e32((uf*dt/dxc)[0]) # assumes constant c. Include a spatial loop in the timestepping somehow? !!!
-    flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
     c = dt*uf/dxc
+    A, b = butcherImUJ31e32() if c[0] > 1.6 else butcherExUJ31e32() # assumes constant c. # I initially set this (1.6) to 1 - might need to be changed to another value for stability
+    flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
 
     for it in range(nt):
         field_k = field[it].copy()
@@ -2745,14 +2746,14 @@ def UJ3QC(init, nt, dt, uf, dxc, MULES=False, nIter=1):
     return field
 
 
-def UJ3C4(init, nt, dt, uf, dxc, MULES=False, nIter=1):
+def ImExUJ3C4(init, nt, dt, uf, dxc, MULES=False, nIter=1):
     """This scheme implements the timestepping from the double butcher tableau from Ullrich and Jablonowski 2012, combined with the fourth order centred spatial discretisation. Assumes u>0 constant."""
     nx = len(init)
     field = np.zeros((nt+1, nx))
     field[0] = init.copy()
-    A, b = doublebutcherUJ31e32((uf*dt/dxc)[0]) # assumes constant c. Include a spatial loop in the timestepping somehow? !!!
-    flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
     c = dt*uf/dxc
+    A, b = butcherImUJ31e32() if c[0] > 1.6 else butcherExUJ31e32() # assumes constant c. # I initially set this (1.6) to 1 - might need to be changed to another value for stability
+    flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
 
     for it in range(nt):
         field_k = field[it].copy()
@@ -2771,15 +2772,15 @@ def UJ3C4(init, nt, dt, uf, dxc, MULES=False, nIter=1):
     return field
 
 
-def UJ3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22'):
+def ImExUJ3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22'):
     """This scheme implements the timestepping from the double butcher tableau from Ullrich and Jablonowski 2012, combined with various (default: the fourth order centred) spatial discretisations. Assumes u>0 constant."""
     # SD: spatial discretisation, default is centered fourth order, i.e. fourth22
     nx = len(init)
     field = np.zeros((nt+1, nx))
     field[0] = init.copy()
-    A, b = doublebutcherUJ31e32((uf*dt/dxc)[0]) # assumes constant c. Include a spatial loop in the timestepping somehow? !!!
-    flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
     c = dt*uf/dxc
+    A, b = butcherImUJ31e32() if c[0] > 1.6 else butcherExUJ31e32() # assumes constant c. # I initially set this (1.6) to 1 - might need to be changed to another value for stability
+    flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
     matrix = getattr(sd, 'M' + SD)
     fluxfn = getattr(sd, SD)
 
@@ -2800,12 +2801,12 @@ def UJ3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22'):
     return field
 
 
-def SSP3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22'): # I tested the accuracy of changing the setup for MULES and that didn't changed the results (up to a rounding error many digits after the comma)
+def ImSSP3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22'): # I tested the accuracy of changing the setup for MULES and that didn't changed the results (up to a rounding error many digits after the comma)
     """This scheme implements the timestepping from the right Butcher tableau of the SSP3(4,3,3) scheme (Table VI from Pareschi and Russo 2005), combined with various (default: the fourth order centred) spatial discretisations. Assumes u>0 constant."""
     nx = len(init)
     field = np.zeros((nt+1, nx))
     field[0] = init.copy()
-    A, b = butcherSSP3433()
+    A, b = butcherImSSP3433()
     flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
     c = dt*uf/dxc
     matrix = getattr(sd, 'M' + SD)
@@ -2827,12 +2828,12 @@ def SSP3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22'): # I tested
 
     return field
 
-def ARS3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22'):
+def ImARS3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22'):
     """This scheme implements the timestepping from the right Butcher tableau of the ARS3(2,3,3) scheme (see Weller, Lock, Wood 2013), combined with various (default: the fourth order centred) spatial discretisations. Assumes u>0 constant."""
     nx = len(init)
     field = np.zeros((nt+1, nx))
     field[0] = init.copy()
-    A, b = butcherARS3233()
+    A, b = butcherImARS3233()
     flx, f = np.zeros((len(b), nx)), np.zeros((len(b), nx))
     c = dt*uf/dxc
     matrix = getattr(sd, 'M' + SD)

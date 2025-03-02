@@ -155,8 +155,8 @@ def create_animation_from_data(fields, nfields, analytic, nt, dt, xc, outputdir,
         for si in range(nfields):   
             field = fields[si]        
             plt.plot(xc, field[it], **plot_args[si])
-        ut.design_figure(f'{plotdir}timestep_{it}.png', f'Psi at t={it*dt:.2f}', \
-                        'x', 'Psi', 0., xmax, True, -0.1, 1.1)
+        ut.design_figure(f'{plotdir}timestep_{it}.png', f'$\\Psi$ at t={it*dt:.2f}', \
+                        'x', '$\\Psi$', 0., xmax, True, -0.1, 1.1)
         filenames.append(f'{plotdir}timestep_{it}.png')
 
     # Create animation from plots in the plots subdirectory

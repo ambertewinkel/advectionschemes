@@ -120,7 +120,7 @@ def Mfifth41(nx, dt, dx, u, alpha):
 
 def fifth401(field): 
     """Returns the flux for a spatial discretisation at [i] using [i+1], [i], [i-1], [i-2], [i-3], [i-4]. Output defined at i-1/2."""
-    return (1./5.*field + 77./60.*np.roll(field,1) - 43./60.*np.roll(field,2) + 17./60.*np.roll(field,3) - 1./20.*np.roll(field,4))/24.
+    return (1./5.*field + 77./60.*np.roll(field,1) - 43./60.*np.roll(field,2) + 17./60.*np.roll(field,3) - 1./20.*np.roll(field,4))
 
 
 def Mfifth401(nx, dt, dx, u, alpha):
