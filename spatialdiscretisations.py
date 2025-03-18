@@ -8,6 +8,20 @@ Initial note -> fourth - fifth in function names don't necessarily imply the ord
 import numpy as np
 
 
+def BS(field):
+    """Explicit (RHS) part of the backward in space discretisation."""
+    return np.roll(field, 1)
+
+
+def MBS(nx, dt, dx, u, alpha):
+    """This function returns the matrix M for the backward-in-space discretisation. That is, the discretisation at time level n+1, which is then on the LHS combined with the field[n+1,i] term."""
+    M = np.zeros((nx, nx))
+    for i in range(nx): # assumes u>0 # assumes A[0,0] = A[1,1] = A[2,2] (not always true!)
+        M[i,i-1] = -dt*alpha*u[i]/dx[i]
+        M[i,i] = 1. + dt*alpha*np.roll(u,-1)[i]/dx[i]
+    return M
+
+
 def quadh(fm1, f, fp1): # Used for the quasicubic (third-order in space for uniform grid) interpolation. Was in schemes.py previously
     """This quadratic interpolation for f[i+1/2] leads to a cubic approximation when put in the FV ddx scheme. The quadratic interpolation matches the integral of the polynomial to the integral of the field over the three cells. See notes sent by James Kent on 28-11-2024.
     --- in ---

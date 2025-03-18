@@ -2566,6 +2566,13 @@ def PPM(init, nt, dt, uf, dxc, MULES=False, nIter=1):
     return field
 
 
+def butcherExSSP3433():
+    """Left explicit Butcher tableau of the SSP3(4,3,3) scheme (Table VI from Pareschi and Russo 2005)."""
+    A = np.array([[0, 0, 0, 0], [0, 0, 0, 0], [0, 1, 0, 0], [0, 0.25, 0.25, 0]])
+    b = np.array([0, 1/6, 1/6, 2/3])
+    return A, b
+
+
 def butcherImSSP3433():
     """Right implicit Butcher tableau of the SSP3(4,3,3) scheme (Table VI from Pareschi and Russo 2005)."""
     alpha, beta, eta = 0.24169426078821, 0.06042356519705, 0.12915286960590
@@ -2618,6 +2625,14 @@ def test_IRK3QC_loops(init, nt, dt, uf, dxc): # 12-02-2025: indeed matches IRK3Q
             f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
         field[it+1] = field[it] + dt*np.dot(b, f)
     return field
+
+
+def butcherExARS3233():
+    """Left explicit Butcher tableau of the ARS3(2,3,3) scheme (see Weller, Lock, Wood 2013 - note the b definition is incorrect in that paper)."""
+    gamma = 0.5 + np.sqrt(3)/6
+    A = np.array([[0, 0, 0], [gamma, 0, 0], [gamma - 1, 2*(1 - gamma), 0]])
+    b = np.array([0, 0.5, 0.5])
+    return A, b
 
 
 def butcherImARS3233():
@@ -2706,14 +2721,14 @@ def ImARS3C4(init, nt, dt, uf, dxc, MULES=False, nIter=1):
     return field
 
 
-def butcherExUJ31e32(c):
+def butcherExUJ31e32():
     """Left (explicit) butcher tableau from Ullrich and Jablonowski 2012. See the Weller Lock and Wood (2013) UJ3(1+e,3,2) scheme."""   
     A = np.array([[0., 0., 0., 0., 0., 0.],[0., 0., 0., 0., 0., 0.],[0., 1., 0., 0., 0., 0.],[0., 0.25, 0.25, 0., 0., 0.],[0., 1/6, 1/6, 2/3, 0., 0.],[0., 1/6, 1/6, 2/3, 0., 0.]])
     b = np.array([0., 1/6, 1/6, 2/3, 0., 0.])
     return A, b
 
 
-def butcherImUJ31e32(c):
+def butcherImUJ31e32():
     """Right (implicit) butcher tableau from Ullrich and Jablonowski 2012. See the Weller Lock and Wood (2013) UJ3(1+e,3,2) scheme."""   
     A = np.array([[0., 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.5]])
     b = np.array([0.5, 0., 0., 0., 0., 0.5])
@@ -2772,7 +2787,7 @@ def ImExUJ3C4(init, nt, dt, uf, dxc, MULES=False, nIter=1):
     return field
 
 
-def ImExUJ3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22'):
+def ImExUJ3_old(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22'):
     """This scheme implements the timestepping from the double butcher tableau from Ullrich and Jablonowski 2012, combined with various (default: the fourth order centred) spatial discretisations. Assumes u>0 constant."""
     # SD: spatial discretisation, default is centered fourth order, i.e. fourth22
     nx = len(init)
@@ -2794,6 +2809,44 @@ def ImExUJ3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22'):
             flx[ik,:] = fluxfn(field_k) # [i] defined at i-1/2
             f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
             flx_HO += flx[ik,:]*b[ik]
+        if MULES == True:
+            flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter)
+        field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc)
+
+    return field
+
+
+def ImExUJ3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22', butcherIm=butcherImUJ31e32, butcherEx=butcherExUJ31e32):
+    """This scheme implements the timestepping from the double butcher tableau from Ullrich and Jablonowski 2012, combined with various (default: the fourth order centred) spatial discretisations. Assumes u>0 constant."""
+    # SD: spatial discretisation, default is centered fourth order, i.e. fourth22
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+    c = dt*uf/dxc
+
+    # Setting the off-centring in time     
+    beta = np.zeros(nx) # beta[i] is at i-1/2
+    for i in range(nx):
+        if c[i] > 1.6: # I initially set this (1.6) to 1 - might need to be changed to another value for stability
+            beta[i] = 1
+
+    AIm, bIm = butcherIm()
+    AEx, bEx = butcherEx() 
+    nstages = len(bIm)
+    flx, f = np.zeros((nstages, nx)), np.zeros((nstages, nx))
+    matrix = getattr(sd, 'M' + SD)
+    fluxfn = getattr(sd, SD)
+
+    for it in range(nt):
+        field_k = field[it].copy()
+        flx_HO = np.zeros(nx)
+        for ik in range(nstages):
+            M = matrix(nx, dt, dxc, beta*uf, AIm[ik,ik]) # Note that for this RK scheme the diagonal elements are not all the same!
+            rhs_k = field[it] + dt*np.dot(AEx[ik,:ik], (1 - beta[:])*f[:ik,:]) + dt*np.dot(AIm[ik,:ik], beta[:]*f[:ik,:])
+            field_k = np.linalg.solve(M, rhs_k)
+            flx[ik,:] = fluxfn(field_k) # [i] defined at i-1/2
+            f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
+            flx_HO += flx[ik,:]*bIm[ik]*beta + flx[ik,:]*bEx[ik]*(1 - beta)
         if MULES == True:
             flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter)
         field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc)
@@ -2828,6 +2881,45 @@ def ImSSP3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22'): # I test
 
     return field
 
+
+def ImExSSP3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22', butcherIm=butcherImSSP3433, butcherEx=butcherExSSP3433):
+    """This scheme implements the timestepping from the double butcher tableau from SSP3(4,3,3) scheme (Table VI from Pareschi and Russo 2005), combined with various (default: the fourth order centred) spatial discretisations. Assumes u>0 constant."""
+    # SD: spatial discretisation, default is centered fourth order, i.e. fourth22
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+    c = dt*uf/dxc
+
+    # Setting the off-centring in time     
+    beta = np.zeros(nx) # beta[i] is at i-1/2
+    for i in range(nx):
+        if c[i] > 0.7: # I initially set this (1.6) to 1 - might need to be changed to another value for stability
+            beta[i] = 1
+
+    AIm, bIm = butcherIm()
+    AEx, bEx = butcherEx() 
+    nstages = len(bIm)
+    flx, f = np.zeros((nstages, nx)), np.zeros((nstages, nx))
+    matrix = getattr(sd, 'M' + SD)
+    fluxfn = getattr(sd, SD)
+
+    for it in range(nt):
+        field_k = field[it].copy()
+        flx_HO = np.zeros(nx)
+        for ik in range(nstages):
+            M = matrix(nx, dt, dxc, beta*uf, AIm[ik,ik])
+            rhs_k = field[it] + dt*np.dot(AEx[ik,:ik], (1 - beta[:])*f[:ik,:]) + dt*np.dot(AIm[ik,:ik], beta[:]*f[:ik,:])
+            field_k = np.linalg.solve(M, rhs_k)
+            flx[ik,:] = fluxfn(field_k) # [i] defined at i-1/2
+            f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
+            flx_HO += flx[ik,:]*bIm[ik]*beta + flx[ik,:]*bEx[ik]*(1 - beta)
+        if MULES == True:
+            flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter)
+        field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc)
+
+    return field
+
+
 def ImARS3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22'):
     """This scheme implements the timestepping from the right Butcher tableau of the ARS3(2,3,3) scheme (see Weller, Lock, Wood 2013), combined with various (default: the fourth order centred) spatial discretisations. Assumes u>0 constant."""
     nx = len(init)
@@ -2849,6 +2941,44 @@ def ImARS3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22'):
             flx[ik,:] = fluxfn(field_k) # [i] defined at i-1/2
             f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
             flx_HO += flx[ik,:]*b[ik]
+        if MULES == True:
+            flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter)
+        field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc)
+
+    return field
+
+
+def ImExARS3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22', butcherIm=butcherImARS3233, butcherEx=butcherExARS3233):
+    """This scheme implements the timestepping from the double butcher tableau from ARS3(2,3,3) scheme (see Weller Lock Wood 2013), combined with various (default: the fourth order centred) spatial discretisations. Assumes u>0 constant."""
+    # SD: spatial discretisation, default is centered fourth order, i.e. fourth22
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+    c = dt*uf/dxc
+
+    # Setting the off-centring in time     
+    beta = np.zeros(nx) # beta[i] is at i-1/2
+    for i in range(nx):
+        if c[i] > 1.2: # I initially set this (1.6) to 1 - might need to be changed to another value for stability
+            beta[i] = 1
+
+    AIm, bIm = butcherIm()
+    AEx, bEx = butcherEx() 
+    nstages = len(bIm)
+    flx, f = np.zeros((nstages, nx)), np.zeros((nstages, nx))
+    matrix = getattr(sd, 'M' + SD)
+    fluxfn = getattr(sd, SD)
+
+    for it in range(nt):
+        field_k = field[it].copy()
+        flx_HO = np.zeros(nx)
+        for ik in range(nstages):
+            M = matrix(nx, dt, dxc, beta*uf, AIm[ik,ik])
+            rhs_k = field[it] + dt*np.dot(AEx[ik,:ik], (1 - beta[:])*f[:ik,:]) + dt*np.dot(AIm[ik,:ik], beta[:]*f[:ik,:])
+            field_k = np.linalg.solve(M, rhs_k)
+            flx[ik,:] = fluxfn(field_k) # [i] defined at i-1/2
+            f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
+            flx_HO += flx[ik,:]*bIm[ik]*beta + flx[ik,:]*bEx[ik]*(1 - beta)
         if MULES == True:
             flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter)
         field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc)

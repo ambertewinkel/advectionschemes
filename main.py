@@ -49,7 +49,7 @@ def main():
     cases = [\
         #{'scheme': 'lExrImRK3QC'},
         #{'scheme': 'RK3QC'},
-        #{'scheme': 'IRK3QC'},
+        #{'scheme': 'ImRK3QC'},
         #{'scheme': 'PPM'},
         #{'scheme': 'SSP3', 'SD':'fourth301'},
         #{'scheme': 'SSP3', 'SD':'fifth302'},        
@@ -57,9 +57,14 @@ def main():
         #{'scheme': 'ARS3', 'SD':'fifth302'},        
         #{'scheme': 'UJ3', 'SD':'fourth301'},
         #{'scheme': 'UJ3', 'SD':'fifth302'},        
-        {'scheme': 'SSP3', 'SD':'fifth401'},        
-        {'scheme': 'ARS3', 'SD':'fifth401'},        
-        {'scheme': 'UJ3', 'SD':'fifth401'},
+        ##{'scheme': 'SSP3', 'SD':'fifth401'},        
+        ##{'scheme': 'ARS3', 'SD':'fifth401'},        
+        ##{'scheme': 'UJ3', 'SD':'fifth401'},
+        {'scheme': 'ImExUJ3', 'SD':'fourth22'},
+        {'scheme': 'ImExSSP3', 'SD':'fourth22'},
+        {'scheme': 'ImExARS3', 'SD':'fourth22'},
+        #{'scheme':'LW3'},
+        #{'scheme':'LW3', 'FCT':True},        
         ]
     
     plot_args = [\
@@ -73,17 +78,22 @@ def main():
         #{'label':'Im ARS3fifth302', 'color':'darkgreen', 'marker':'+', 'linestyle':'-'},
         #{'label':'ImEx UJ3fourth301', 'color':'pink', 'marker':'x', 'linestyle':'-'},
         #{'label':'ImEx UJ3fifth302', 'color':'purple', 'marker':'+', 'linestyle':'-'},
-        {'label':'Im SSP3fifth401', 'color':'dodgerblue', 'marker':'+', 'linestyle':'-'},
-        {'label':'Im ARS3fifth401', 'color':'darkgreen', 'marker':'+', 'linestyle':'-'},
-        {'label':'ImEx UJ3fifth401', 'color':'purple', 'marker':'+', 'linestyle':'-'},
+        ##{}'label':'Im SSP3fifth401', 'color':'dodgerblue', 'marker':'+', 'linestyle':'-'},
+        ##{}'label':'Im ARS3fifth401', 'color':'darkgreen', 'marker':'+', 'linestyle':'-'},
+        ##{}'label':'ImEx UJ3fifth401', 'color':'purple', 'marker':'+', 'linestyle':'-'},
+        {'label':'ImEx UJ3 BS', 'color':'green', 'marker':'o', 'linestyle':'-'},
+        {'label':'ImEx SSP3 BS', 'color':'blue', 'marker':'+', 'linestyle':'-'},
+        {'label':'ImEx ARS3 BS', 'color':'red', 'marker':'x', 'linestyle':'-'},
+        #{'label':'Original non-monotonic', 'color':'blue', 'marker':'+', 'linestyle':'-'},
+        #{'label':'Limited monotonic', 'color':'red', 'marker':'x', 'linestyle':'-'},
         ]
 
     # Initial conditions
     analytic = an.combi         # initial condition, options: sine, cosbell, tophat, or combi
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 0.5#1.#3.125#6.25           # constant velocity
-    nt = int(100/uconstant)                  # number of time steps
+    uconstant = 1.#6.25#2.#3.125#6.25           # constant velocity
+    nt = 1#3*int(100/uconstant)                  # number of time steps
     dt = 0.01#0.03125                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching'
     cconstant = uconstant*dt/(xmax/nx)  # Courant number # only used for title in final.pdf
@@ -434,9 +444,9 @@ def callscheme(case, nt, dt, uf, dxc, psi_in, verbose=True):
     #startscheme = timeit.default_timer()
     #print(f'--> Starting runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.4f} s, {nt}, {len(psi_in)}')
     psi = fn(psi_in.copy(), nt, dt, uf, dxc, **params)
-    #print(case)
-    #print(psi[-1])
-    #print()
+    print(case)
+    print(psi[-1])
+    print()
     #plt.plot(psi[-1])
     #plt.title('After exiting the scheme function')
     #plt.show()
