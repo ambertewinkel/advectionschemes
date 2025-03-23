@@ -2984,3 +2984,63 @@ def ImExARS3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22', butcher
         field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc)
 
     return field
+
+
+def ImExRK(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22', RK='UJ31e32', blend='off', clim=1.6):
+    """This scheme implements the timestepping from the double butcher tableau defined with RK, combined with various (default: the fourth order centred) spatial discretisations. Assumes u>0 constant."""
+    # SD: spatial discretisation, default is centered fourth order, i.e. fourth22
+    nx = len(init)
+    field = np.zeros((nt+1, nx))
+    field[0] = init.copy()
+    c = dt*uf/dxc
+
+    beta = np.ones(nx) # beta[i] is at i-1/2
+    # Setting the off-centring in time 
+    if blend == 'off':    
+        for i in range(nx):
+            if c[i] <= clim: 
+                beta[i] = 0.
+    elif blend == 'rExlIm':
+        for i in range(int(nx/2)):
+            beta[i] = 0. 
+    elif blend == 'rExlIm_sm': # linear smoothing for 1/10 of the domain
+        for i in range(int(nx/10)):
+            beta[i] = (int(nx/10) - i)/int(nx/10)
+        for i in range(int(nx/10), int(nx/2)):
+            beta[i] = 0. 
+        for i in range(int(nx/2), int(nx/2) + int(nx/10)):
+            beta[i] = (i - int(nx/2))/int(nx/10)
+    elif blend == 'sm': # smooth transition from 0 to 1 with 1-1/c
+        for i in range(nx):
+            beta[i] = np.maximum(0., 1. - 1./c[i])
+    elif blend == 'Im':
+        beta = np.ones(nx)
+    elif blend == 'Ex':
+        beta = np.zeros(nx)
+    else:
+        print('Error: Blend in off-centering not recognised.')
+    #print('blend:', blend)
+    #print('beta with that blend is', beta)
+
+    AIm, bIm = globals()['butcherIm' + RK]()#butcherIm()
+    AEx, bEx = globals()['butcherEx' + RK]()#butcherEx() 
+    nstages = len(bIm)
+    flx, f = np.zeros((nstages, nx)), np.zeros((nstages, nx))
+    matrix = getattr(sd, 'M' + SD)
+    fluxfn = getattr(sd, SD)
+
+    for it in range(nt):
+        field_k = field[it].copy()
+        flx_HO = np.zeros(nx)
+        for ik in range(nstages):
+            M = matrix(nx, dt, dxc, beta*uf, AIm[ik,ik])
+            rhs_k = field[it] + dt*np.dot(AEx[ik,:ik], (1 - beta[:])*f[:ik,:]) + dt*np.dot(AIm[ik,:ik], beta[:]*f[:ik,:])
+            field_k = np.linalg.solve(M, rhs_k)
+            flx[ik,:] = fluxfn(field_k) # [i] defined at i-1/2
+            f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
+            flx_HO += flx[ik,:]*bIm[ik]*beta + flx[ik,:]*bEx[ik]*(1 - beta)
+        if MULES == True:
+            flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter)
+        field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc)
+
+    return field
