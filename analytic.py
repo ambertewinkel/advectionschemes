@@ -174,3 +174,20 @@ def combi(x, xmax, u=0., t=0., shift=0., ampl=1., a=0., b=0.5, c=0.6, d=0.8):
         psi = shift + ampl*np.where((x0 >= c) | (x0 <= d), 1., psi)
 
     return psi
+
+
+def cotan(x):
+    return -np.tan(x + np.pi/2)
+
+
+def rho_varuspace(x, xmax, u='1psinlx', t=0., l=1.):
+    """This is the analytic solution to the advection equation with a variable velocity field in space, i.e., u=1+sin(lx), where l is real. Here we have assumed l=1."""
+    psi = np.zeros(len(x))
+    psi = (- np.sin(t)*np.sin(cotan(0.5*x + 0.25*np.pi)) + np.cos(t)*np.cos(cotan(0.5*x + 0.25*np.pi)))/(np.sin(x) + 1.)
+    return psi
+
+
+
+
+def rho_varuspacetime():
+    pass

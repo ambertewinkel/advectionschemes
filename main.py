@@ -35,11 +35,11 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     limitCto1 = False
-    create_animation = False
+    create_animation = True
     check_orderofconvergence = False
     accuracy_in = 'space with C const' # 'space with dt const' or 'time with dx const' or 'space with C const'; (relevant only if check_orderofconvergence == True)
     date = dati.date.today().strftime("%Y%m%d")                   # date of the run
@@ -64,8 +64,14 @@ def main():
         ##{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth401', 'blend':'rExlIm_sm'},
         #{'scheme': 'ImExRK', 'RK':'SSP3433', 'SD':'fifth401', 'blend':'rExlIm'},
         #{'scheme': 'ImExRK', 'RK':'SSP3433', 'SD':'fifth401', 'blend':'rExlIm_sm'},
-        {'scheme': 'ImExRK', 'RK':'ARS3233', 'SD':'fifth401', 'blend':'rExlIm'},
-        {'scheme': 'ImExRK', 'RK':'ARS3233', 'SD':'fifth401', 'blend':'rExlIm_sm'},
+        #!{'scheme': 'ImExRK', 'RK':'ARS3233', 'SD':'fifth401', 'blend':'rExlIm'},
+        #!{'scheme': 'ImExRK', 'RK':'ARS3233', 'SD':'fifth401', 'blend':'rExlIm_sm'},
+        
+        #{'scheme': 'ImExRK', 'RK':'SSP3433', 'SD':'fifth302', 'blend':'sm'},
+        ##{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fourth301', 'blend':'sm'},
+        ##{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm'},
+        #{'scheme': 'ImExRK', 'RK':'ARS3233', 'SD':'fifth302', 'blend':'sm'},
+
         #{'scheme':'LW3'},
         #{'scheme':'LW3', 'FCT':True},        
         ]
@@ -74,7 +80,7 @@ def main():
         #{'label':'lEx-rIm RK3QC', 'color':'magenta', 'marker':'x', 'linestyle':'-'},
         #{'label':'Ex RK3QC', 'color':'blue', 'marker':'x', 'linestyle':'-'},
         #{'label':'Im RK3QC', 'color':'green', 'marker':'+', 'linestyle':'-'},
-        #{'label':'PPM', 'color':'red', 'marker':'+', 'linestyle':'-'},
+        #{'label':'PPM', 'color':'red', 'marker':'o', 'linestyle':'-'},
         #{'label':'Im SSP3fourth301', 'color':'cyan', 'marker':'x', 'linestyle':'-'},
         #{'label':'Im SSP3fifth302', 'color':'dodgerblue', 'marker':'+', 'linestyle':'-'},
         #{'label':'Im ARS3fourth301', 'color':'springgreen', 'marker':'x', 'linestyle':'-'},
@@ -88,22 +94,28 @@ def main():
         ##{'label':'ImEx UJ3 5th401 lExrIm_sm', 'color':'darkgreen', 'marker':'x', 'linestyle':'-'},
         #{'label':'ImEx SSP3 5th401 lExrIm', 'color':'cyan', 'marker':'+', 'linestyle':'-'},
         #{'label':'ImEx SSP3 5th401 lExrIm_sm', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        {'label':'ImEx ARS3 5th401 lExrIm', 'color':'orange', 'marker':'+', 'linestyle':'-'},
-        {'label':'ImEx ARS3 5th401 lExrIm_sm', 'color':'red', 'marker':'x', 'linestyle':'-'},
+        #!{'label':'ImEx ARS3 5th401 lExrIm', 'color':'orange', 'marker':'+', 'linestyle':'-'},
+        #!{'label':'ImEx ARS3 5th401 lExrIm_sm', 'color':'red', 'marker':'x', 'linestyle':'-'},
+    
+        #{'label':'ImEx SSP3 5th302 sm', 'color':'cyan', 'marker':'o', 'linestyle':'-'},
+        ##{'label':'ImEx UJ3 4th301 sm', 'color':'blue', 'marker':'+', 'linestyle':'-'},
+        ##{'label':'ImEx UJ3 5th302 sm', 'color':'seagreen', 'marker':'x', 'linestyle':'-'},
+        #{'label':'ImEx ARS3 5th302 sm', 'color':'orange', 'marker':'+', 'linestyle':'-'},
+
         #{'label':'Original non-monotonic', 'color':'blue', 'marker':'+', 'linestyle':'-'},
         #{'label':'Limited monotonic', 'color':'red', 'marker':'x', 'linestyle':'-'},
         ]
 
     # Initial conditions
-    analytic = an.sine         # initial condition, options: sine, cosbell, tophat, or combi
+    analytic = an.rho_varuspace         # initial condition, options: sine, cosbell, tophat, or combi
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    uconstant = 1.#3.125#1.#6.25#2.#3.125#6.25           # constant velocity
-    nt = int(100/uconstant)                  # number of time steps
+    u_setting = '1psinlx'       # 'constant' or '1psinlx'
+    uconstant = 10000000#0.5#12.5#6.25#2.#3.125#6.25           # constant velocity
+    nt = 10#10*int(100/uconstant)                  # number of time steps
     dt = 0.01#0.03125                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching'
     cconstant = uconstant*dt/(xmax/nx)  # Courant number # only used for title in final.pdf
-
     schemenames = [case["scheme"] for case in cases]
     schemenames_settings = str(analytic.__name__) + f'_t{nt*dt:.4f}_u{uconstant:.4f}_' + "-".join(schemenames)
     
@@ -220,7 +232,27 @@ def main():
         nx = nx_arr[xi]
         dt = dt_arr[xi]
         nt = nt_arr[xi]
-        uf = np.full(nx, uconstant)
+            
+        
+        # Setup grid for each of the grid spacings
+        if coords == 'stretching': # Potentially adjusted later if limitCto1 == True
+            xf, dxc, xc, dxf = gr.coords_stretching(xmax, nx, nx/2, dxcmin=0.) # points in space, length of spatial step        
+        elif coords == 'uniform':
+            xf, dxc, xc, dxf = gr.coords_uniform(xmax, nx) # points in space, length of spatial step
+        elif coords == 'weller':
+            xf, dxc, xc, dxf = gr.coords_welleretal2022(xmax, nx) # points in space, length of spatial step
+        else: 
+            logging.info('Error: invalid coordinates')
+
+        if u_setting == 'constant':
+            uf = np.full(nx, uconstant)
+        elif u_setting == '1psinlx':
+            lval = 1.
+            uf = 1. + np.sin(lval*2*np.pi*xf) 
+            plt.plot(xf, uf)
+            plt.title('Initial velocity')
+            plt.show()
+
         l = gridlabels[xi]
 
         # Check whether to limit the Courant number by limiting the grid spacing
@@ -230,15 +262,9 @@ def main():
         else:
             dxcmin = 0.
 
-        # Setup grid for each of the grid spacings
+        # Reset with potentially the new dxcmin (i.e. connected to limitCby1)
         if coords == 'stretching':
             xf, dxc, xc, dxf = gr.coords_stretching(xmax, nx, nx/2, dxcmin=dxcmin) # points in space, length of spatial step
-        elif coords == 'uniform':
-            xf, dxc, xc, dxf = gr.coords_uniform(xmax, nx) # points in space, length of spatial step
-        elif coords == 'weller':
-            xf, dxc, xc, dxf = gr.coords_welleretal2022(xmax, nx) # points in space, length of spatial step
-        else: 
-            logging.info('Error: invalid coordinates')
 
         # Calculate velocity and Courant number at cell centers 
         uc = gr.linear(xc, xf, uf)       # velocity at cell centers

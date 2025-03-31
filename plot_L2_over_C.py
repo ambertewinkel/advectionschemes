@@ -24,10 +24,10 @@ def plot():
     # Cases to analyse
     cases = [\
         #{'scheme': 'PPM'},
-        {'scheme': 'ImExRK', 'RK': 'ARS3233', 'SD':'fifth401', 'blend':'off'},
-        {'scheme': 'ImExRK', 'RK': 'ARS3233', 'SD':'fifth401', 'blend':'sm'},
-        {'scheme': 'ImExRK', 'RK': 'ARS3233', 'SD':'fifth401', 'blend':'Ex'},        
-        {'scheme': 'ImExRK', 'RK': 'ARS3233', 'SD':'fifth401', 'blend':'Im'},
+        {'scheme': 'ImExRK', 'RK': 'ARS3233', 'SD':'fifth302', 'blend':'off'},
+        {'scheme': 'ImExRK', 'RK': 'ARS3233', 'SD':'fifth302', 'blend':'sm'},
+        {'scheme': 'ImExRK', 'RK': 'ARS3233', 'SD':'fifth302', 'blend':'Ex'},        
+        {'scheme': 'ImExRK', 'RK': 'ARS3233', 'SD':'fifth302', 'blend':'Im'},
         ##{'scheme': 'SSP3', 'SD':'fourth301'},
         ##{'scheme': 'SSP3', 'SD':'fifth302'},
         ##{'scheme': 'SSP3', 'SD':'fifth401'},
@@ -47,10 +47,10 @@ def plot():
     
     plot_args = [\
         #{'label':'PPM', 'color':'red', 'marker':'+', 'linestyle':'-'},
-        {'label':'ImEx ARS3 5th401 noblend', 'color':'green', 'marker':'o', 'linestyle':'-'},
-        {'label':'ImEx ARS3 5th401 sm', 'color':'orange', 'marker':'x', 'linestyle':'-'},
-        {'label':'ImEx ARS3 5th401 Ex', 'color':'blue', 'marker':'+', 'linestyle':'-'},
-        {'label':'ImEx ARS3 5th401 Im', 'color':'purple', 'marker':'+', 'linestyle':'-'}
+        {'label':'ImEx ARS3 5th302 noblend', 'color':'green', 'marker':'o', 'linestyle':'-'},
+        {'label':'ImEx ARS3 5th302 sm', 'color':'orange', 'marker':'x', 'linestyle':'-'},
+        {'label':'ImEx ARS3 5th302 Ex', 'color':'blue', 'marker':'+', 'linestyle':'-'},
+        {'label':'ImEx ARS3 5th302 Im', 'color':'purple', 'marker':'+', 'linestyle':'-'}
         ##{'label':'Im SSP3fourth301', 'color':'cyan', 'marker':'x', 'linestyle':'-'},
         ##{'label':'Im SSP3fifth302', 'color':'dodgerblue', 'marker':'+', 'linestyle':'-'},
         ##{'label':'Im SSP3fifth401', 'color':'blue', 'marker':'x', 'linestyle':'-'},
