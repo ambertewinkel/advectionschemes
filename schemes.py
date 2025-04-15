@@ -2986,13 +2986,15 @@ def ImExARS3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22', butcher
     return field
 
 
-def ImExRK(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22', RK='UJ31e32', blend='off', clim=1.6):
+def ImExRK(init, nt, dt, uf, dxc, ufn2np1=None, MULES=False, nIter=1, SD='fourth22', RK='UJ31e32', blend='off', clim=1.6):
     """This scheme implements the timestepping from the double butcher tableau defined with RK, combined with various (default: the fourth order centred) spatial discretisations. Assumes u>0 constant."""
     # SD: spatial discretisation, default is centered fourth order, i.e. fourth22
     nx = len(init)
     field = np.zeros((nt+1, nx))
     field[0] = init.copy()
-    c = dt*uf/dxc
+    #c = dt*uf/dxc # This c is used for the calculation of the off-centring in time. For a varying velocity field in time, for the offcentring calculation, we need to use the maximum velocity that will appear locally at a certain face from n to n+1 to calculate the c and theta. 
+    maxuf = # calculate the max velocity at the time points given by the Butcher c
+    c = dt*maxuf/dxc # !!! adjust
 
     beta = np.ones(nx) # beta[i] is at i-1/2
     # Setting the off-centring in time 
@@ -3019,11 +3021,9 @@ def ImExRK(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22', RK='UJ31e
         beta = np.zeros(nx)
     else:
         print('Error: Blend in off-centering not recognised.')
-    #print('blend:', blend)
-    #print('beta with that blend is', beta)
 
-    AIm, bIm = globals()['butcherIm' + RK]()#butcherIm()
-    AEx, bEx = globals()['butcherEx' + RK]()#butcherEx() 
+    AIm, bIm = globals()['butcherIm' + RK]()
+    AEx, bEx = globals()['butcherEx' + RK]() 
     nstages = len(bIm)
     flx, f = np.zeros((nstages, nx)), np.zeros((nstages, nx))
     matrix = getattr(sd, 'M' + SD)
@@ -3040,7 +3040,7 @@ def ImExRK(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22', RK='UJ31e
             f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
             flx_HO += flx[ik,:]*bIm[ik]*beta + flx[ik,:]*bEx[ik]*(1 - beta)
         if MULES == True:
-            flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter)
+            flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter) # !!! do I need to use a different c here? Not one that is based on the max velocity from n to n+1 locally?
         field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc)
 
     return field
