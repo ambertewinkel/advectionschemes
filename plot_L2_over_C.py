@@ -23,11 +23,14 @@ def plot():
 
     # Cases to analyse
     cases = [\
+        {'scheme': 'aiUpwind'}, # already defaults to a theta blend
+        {'scheme': 'aiMPDATA', 'do_beta': 'blend'},
+        {'scheme': 'ImExRK', 'RK': 'UJ31e32', 'SD':'fifth302', 'blend':'sm'},
         #{'scheme': 'PPM'},
-        {'scheme': 'ImExRK', 'RK': 'ARS3233', 'SD':'fifth302', 'blend':'off'},
-        {'scheme': 'ImExRK', 'RK': 'ARS3233', 'SD':'fifth302', 'blend':'sm'},
-        {'scheme': 'ImExRK', 'RK': 'ARS3233', 'SD':'fifth302', 'blend':'Ex'},        
-        {'scheme': 'ImExRK', 'RK': 'ARS3233', 'SD':'fifth302', 'blend':'Im'},
+        ###{'scheme': 'ImExRK', 'RK': 'ARS3233', 'SD':'fifth302', 'blend':'off'},
+        ###{'scheme': 'ImExRK', 'RK': 'ARS3233', 'SD':'fifth302', 'blend':'sm'},
+        ###{'scheme': 'ImExRK', 'RK': 'ARS3233', 'SD':'fifth302', 'blend':'Ex'},        
+        ###{'scheme': 'ImExRK', 'RK': 'ARS3233', 'SD':'fifth302', 'blend':'Im'},
         ##{'scheme': 'SSP3', 'SD':'fourth301'},
         ##{'scheme': 'SSP3', 'SD':'fifth302'},
         ##{'scheme': 'SSP3', 'SD':'fifth401'},
@@ -46,11 +49,14 @@ def plot():
         ]
     
     plot_args = [\
+        {'label':'AdImEx Upwind', 'color':'darkgreen', 'marker':'x', 'linestyle':'-'},
+        {'label':'AdImEx MPDATA', 'color':'orange', 'marker':'x', 'linestyle':'-'},  
+        {'label':'AdImEx Strang Carryover', 'color':'purple', 'marker':'x', 'linestyle':'-'},
         #{'label':'PPM', 'color':'red', 'marker':'+', 'linestyle':'-'},
-        {'label':'ImEx ARS3 5th302 noblend', 'color':'green', 'marker':'o', 'linestyle':'-'},
-        {'label':'ImEx ARS3 5th302 sm', 'color':'orange', 'marker':'x', 'linestyle':'-'},
-        {'label':'ImEx ARS3 5th302 Ex', 'color':'blue', 'marker':'+', 'linestyle':'-'},
-        {'label':'ImEx ARS3 5th302 Im', 'color':'purple', 'marker':'+', 'linestyle':'-'}
+        ###{'label':'ImEx ARS3 5th302 noblend', 'color':'green', 'marker':'o', 'linestyle':'-'},
+        ###{'label':'ImEx ARS3 5th302 sm', 'color':'orange', 'marker':'x', 'linestyle':'-'},
+        ###{'label':'ImEx ARS3 5th302 Ex', 'color':'blue', 'marker':'+', 'linestyle':'-'},
+        ###{'label':'ImEx ARS3 5th302 Im', 'color':'purple', 'marker':'+', 'linestyle':'-'}
         ##{'label':'Im SSP3fourth301', 'color':'cyan', 'marker':'x', 'linestyle':'-'},
         ##{'label':'Im SSP3fifth302', 'color':'dodgerblue', 'marker':'+', 'linestyle':'-'},
         ##{'label':'Im SSP3fifth401', 'color':'blue', 'marker':'x', 'linestyle':'-'},
@@ -83,7 +89,7 @@ def plot():
     if not os.path.exists('./output/L2_over_C/' + date + '/'):
         os.mkdir('./output/L2_over_C/' + date + '/')
         print("Folder %s created" % date)
-    plotname = f'./output/L2_over_C/{date}/{'L2_over_C-' + "-".join(schemenames)}.pdf' 
+    plotname = f'./output/L2_over_C/{date}/{'L2_over_C-' + "-".join(schemenames)}' + '.svg' #+ '.pdf' 
     filename = f'./output/L2_over_C/{date}/{'L2_over_C-' + "-".join(schemenames)}.log'
     i = 0 
     while os.path.exists(plotname):

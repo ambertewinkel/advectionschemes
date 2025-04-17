@@ -16,6 +16,7 @@ import datetime as dati
 import logging
 import inspect
 import timeit
+import sys
 
 
 logger = logging.getLogger(__name__)
@@ -35,11 +36,11 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     limitCto1 = False
-    create_animation = True
+    create_animation = False
     check_orderofconvergence = False
     accuracy_in = 'space with C const' # 'space with dt const' or 'time with dx const' or 'space with C const'; (relevant only if check_orderofconvergence == True)
     date = dati.date.today().strftime("%Y%m%d")                   # date of the run
@@ -69,7 +70,7 @@ def main():
         
         #{'scheme': 'ImExRK', 'RK':'SSP3433', 'SD':'fifth302', 'blend':'sm'},
         ##{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fourth301', 'blend':'sm'},
-        ##{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm'},
+        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm'},
         #{'scheme': 'ImExRK', 'RK':'ARS3233', 'SD':'fifth302', 'blend':'sm'},
 
         #{'scheme':'LW3'},
@@ -99,7 +100,7 @@ def main():
     
         #{'label':'ImEx SSP3 5th302 sm', 'color':'cyan', 'marker':'o', 'linestyle':'-'},
         ##{'label':'ImEx UJ3 4th301 sm', 'color':'blue', 'marker':'+', 'linestyle':'-'},
-        ##{'label':'ImEx UJ3 5th302 sm', 'color':'seagreen', 'marker':'x', 'linestyle':'-'},
+        {'label':'AdImEx UJ3 5th302', 'color':'seagreen', 'marker':'x', 'linestyle':'-'},
         #{'label':'ImEx ARS3 5th302 sm', 'color':'orange', 'marker':'+', 'linestyle':'-'},
 
         #{'label':'Original non-monotonic', 'color':'blue', 'marker':'+', 'linestyle':'-'},
@@ -107,12 +108,15 @@ def main():
         ]
 
     # Initial conditions
-    analytic = an.rho_varuspace         # initial condition, options: sine, cosbell, tophat, or combi
+    analytic = an.combi#rho_varuspace         # initial condition, options: sine, cosbell, tophat, or combi
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    u_setting = '1psinlx'       # 'constant' or '1psinlx'
-    uconstant = 10000000#0.5#12.5#6.25#2.#3.125#6.25           # constant velocity
-    nt = 10#10*int(100/uconstant)                  # number of time steps
+    u_setting = 'constant'#'1psinlx'       # 'constant' or '1psinlx'
+    if len(sys.argv) == 2:
+        uconstant = float(sys.argv[1]) # velocity
+    else:
+        uconstant = 10000000.3#0.5#12.5#6.25#2.#3.125#6.25           # constant velocity
+    nt = 500#10*int(100/uconstant)                  # number of time steps
     dt = 0.01#0.03125                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching'
     cconstant = uconstant*dt/(xmax/nx)  # Courant number # only used for title in final.pdf
