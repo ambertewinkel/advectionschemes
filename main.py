@@ -213,19 +213,6 @@ def main():
             uf = np.full(nx, uconstant)
         elif u_setting == 'varying_space':
             uf = an.velocity_varying_space(xf)
-            #lval = 2.*np.pi
-            #uf = 2. + np.sin(lval*xf) 
-            ##plt.plot(xf, uf)
-            ##plt.title('Initial velocity on cell faces')
-            ##plt.show()
-        elif u_setting == 'varying_space_time': # v!!! needs to go into time loop (or add as option in the scheme depending on u_setting whether it recalculates the velocity)
-            uf = an.velocity_varying_space_time(xf, t=0.)
-            #lval = 2.*np.pi
-            #wval = 2.*np.pi
-            #uf = 2. + np.sin(lval*xf)*np.cos(wval*dt)
-            ##plt.plot(xf, uf)
-            ##plt.title('Initial velocity on cell faces')
-            ##plt.show()
         else:
             logging.info('Error: invalid velocity setting')
             print('Error: invalid velocity setting')
@@ -247,13 +234,13 @@ def main():
         # v!!! means that I have found a (temporary) solution on 21-04-2025 - but could use a think of a better solution in the future.
         if u_setting == 'constant':
             uc = gr.linear(xc, xf, uf)       # velocity at cell centers
-            cc = 0.5*dt*(np.roll(abs(uf),-1) + abs(uf))/dxc # Courant number at cell centers # v!!! the Courant number calculated here is not actually used directly in the scheme nor analytic solution - it is recalculated in those functions! It is only used to calculate the cmax/cmin below. 
-            # v!!! calculate Courant number at cell faces (put in loop for uf as well? as this setting assumes constant grid, that could work (apart from the recalc in the time loop of course, but that is separate))
-            cmax = np.max(cc)  # v!!! recalc or neglect? Just print all Courant number cell face values?
-            cmin = np.min(cc)  # v!!! recalc or neglect? Just print all Courant number cell face values?
+            cc = 0.5*dt*(np.roll(abs(uf),-1) + abs(uf))/dxc # Courant number at cell centers # This C is not actually used directly in the scheme nor analytic solution - it is recalculated in those functions (and sometimes also at cell faces instead)! It is only used to calculate the cmax/cmin below. 
+            cmax = np.max(cc)
+            cmin = np.min(cc)
             logging.info(f'Min Courant number: {cmin:.4f}')
             logging.info(f'Max Courant number: {cmax:.4f}')  
         if u_setting == 'varying_space' or u_setting == 'varying_space_time':
+            # FYI - for the nonuniform velocity schemes I need to calculate the Courant number at cell faces
             logging.info('The Courant numbers values and plot wont be exactly correct for varying velocity, as the ones I would calculate here are defined at cell centers -> hence I have set them to be NaNs.')
             uc = np.full(nx, np.nan)
             cc = np.full(nx, np.nan)
@@ -270,7 +257,7 @@ def main():
         # Calculate analytic solutions for each time step
         locals()[f'psi_an_{l}'] = np.zeros((nt+1, nx))
         for it in range(nt+1):
-            locals()[f'psi_an_{l}'][it] = analytic(xc, xmax, uc, it*dt) # v!!! why does the analytic solution use uc? # I need to calculate the velocity simply at x values in the 'cell centers'....? v!!! check with Hilary -----> actually: keep it as it is??? v!!! for the varying velocity fields, I can pass on uc but the analytic solution function doesn't actually need it as the velocity is basically already prescribed in the equation it calculates. 
+            locals()[f'psi_an_{l}'][it] = analytic(xc, xmax, uc, it*dt) # analytic solution uses uc. For the varying velocity fields, I can pass on uc but the analytic solution function doesn't actually need it as the velocity is basically already prescribed in the equation it calculates, that is, if an analytic solution exists.
         a = locals()[f'psi_an_{l}'][-1].copy()
         if u_setting == 'varying_space':
             logging.info("NOTE: the analytic solution is only sensible for a variable velocity field in space for a couple of time steps into the simulation due to accummulation of the field.")

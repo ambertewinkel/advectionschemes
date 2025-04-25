@@ -3015,27 +3015,11 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
 
     # !!! ALSO: CHECK THE RK SCHEME DEFINITION IN ANY CASE COMPARING IT TO THE SLB DEFINITION FROM BEGINNING OF APRIL.
 
-    # indeed varies
-    #plt.plot(xf, uf, label='Velocity field') 
-    #plt.xlabel('x')
-    #plt.ylabel('Velocity field')
-    #plt.title('Velocity field for the RK scheme')
-    #plt.show()
-    
     beta = np.ones(nx) # beta[i] is at i-1/2
 
-    # side note - move the time loop inside of the if statement and just have three time loops --- If I am going to have three time loops in any case, might as well avoid some ifs. 
-
     if u_setting == 'constant' or u_setting == 'varying_space':
-        c = dt*uf/dxc # assumes uniform grid c # This c is used for the calculation of the off-centring in time. For a varying velocity field in time, for the offcentring calculation, we need to use the maximum velocity that will appear locally at a certain face from n to n+1 to calculate the c and theta. 
+        c = dt*uf/dxc # assumes uniform grid c # This c is used for the calculation of the off-centring in time. 
         # Setting the off-centring in time 
-
-        plt.plot(xf, c, label='Courant number') # v!!! check this
-        plt.xlabel('x')
-        plt.ylabel('Courant number')
-        plt.title('Courant number for the RK scheme')
-        plt.savefig('Courant_number.pdf')
-        plt.show()
         if blend == 'off':    
             for i in range(nx):
                 if c[i] <= clim: 
@@ -3062,14 +3046,7 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
         elif blend == 'Ex':
             beta = np.zeros(nx)
         else:
-            print('Error: Blend in off-centering not recognised.')
-
-        plt.plot(xf, beta, label='Beta') 
-        plt.xlabel('x')
-        plt.ylabel('$\\theta$')
-        plt.title('$\\theta$ for the RK scheme')
-        plt.savefig('theta.pdf')
-        plt.show()
+            raise ValueError('Blend in off-centering not recognised.')
 
     if u_setting == 'varying_space_time' and blend != 'sm':
         raise ValueError('For a varying velocity field, off-centering in time is only implemented for a smooth transition from 0 to 1 with 1-1/c.')
@@ -3078,40 +3055,35 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
     cIm = AIm.sum(axis=1)
     AEx, bEx = globals()['butcherEx' + RK]() 
     cEx = AEx.sum(axis=1)
-    #print(bIm)
-    nstages = np.shape(bIm)[1] #len(bIm) # !!! I changed bIm to be multidimensional - len(bIm) won't work properly anymore in this case.
-    #print('nstages', nstages)
+    nstages = np.shape(bIm)[1] # I changed bIm to be multidimensional - len(bIm) won't work properly anymore in this case. (i.e. other ImEx schemes won't work with the butcher functions as of 25-04-2025)
     flx, fEx, fIm, flx_field, f = np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx))
     matrix = getattr(sd, 'M' + SD)
     fluxfn = getattr(sd, SD)
 
-    if u_setting == 'varying_space_time': # v!!! we are only setting this up with blend == 'sm' -> a smooth transition from 0 to 1 with 1-1/c
+    if u_setting == 'varying_space_time': # 25-04-2025: NOT WORKING 
+        # We are only setting this up with blend == 'sm' -> a smooth transition from 0 to 1 with 1-1/c
+        # For a varying velocity field in time, for the offcentring calculation, we need to use the maximum velocity that will appear locally at a certain face from n to n+1 to calculate the c and theta. 
         for it in range(nt):
-        # !!! AND I NEED TO RECALCULATE at different intermediate stages. -- check ufs below # TO DO !!! 
+        # to do: I NEED TO RECALCULATE at different intermediate stages. -- check uf below
             betaset = False
             uf = an.velocity_varying_space_time(xf, it*nt) # recalculate velocity # where to put this?
             while betaset == False:  
                 maxuf = uf.copy() 
-                cf = maxuf*dt/(0.5*dxc) # recalculate Courant number # v!!! assumes uniform grid, which is the assumption in any case with the varying space time u setting
+                cf = maxuf*dt/(0.5*dxc) # recalculate Courant number # assumes uniform grid, which is the assumption in any case with the varying space time u setting
                 beta = np.maximum(0., 1. - 1./cf)   
                 for istage in range(nstages):
                     ufstage = an.velocity_varying_space_time(xf, it*nt + (1-beta)*cEx[istage]*dt + beta*cIm[istage]*dt) # recalculate velocity for the stage
                     maxuf = np.maximum(maxuf, ufstage)
 
-                ###if  : betaset = True
-            ### 21-04-2025: don't have this working yet. Not sure of the best way how to combine u and beta for stability. Have not tested varying_space_time yet. 
-
+                #if  : betaset = True
+            # 21-04-2025: don't have this working yet. Not sure of the best way how to combine u and beta for stability. Have not tested varying_space_time yet. 
             #----
             #maxuf = # calculate the max velocity at the time points given by the Butcher c
             #c = dt*maxuf/dxc # !!! adjust # !!! 21-04-2025: put into the time loop? # !!! and do I want to assume a smooth beta blend for this i.e. when in time loop to avoid 
             #----
 
-
-
-
-
     elif u_setting == 'varying_space':
-        #AEx =  # Resetting AEx to include b !!! working here
+        # Resetting AEx to include b
         AEx = np.concatenate((AEx,bEx), axis=0)
         AIm = np.concatenate((AIm,bIm), axis=0)
         AEx = np.concatenate((AEx, np.zeros((nstages+1,1))), axis=1)
@@ -3123,65 +3095,13 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
             for ik in range(nstages+1):
                 # Calculate the field at stage k
                 M = matrix(nx, dt, dxc, beta*uf, AIm[ik,ik])
-                rhs_k = field[it] + dt*np.dot(AEx[ik,:ik], fEx[:ik,:]) + dt*np.dot(AIm[ik,:ik], fIm[:ik,:]) #+ dt*np.dot(AEx[ik,:ik], (1 - beta[:])*f[:ik,:]) + dt*np.dot(AIm[ik,:ik], beta[:]*f[:ik,:])
+                rhs_k = field[it] + dt*np.dot(AEx[ik,:ik], fEx[:ik,:]) + dt*np.dot(AIm[ik,:ik], fIm[:ik,:])
                 field_k = np.linalg.solve(M, rhs_k)
-
                 # Calculate the flux based on the field at stage k
-
                 flx_field[ik,:] = fluxfn(field_k) # [i] defined at i-1/2
-                #f[ik,:] = -ddx(uf*flx[ik,:], np.roll(uf*flx[ik,:],-1), dxc) # Do I need to do more than just move uf into the ddx function to make it dependent on space? # beta!!! # I somehow need to split this into Ex and Im
                 fEx[ik,:] = -ddx((1 - beta[:])*uf*flx_field[ik,:], np.roll((1 - beta[:])*uf*flx_field[ik,:],-1), dxc)
-                fIm[ik,:] = -ddx(beta[:]*uf*flx_field[ik,:], np.roll(beta[:]*uf*flx_field[ik,:],-1), dxc)
-
-
-                #plt.plot(xf, flx_field[ik,:], label='Flux at stage ' + str(ik)) # [i] defined at i-1/2
-                #plt.xlabel('x')
-                #plt.ylabel('Flux at stage ' + str(ik))
-                #plt.title('Flux at stage ' + str(ik) + ' for the RK scheme')
-                #plt.show()
-#
-#
-                #plt.plot(xf, field_k, label='Field at stage ' + str(ik))
-                #plt.xlabel('x')
-                #plt.ylabel('Field at stage ' + str(ik))
-                #plt.title('Field at stage ' + str(ik) + ' for the RK scheme')
-                #plt.show()
-                
+                fIm[ik,:] = -ddx(beta[:]*uf*flx_field[ik,:], np.roll(beta[:]*uf*flx_field[ik,:],-1), dxc)                
             field[it+1] = field_k.copy()
-                
-                
-                
-            #    flx_HO += ...#flx[ik,:]*bIm[ik]*beta + flx[ik,:]*bEx[ik]*(1 - beta)
-            #if MULES == True:
-            #    flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter) # !!! do I need to use a different c here? Not one that is based on the max velocity from n to n+1 locally?
-            #field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc) # should uf be outside of the flux?
-
-            #field[it+1] = ....[-1]
-
-
-
-
-        #elif u_setting == 'varying_space': # 21-04-2025: I think this is now fine? I have just moved the uf inside of the ddx...? The uf and beta varying in space has already been set up above. ---> No it is not. Not conservative.
-        #    field_k = field[it].copy()
-        #    flx_HO = np.zeros(nx)
-        #    for ik in range(nstages):
-        #        M = matrix(nx, dt, dxc, beta*uf, AIm[ik,ik])
-        #        rhs_k = field[it] + dt*np.dot(AEx[ik,:ik], (1 - beta[:])*f[:ik,:]) + dt*np.dot(AIm[ik,:ik], beta[:]*f[:ik,:])
-        #        field_k = np.linalg.solve(M, rhs_k)
-        #        flx[ik,:] = fluxfn(field_k) # [i] defined at i-1/2
-        #        f[ik,:] = -ddx(uf*flx[ik,:], np.roll(uf*flx[ik,:],-1), dxc) # Do I need to do more than just move uf into the ddx function to make it dependent on space? # beta!!!
-        #        flx_HO += flx[ik,:]*bIm[ik]*beta + flx[ik,:]*bEx[ik]*(1 - beta)
-        #    if MULES == True:
-        #        flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter) # !!! do I need to use a different c here? Not one that is based on the max velocity from n to n+1 locally?
-        #    field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc) # should uf be outside of the flux?
-
-
-
-
-
-
-
-
     elif u_setting == 'constant':
         for it in range(nt):
             field_k = field[it].copy()
