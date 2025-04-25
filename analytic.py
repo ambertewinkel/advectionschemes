@@ -180,14 +180,48 @@ def cotan(x):
     return -np.tan(x + np.pi/2)
 
 
-def rho_varuspace(x, xmax, u='1psinlx', t=0., l=1.):
-    """This is the analytic solution to the advection equation with a variable velocity field in space, i.e., u=1+sin(lx), where l is real. Here we have assumed l=1."""
+#def analytic_velocity_varying_space(x, xmax, u, t=0., l=2.*np.pi): # !!! look into this derivation and include the l value
+#    """This is the analytic solution to the advection equation with a variable velocity field in space, i.e., u=2+sin(lx), where l is real. Here we have assumed l=2*pi."""
+#    psi = np.zeros(len(x))
+#    psi = (- np.sin(t)*np.sin(cotan(0.5*x + 0.25*np.pi)) + np.cos(t)*np.cos(cotan(0.5*x + 0.25*np.pi)))/(np.sin(x) + 1.) # !!! change 1+sinlx to 2 + sinlx and l from 1 to 2*pi
+#    return psi
+
+def analytic_velocity_varying_space(x, xmax, u, t=0., l=2.*np.pi): # make sure l matches the velocity function below
+    """This is the analytic solution to the advection equation with a variable velocity field in space, i.e., u=2+sin(lx), where l is real. Here we have assumed l=2*pi."""
+    k = 1.
     psi = np.zeros(len(x))
-    psi = (- np.sin(t)*np.sin(cotan(0.5*x + 0.25*np.pi)) + np.cos(t)*np.cos(cotan(0.5*x + 0.25*np.pi)))/(np.sin(x) + 1.)
+    intdx = 2.*np.arctan((2.*np.tan(l*x/2.) + 1.)/np.sqrt(3))
+    psi = 1./velocity_varying_space(x, l=l)*np.exp(k*t - intdx)
     return psi
 
 
 
 
-def rho_varuspacetime():
-    pass
+#####def analytic_velocity_varying_space_time(x, xmax, u='varying_space_time', t=0., l=2.*np.pi, w=2.*np.pi): # !!! how to sensibly set up an analytic solution for this? - I just need to it to be exact after a full period of the temporal wave - I think that is the only thing that I can actually achieve. # !!! make sure that the analytic solution is correct after a full revolution in time (and space?).
+#####    """This is the analytic solution to the advection equation with a variable velocity field in space, i.e., u=2+sin(lx), where l is real. Here we have assumed l=2*pi."""
+#####    psi = np.zeros(len(x))
+#####    psi = (- np.sin(t)*np.sin(cotan(0.5*x + 0.25*np.pi)) + np.cos(t)*np.cos(cotan(0.5*x + 0.25*np.pi)))/(np.sin(x) + 1.) # !!! change 1+sinlx to 2 + sinlx and l from 1 to 2*pi # !!! change INCLUDE TIME and make 1+sinlx to 2 + sinlx and l from 1 to 2*pi
+#####    return psi
+#####    # !!! so for this function as we are just interested in the values at a full temporal revolution - can it just be the analytic_velocity_varying_space function? Because at one full revolution the cos(wt)=1 so it would be the same... 
+#####
+
+
+
+def velocity_varying_space(x, l=2.*np.pi):
+    """This function returns a velocity field that is varying in space. The velocity field is given by u = 2 + sin(lx), where l is a real number."""
+    u = 6. + 5.*np.sin(l*x) # currently 1+ not 2+!!!
+    return u
+
+
+def velocity_varying_space_time(x, t, l = 2.*np.pi, w = 2.*np.pi):
+    """This function returns a velocity field that is varying in space and time. The velocity field is given by u = 2 + sin(lx) + sin(wt), where l and w are real numbers."""
+    u = 1. + np.sin(l*x)*np.cos(w*t) # currently 1+ not 2+!!!
+    return u
+
+
+def analytic_constant(x, xmax, u=0., t=0., shift=0., ampl=1.):
+    """Returns a constant value for the initial condition."""
+
+    psi = np.full(len(x), 10.)
+
+    return psi
