@@ -35,7 +35,7 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     limitCto1 = False
@@ -47,21 +47,22 @@ def main():
 
     # Input cases
     cases = [\
-        {'scheme': 'aiUpwind'},
-        {'scheme': 'ImExRK', 'RK':'aiUpwind', 'SD':'BS', 'blend':'sm'},#, 'blend':'sm_centredspace'#{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm_centredspace'},
+        #{'scheme': 'aiUpwind'},
+        {'scheme': 'ImExRK', 'RK':'aiUpwind', 'SD':'BS', 'blend':'sm'},#, 'blend':'sm_centredspace'
+        #{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm_centredspace'},
         ]
     
     plot_args = [\
-        {'label':'aiUpwind', 'color':'blue', 'marker':'o', 'linestyle':'-'},
-        {'label':'aiUpwind_RK', 'color':'red', 'marker':'x', 'linestyle':'-'},
+        #{'label':'aiUpwind', 'color':'blue', 'marker':'o', 'linestyle':'-'},
+        {'label':'aiUpwind', 'color':'red', 'marker':'', 'linestyle':'-'},
         #{'label':'AdImEx UJ3 5th302 sm', 'color':'seagreen', 'marker':'x', 'linestyle':'-'},
         ]
 
     # Initial conditions
-    nx = 40                     # number of points in space
+    nx = 400                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    nt = 100                     # number of time steps
-    dt = 0.01                   # time step
+    nt = 1000                     # number of time steps
+    dt = 0.001                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching' # note: stretching won't work with a varying velocity field
     schemenames = [case["scheme"] for case in cases]
     u_setting = 'constant'#'varying_space'       # 'constant' or 'varying_space' or 'varying_space_time' ---- # !!! 'constant' to 'uniform' and 'varying' to 'nonuniform'? # v!!! I am choosing on 21-04-2025 to keep the u_setting the same for all schemes, I could put it into the scheme parameters at a later point in time.  
@@ -71,8 +72,8 @@ def main():
                                 # Note: This is currently (21-04-2025) only applied to the .pdf final field output, not to the animation .gif file. v!!! could be changed in the future.    
         schemenames_settings = str(analytic.__name__) + f'_t{nt*dt:.4f}_u{u_setting}_' + "-".join(schemenames) # v!!! how do I want to define this in case of non uconstant? # perhaps generalise schemename to simplify this?
     elif u_setting == 'constant':
-        analytic = an.combi      # initial condition, options: sine, cosbell, tophat, or combi # and more for varying velocity field
-        uconstant = 3.125#0.5         # constant velocity # should only apply when u_setting == 'constant' # is used in the analytic function and for the title in the final.pdf plot for the constant velocity field
+        analytic = an.sine      # initial condition, options: sine, cosbell, tophat, or combi # and more for varying velocity field
+        uconstant = 0.5#3.125#0.5         # constant velocity # should only apply when u_setting == 'constant' # is used in the analytic function and for the title in the final.pdf plot for the constant velocity field
         schemenames_settings = str(analytic.__name__) + f'_t{nt*dt:.4f}_u{uconstant}_' + "-".join(schemenames) # v!!! how do I want to define this in case of non uconstant? # perhaps generalise schemename to simplify this?
     else:
         print('Warning: potentially incorrect file naming.')
@@ -185,7 +186,7 @@ def main():
             logging.info('Error: invalid accuracy_in')
     else: # Run schemes for only the one grid spacing defined above
         nx_arr = np.array([nx], dtype=int)
-        dt_arr = np.array([dt], dtype=float)
+        dt_arr = np.array([dt], dtype=float) # change this? !!!
         nt_arr = np.array([nt], dtype=int)
         gridlabels = ['reg']
 
@@ -232,7 +233,7 @@ def main():
 
         # Calculate velocity and Courant number at cell centers  # v!!! check if this is correct! 21-04-2025: somehow figured out a way around it. I think it is correct now but double check whether I want to improve the code though as it might be a bit hacky.
         # v!!! means that I have found a (temporary) solution on 21-04-2025 - but could use a think of a better solution in the future.
-        if u_setting == 'constant':
+        if u_setting == 'constant': # !!! dt will not always be the same for all grids
             uc = gr.linear(xc, xf, uf)       # velocity at cell centers
             cc = 0.5*dt*(np.roll(abs(uf),-1) + abs(uf))/dxc # Courant number at cell centers # This C is not actually used directly in the scheme nor analytic solution - it is recalculated in those functions (and sometimes also at cell faces instead)! It is only used to calculate the cmax/cmin below. 
             cmax = np.max(cc)
@@ -293,7 +294,7 @@ def main():
                      'x', '$\\Psi$', 0., xmax, True, -0.1, 1.1)
     elif u_setting == 'varying_space':
         ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with $u$ varying in space', \
-                     'x', '$\\Psi$', 0., xmax, True, 0.1, 1.1)#100)#15)#1.1)
+                     'x', '$\\Psi$', 0., xmax, True, 0.1, 100)#15)#1.1)
     elif u_setting == 'varying_space_time':
         ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with $u$ varying in space and time', \
                      'x', '$\\Psi$', 0., xmax, True, -0.1, 1.1)
