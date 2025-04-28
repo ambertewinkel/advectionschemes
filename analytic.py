@@ -183,6 +183,11 @@ def analytic_constant(x, xmax, u=0., t=0., val=10.0):
 
 
 def velocity_varying_space(x, l=2.*np.pi):
-    """This function returns a velocity field that is varying in space. The velocity field is given by u = 2 + sin(lx), where l is a real number."""
-    u = 6. + 5.*np.sin(l*x) # currently 1+ not 2+!!!
+    """This function returns a velocity field that is varying in space. The velocity field is given by u = 5.5 + 4.5*sin(lx), where l is a real number, default 2*pi."""
+    u = 5.5 + 4.5*np.sin(l*x)
+    return u
+
+def velocity_varying_space2(x, l=2.*np.pi):
+    """This function returns a velocity field that is varying in space. The velocity field is given by u = 5.5 + 4.5*sin(lx), where l is a real number, default 2*pi."""
+    u = 2.5 + 1.5*np.sin(l*x)
     return u

@@ -35,7 +35,7 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     limitCto1 = False
@@ -49,20 +49,23 @@ def main():
     cases = [\
         #{'scheme': 'aiUpwind'},
         {'scheme': 'ImExRK', 'RK':'aiUpwind', 'SD':'BS', 'blend':'sm'},#, 'blend':'sm_centredspace'
-        #{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm_centredspace'},
+        {'scheme': 'aiMPDATA', 'do_beta': 'blend'},
+        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm'},
         ]
     
     plot_args = [\
         #{'label':'aiUpwind', 'color':'blue', 'marker':'o', 'linestyle':'-'},
-        {'label':'aiUpwind', 'color':'red', 'marker':'', 'linestyle':'-'},
-        #{'label':'AdImEx UJ3 5th302 sm', 'color':'seagreen', 'marker':'x', 'linestyle':'-'},
+        {'label':'AdImEx Upwind', 'color':'darkgreen', 'marker':'x', 'linestyle':'-'},
+        {'label':'AdImEx MPDATA', 'color':'orange', 'marker':'x', 'linestyle':'-'},
+        {'label':'AdImEx Strang', 'color':'purple', 'marker':'x', 'linestyle':'-'},
         ]
 
     # Initial conditions
-    nx = 400                     # number of points in space
+    ymax = 1.5#100.         # for plotting purposes
+    nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    nt = 1000                     # number of time steps
-    dt = 0.001                   # time step
+    nt = 100                     # number of time steps
+    dt = 0.01                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching' # note: stretching won't work with a varying velocity field
     schemenames = [case["scheme"] for case in cases]
     u_setting = 'constant'#'varying_space'       # 'constant' or 'varying_space' or 'varying_space_time' ---- # !!! 'constant' to 'uniform' and 'varying' to 'nonuniform'? # v!!! I am choosing on 21-04-2025 to keep the u_setting the same for all schemes, I could put it into the scheme parameters at a later point in time.  
@@ -72,7 +75,7 @@ def main():
                                 # Note: This is currently (21-04-2025) only applied to the .pdf final field output, not to the animation .gif file. v!!! could be changed in the future.    
         schemenames_settings = str(analytic.__name__) + f'_t{nt*dt:.4f}_u{u_setting}_' + "-".join(schemenames) # v!!! how do I want to define this in case of non uconstant? # perhaps generalise schemename to simplify this?
     elif u_setting == 'constant':
-        analytic = an.sine      # initial condition, options: sine, cosbell, tophat, or combi # and more for varying velocity field
+        analytic = an.combi      # initial condition, options: sine, cosbell, tophat, or combi # and more for varying velocity field
         uconstant = 0.5#3.125#0.5         # constant velocity # should only apply when u_setting == 'constant' # is used in the analytic function and for the title in the final.pdf plot for the constant velocity field
         schemenames_settings = str(analytic.__name__) + f'_t{nt*dt:.4f}_u{uconstant}_' + "-".join(schemenames) # v!!! how do I want to define this in case of non uconstant? # perhaps generalise schemename to simplify this?
     else:
@@ -294,7 +297,7 @@ def main():
                      'x', '$\\Psi$', 0., xmax, True, -0.1, 1.1)
     elif u_setting == 'varying_space':
         ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with $u$ varying in space', \
-                     'x', '$\\Psi$', 0., xmax, True, 0.1, 100)#15)#1.1)
+                     'x', '$\\Psi$', 0., xmax, True, 0.1, ymax)
     elif u_setting == 'varying_space_time':
         ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with $u$ varying in space and time', \
                      'x', '$\\Psi$', 0., xmax, True, -0.1, 1.1)
@@ -437,7 +440,7 @@ def main():
         for c in range(len(cases)):        
             s = plot_args[c]['label']
             fields.append(locals()[f'psi_{s}_reg'])
-        anim.create_animation_from_data(fields, len(schemenames), locals()['psi_an_reg'], nt, dt, xc, outputdir, plot_args, xmax)
+        anim.create_animation_from_data(fields, len(schemenames), locals()['psi_an_reg'], nt, dt, xc, outputdir, plot_args, xmax, ymax=ymax)
 
     print('Done')
     logging.info('')

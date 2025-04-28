@@ -35,24 +35,33 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
     
     # We need to set: dt, nx, nt, u_setting, analytic
     xmax = 1.0
     ymax = 100. # for plotting purposes
-    dtfactor_HRESLRES = 10
-    #dtfactor_ExAdImEx = 10
-    dt_LRES = 0.01 # largest time step of the two dt's for the animation
-    nt_LRES = 100 # largest number of time steps of the two nt's for the animation
+    dt_LRES_AdImEx = 0.01 # largest time step of the two dt's for the animation dt_LRES before
+    nt_LRES_AdImEx = 100 # largest number of time steps of the two nt's for the animation
     nx_LRES = 40
-    dx_LRES = nx_LRES/xmax
-    dt_HRES = dt_LRES/dtfactor_HRESLRES 
-    nt_HRES = nt_LRES*dtfactor_HRESLRES
+    dx_LRES = xmax/nx_LRES
+
+    dtfactor_HRESLRES = 10
+    dtfactor_ExAdImEx = 5
+
+    dt_HRES_AdImEx = dt_LRES_AdImEx/dtfactor_HRESLRES # used to be dt_HRES
+    nt_HRES_AdImEx = nt_LRES_AdImEx*dtfactor_HRESLRES
     dx_HRES = dx_LRES/dtfactor_HRESLRES
     nx_HRES = nx_LRES*dtfactor_HRESLRES
-    u_setting = 'varying_space'
+
+    dt_LRES_Ex = dt_LRES_AdImEx/dtfactor_ExAdImEx 
+    nt_LRES_Ex = nt_LRES_AdImEx*dtfactor_ExAdImEx
+
+    dt_HRES_Ex = dt_LRES_Ex/dtfactor_HRESLRES 
+    nt_HRES_Ex = nt_LRES_Ex*dtfactor_HRESLRES
+
+    u_setting = 'varying_space2'
     analytic = an.analytic_constant
-    total_time = nt_LRES*dt_LRES
+    total_time = nt_LRES_AdImEx*dt_LRES_AdImEx
 
     #!!! check the courant numbers for the different options! i.e. plot in a single plot?? when plotting the final fields as well?
 
@@ -62,23 +71,11 @@ def main():
     datetime = dati.datetime.now().strftime("%d%m%Y-%H%M%S")      # date and time of the run
 
     # Input cases
-    #cases = [\
-    #    #{'scheme': 'aiUpwind'},
-    #    {'scheme': 'ImExRK', 'RK':'aiUpwind', 'SD':'BS', 'blend':'sm'},#, 'blend':'sm_centredspace'
-    #    #{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm_centredspace'},
-    #    ]
-    #
-    #plot_args = [\
-    #    #{'label':'aiUpwind', 'color':'blue', 'marker':'o', 'linestyle':'-'},
-    #    {'label':'aiUpwind', 'color':'red', 'marker':'', 'linestyle':'-'},
-    #    #{'label':'AdImEx UJ3 5th302 sm', 'color':'seagreen', 'marker':'x', 'linestyle':'-'},
-    #    ]
-    #
     cases = [\
-        {'scheme': 'ImExRK', 'RK':'aiUpwind', 'SD':'BS', 'blend':'sm', 'HRES': True},#'dt':dt_HRES, 'nt':nt_HRES, 'nx':nx_HRES, 'dx':dx_HRES},
-        {'scheme': 'ImExRK', 'RK':'aiUpwind', 'SD':'BS', 'blend':'sm', 'HRES': True},#'dt':dt_HRES, 'nt':nt_HRES, 'nx':nx_HRES, 'dx':dx_HRES},
-        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'HRES': False},#'dt':dt_LRES, 'nt':nt_LRES, 'nx':nx_LRES, 'dx':dx_LRES},
-        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'HRES': False},#'dt':dt_LRES, 'nt':nt_LRES, 'nx':nx_LRES, 'dx':dx_LRES},
+        {'scheme': 'ImExRK', 'RK': 'aiUpwind', 'SD': 'BS', 'blend': 'sm', 'HRES': True, 'AdImEx': False},
+        {'scheme': 'ImExRK', 'RK': 'aiUpwind', 'SD': 'BS', 'blend': 'sm', 'HRES': True, 'AdImEx': True},
+        {'scheme': 'ImExRK', 'RK': 'UJ31e32', 'SD': 'fifth302', 'blend': 'sm', 'HRES': False, 'AdImEx': False},
+        {'scheme': 'ImExRK', 'RK': 'UJ31e32', 'SD': 'fifth302', 'blend': 'sm', 'HRES': False, 'AdImEx': True},
         ]
     
     plot_args = [\
@@ -88,28 +85,11 @@ def main():
         {'label':'AdImEx Strang', 'color':'seagreen', 'marker':'', 'linestyle':'-'},
         ]
 
-    schemenames = [case["scheme"] for case in cases]
-
-    # Initial conditions
-    #nx = 400                     # number of points in space
-    #xmax = 1.                   # physical domain parameters
-    #ymax = 100. # for plotting purposes
-    #nt = 1000                     # number of time steps
-    #dt = 0.001                   # time step
-    #coords = 'uniform'          # 'uniform' or 'stretching' # note: stretching won't work with a varying velocity field
-    #u_setting = 'varying_space'       # 'constant' or 'varying_space' or 'varying_space_time' ---- # !!! 'constant' to 'uniform' and 'varying' to 'nonuniform'? # v!!! I am choosing on 21-04-2025 to keep the u_setting the same for all schemes, I could put it into the scheme parameters at a later point in time.  
-    #if u_setting == 'varying_space' or u_setting == 'varying_space_time':
-    #analytic = an.analytic_constant
-    #    time1rev = False            # This boolean is set by hand - determines whether, for a varying velocity field in space and time, the u ~ cos(wt) has gone through a full revolution in time (and space?). It determines whether the analytic solution is plotted for a certain number of time steps or not. 
-    #                            # Note: This is currently (21-04-2025) only applied to the .pdf final field output, not to the animation .gif file. v!!! could be changed in the future.    
-    #    schemenames_settings = str(analytic.__name__) + f'_t{nt*dt:.4f}_u{u_setting}_' + "-".join(schemenames) # v!!! how do I want to define this in case of non uconstant? # perhaps generalise schemename to simplify this?
-    #elif u_setting == 'constant':
-    #    analytic = an.sine      # initial condition, options: sine, cosbell, tophat, or combi # and more for varying velocity field
-    #    uconstant = 0.5#3.125#0.5         # constant velocity # should only apply when u_setting == 'constant' # is used in the analytic function and for the title in the final.pdf plot for the constant velocity field
-    #    schemenames_settings = str(analytic.__name__) + f'_t{nt*dt:.4f}_u{uconstant}_' + "-".join(schemenames) # v!!! how do I want to define this in case of non uconstant? # perhaps generalise schemename to simplify this?
-    #else:
-    #    print('Warning: potentially incorrect file naming.')
-    #    logging.info('Warning: potentially incorrect file naming.')
+    schemenames = "-".join([case["scheme"] for case in cases])
+    HRESbool, AdImExbool = [], []    
+    for c in range(len(cases)):
+        HRESbool.append(cases[c]['HRES'])
+        AdImExbool.append(cases[c]['AdImEx'])
     
     ##################################
     #### Setup output and logging ####
@@ -151,15 +131,9 @@ def main():
     logging.info(f'Date and time: {datetime}')
     logging.info(f'Output directory: {outputdir}')
     logging.info('')
-    #logging.info(f'Analytic function: {analytic.__name__}')
-    #logging.info(f'Number of grid points: {nx}')
-    #logging.info(f'Number of time steps: {nt}')
-    #logging.info(f'Time step: {dt} s')
     logging.info(f'Total simulated time: {total_time:.4f} s')
-    #if u_setting == 'constant':
-    #    logging.info(f'Velocity: {u_setting} with u={uconstant}')
-    #elif u_setting == 'varying_space' or u_setting == 'varying_space_time':
-    #    logging.info(f'Velocity: {u_setting}')
+    logging.info(f'Velocity setting: {u_setting}')
+    logging.info(f'Analytic function: {analytic.__name__}')
     logging.info(f'Schemes included are: {schemenames}')
     logging.info(f'Cases:')
     for case in cases:
@@ -179,159 +153,11 @@ def main():
     #### Run schemes ####
     #####################
 
-    # Setup: run schemes for one or three grid spacings (nx*factor, nx/factor, nx)
-    #if check_orderofconvergence == True: # Run schemes for two extra grid spacings # v!!! change/check how we can get this to work with varying u fields in space (and time?) - currently not implemented - could be implemented in the future, see comment where check_orderofconvergence is set
-    #    factor = 2
-    #    gridlabels = ['fine', 'coarse', 'reg']
-    #    if accuracy_in == 'space with dt const': # 'space with dt const' or 'time with dx const' or 'space with C const'
-    #        nx_arr = np.array([nx*factor, nx/factor, nx], dtype=int)
-    #        dx_arr = np.array([xmax/nx_arr[0], xmax/nx_arr[1], xmax/nx_arr[2]], dtype=float)
-    #        nt_arr = np.full(len(nx_arr), nt)
-    #        dt_arr = np.full(len(nx_arr), dt)
-    #        c_arr = np.array([uconstant*dt_arr[0]/dx_arr[0], uconstant*dt_arr[1]/dx_arr[1], uconstant*dt_arr[2]/dx_arr[2]], dtype=float)
-    #        resolution = dx_arr.copy()
-    #        print('Courant numbers for the [fine, coarse, reg] grid spacings:', c_arr)
-    #        var_acc = f'dx with dt={dt_arr[-1]:.4f}'
-    #    elif accuracy_in == 'time with dx const':
-    #        nt_arr = np.array([nt*factor, nt/factor, nt], dtype=int)
-    #        dt_arr = np.array([dt/factor, dt*factor, dt], dtype=float)
-    #        nx_arr = np.full(len(nt_arr), nx)
-    #        dx_arr = np.full(len(nt_arr), xmax/nx)
-    #        c_arr = np.array([uconstant*dt_arr[0]/dx_arr[0], uconstant*dt_arr[1]/dx_arr[1], uconstant*dt_arr[2]/dx_arr[2]], dtype=float)
-    #        resolution = dt_arr.copy()
-    #        print('Courant numbers for the [fine, coarse, reg] grid spacings:', c_arr)
-    #        var_acc = f'dt with dx={dx_arr[-1]:.4f}'
-    #    elif accuracy_in == 'space with C const': # dx and dt vary keeping Courant number constant
-    #        nx_arr = np.array([nx*factor, nx/factor, nx], dtype=int)
-    #        dx_arr = np.array([xmax/nx_arr[0], xmax/nx_arr[1], xmax/nx_arr[2]], dtype=float)
-    #        nt_arr = np.array([nt*factor, nt/factor, nt], dtype=int)
-    #        dt_arr = np.array([dt/factor, dt*factor, dt], dtype=float)
-    #        c_arr = np.array([uconstant*dt_arr[0]/dx_arr[0], uconstant*dt_arr[1]/dx_arr[1], uconstant*dt_arr[2]/dx_arr[2]], dtype=float)
-    #        resolution = dx_arr.copy()
-    #        for i in range(len(nx_arr)): # Loop over 1 or 3 grid spacings
-    #            logging.info(f'Courant number for the {gridlabels[i]} grid spacing: {c_arr[i]:.4f}')
-    #            logging.info(f'nt, dt, nt*dt for the {gridlabels[i]} grid spacing: {nt_arr[i]}, {dt_arr[i]:.4f}, {nt_arr[i]*dt_arr[i]:.4f}')
-    #            logging.info(f'nx, dx, xmax for the {gridlabels[i]} grid spacing: {nx_arr[i]}, {dx_arr[i]:.4f}, {xmax}')
-    #            logging.info('')
-    #        var_acc = f'dx with C={c_arr[-1]:.4f}'
-    #    else:
-    #        logging.info('Error: invalid accuracy_in')
-    #else: # Run schemes for only the one grid spacing defined above
-    #    nx_arr = np.array([nx], dtype=int)
-    #    dt_arr = np.array([dt], dtype=float) # change this? !!!
-    #    nt_arr = np.array([nt], dtype=int)
-    #    gridlabels = ['reg']
-
-    # Calculate numerical results
-    #for xi in range(len(nx_arr)): # Loop over 1 or 3 grid spacings
-    #    nx = nx_arr[xi]
-    #    dt = dt_arr[xi]
-    #    nt = nt_arr[xi]
-            
-        # Setup grid for each of the grid spacings
-        #if coords == 'stretching': # Potentially adjusted later if limitCto1 == True
-        #    if u_setting == 'varying_space' or u_setting == 'varying_space_time':
-        #        print('Error: stretching coordinates not implemented for varying velocity field')
-        #        logging.info('Error: stretching coordinates not implemented for varying velocity field')
-        #        raise ValueError('Error: stretching coordinates not implemented for varying velocity field')
-        #    xf, dxc, xc, dxf = gr.coords_stretching(xmax, nx, nx/2, dxcmin=0.) # points in space, length of spatial step        
-        #elif coords == 'uniform':
-
-        #elif coords == 'weller':
-        #    xf, dxc, xc, dxf = gr.coords_welleretal2022(xmax, nx) # points in space, length of spatial step
-        #else: 
-        #    logging.info('Error: invalid coordinates')
-
-
-#####!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # !!! put this in a loop over the schemes!
-        # We assume a uniform grid. But different nx!!! so set up differently
-        #xf, dxc, xc, dxf = gr.coords_uniform(xmax, nx) # points in space, length of spatial step
-        # Set up velocity
-        #if u_setting == 'constant':
-        #    uf = np.full(nx, uconstant)
-        #elif u_setting == 'varying_space':
-        #    uf = an.velocity_varying_space(xf)
-        #else:
-        #    logging.info('Error: invalid velocity setting')
-        #    print('Error: invalid velocity setting')
-
-        #l = gridlabels[xi]
-#
-        ## Check whether to limit the Courant number by limiting the grid spacing
-        #if limitCto1 == True: 
-        #    cmax = 1.
-        #    dxcmin = np.min(0.5*dt*(np.roll(uf,-1) + uf)/cmax)
-        #else:
-        #    dxcmin = 0.
-
-        # Reset with potentially the new dxcmin (i.e. connected to limitCby1)
-        #if coords == 'stretching':
-        #    xf, dxc, xc, dxf = gr.coords_stretching(xmax, nx, nx/2, dxcmin=dxcmin) # points in space, length of spatial step
-#
-        # Calculate velocity and Courant number at cell centers  # v!!! check if this is correct! 21-04-2025: somehow figured out a way around it. I think it is correct now but double check whether I want to improve the code though as it might be a bit hacky.
-        # v!!! means that I have found a (temporary) solution on 21-04-2025 - but could use a think of a better solution in the future.
-        #if u_setting == 'constant': # !!! dt will not always be the same for all grids
-        #    uc = gr.linear(xc, xf, uf)       # velocity at cell centers
-        #    cc = 0.5*dt*(np.roll(abs(uf),-1) + abs(uf))/dxc # Courant number at cell centers # This C is not actually used directly in the scheme nor analytic solution - it is recalculated in those functions (and sometimes also at cell faces instead)! It is only used to calculate the cmax/cmin below. 
-        #    cmax = np.max(cc)
-        #    cmin = np.min(cc)
-        #    logging.info(f'Min Courant number: {cmin:.4f}')
-        #    logging.info(f'Max Courant number: {cmax:.4f}')  
-        #if u_setting == 'varying_space' or u_setting == 'varying_space_time':
-        #    # FYI - for the nonuniform velocity schemes I need to calculate the Courant number at cell faces
-        #    logging.info('The Courant numbers values and plot wont be exactly correct for varying velocity, as the ones I would calculate here are defined at cell centers -> hence I have set them to be NaNs.')
-        #    uc = np.full(nx, np.nan)
-        #    cc = np.full(nx, np.nan)
-#
-        # Print and plot grid and Courant number (solely for the regular grid spacing) # v!!! remove feature or move it to cell faces (varying velocity)? -> 21-04-2025: I have simply set cc to be NaN for the varying velocity field in space and time, so that it doesn't plot anything I think. I wouldn't want to remove the actual plotting action as it wouldn't update the plot in testing mode otherwise.
-        #if gridlabels[xi] == 'reg':
-        #    logging.info('The (cell center) points and Courant numbers are:')
-        #    for i in range(nx):
-        #        logging.info(f'{i}: {xc[i]:.4f} -- {cc[i]:.4f}')
-        #    logging.info('')
-        #    ut.plot_Courant(xc, cc, outputdir)
-        #    ut.plot_grid(xc, dxc, outputdir)
-
-        # Calculate analytic solutions for each time step
-        # Calculate the initial condition for the HRES
-    #xf_HRES, dxc_HRES, xc_HRES, dxf_HRES = gr.coords_uniform(xmax, nx_HRES) # points in space, length of spatial step
-    #psi_in_HRES = analytic(xc_HRES, xmax, u=0., t=0.) # u not relevant here but in function call
-    #psi_in = analytic(xc_LRES, xmax, u=0., t=0.)np.zeros((nt_HRES+1, nx_HRES))
-
-        #locals()[f'psi_an_{l}'] = np.zeros((nt+1, nx))
-        #for it in range(nt+1):
-        #    locals()[f'psi_an_{l}'][it] = analytic(xc, xmax, uc, it*dt_LRES) # analytic solution uses uc. For the varying velocity fields, I can pass on uc but the analytic solution function doesn't actually need it as the velocity is basically already prescribed in the equation it calculates, that is, if an analytic solution exists.
-        #a = locals()[f'psi_an_{l}'][-1].copy()
-        #if u_setting == 'varying_space':
-        #    logging.info("NOTE: the analytic solution is only sensible for a variable velocity field in space for a couple of time steps into the simulation due to accummulation of the field.")
-        #elif u_setting == 'varying_space_time':
-        #    logging.info("NOTE: the analytic solution is only sensible for a variable velocity field in space and time after a full revolution in time.")
-        #logging.info(f"Analytic solution for nx={nx}, nt={nt}, dt={dt_LRES}: {a}")
-        #logging.info('')
-
-        # Calculate initial condition
-        #psi_in = locals()[f'psi_an_{l}'][0]
-        
-        # Calculate numerical solutions for each scheme through time
-        # Output is 2D field ([1d time, 1d space])
-
-
     # Print experiment results in .log
     logging.info('')
     logging.info('========== Data at the final time step ==========')
     logging.info('')
-    
-    # Conservation, boundedness and total variation Psi
-    #csv_psi_analytic = epm.check_conservation(psi_in, locals()['psi_an_reg'][nt], dxc)
-    #logging.info(f'Analytic - Mass gained: {csv_psi_analytic:.4E}')    
-    #bdn_psi_analytic = epm.check_boundedness(psi_in, locals()['psi_an_reg'][nt])
-    #logging.info(f'Analytic - Boundedness: {bdn_psi_analytic}')    
-    #logging.info('')
 
-        
-
-    plt.figure(figsize=(7,4))
 
     xf_HRES, dxc_HRES, xc_HRES, dxf_HRES = gr.coords_uniform(xmax, nx_HRES) # points in space, length of spatial step
     xf_LRES, dxc_LRES, xc_LRES, dxf_LRES = gr.coords_uniform(xmax, nx_LRES) # points in space, length of spatial step
@@ -340,11 +166,59 @@ def main():
     uf_HRES = getattr(an, 'velocity_' + u_setting)(xf_HRES)
     uf_LRES = getattr(an, 'velocity_' + u_setting)(xf_LRES)
     l = 'reg'
+
+    plt.plot(xf_HRES, uf_HRES, linestyle='-', color='k') 
+    plt.title('Velocity')
+    plt.xlabel('x')
+    plt.ylabel('$u$')
+    plt.savefig('velocity.png')
+    plt.close()
+
+
+    for c in range(len(cases)):
+        if cases[c]['HRES'] == True:
+            if cases[c]['AdImEx'] == True:
+                dtplot = dt_HRES_AdImEx
+                cplot = dtplot*uf_HRES/dx_HRES # courant number for HRES
+                plt.plot(xf_HRES, cplot, label='AdImEx', color='red', linestyle='-')            
+            else:
+                dtplot = dt_HRES_Ex
+                cplot = dtplot*uf_HRES/dx_HRES # courant number for HRES
+                plt.plot(xf_HRES, cplot, label='Ex', color='blue', linestyle='-')
+    plt.title('Courant number')
+    plt.xlabel('x')
+    plt.ylabel('$C$')
+    plt.legend()
+    plt.axhline(1, color='k', linestyle=':')
+    plt.savefig('courantnumber.png')
+    plt.close()
+
+
+
+    exit()
+
+    plt.figure(figsize=(7,4))
+    plt.plot(xc_HRES, psi_in_HRES, linestyle='--', color='grey', label='Initial') # plot initial condition
+
+    # Run schemes and plot the final time step for each scheme in the same plot and do experiments
     for c in range(len(cases)):
         s = plot_args[c]['label']
         if cases[c]['HRES'] == True:
+            # Set up time step and number of time steps for HRES
+            if cases[c]['AdImEx'] == True:
+                nt_HRES = nt_HRES_AdImEx
+                dt_HRES = dt_HRES_AdImEx
+            else:
+                nt_HRES = nt_HRES_Ex
+                dt_HRES = dt_HRES_Ex
+
+            # Run case
             locals()[f'psi_{s}_{l}'] = callscheme(cases[c], nt_HRES, dt_HRES, uf_HRES, dxc_HRES, psi_in_HRES, u_setting)
+
+            # Plot final time step
             plt.plot(xc_HRES, locals()[f'psi_{s}_reg'][-1], **plot_args[c]) # !!! check whether -1 is correct - I want to make sure that LRES and HRES are plotting at the same point in time!
+
+            # Do experiments
             locals()[f'csv_psi_{s}'] = epm.check_conservation(psi_in_HRES, locals()[f'psi_{s}_reg'][-1], dxc_HRES) # !!! same -> -1 correct?
             logging.info(f"{plot_args[c]['label']} - Mass gained: {locals()[f'csv_psi_{s}']:.4E}")
             locals()[f'bdn_psi_{s}'] = epm.check_boundedness(psi_in_HRES, locals()[f'psi_{s}_reg'][-1]) # !!! same -> -1 correct?
@@ -352,9 +226,23 @@ def main():
             locals()[f'TV_psi_{s}'] = epm.totalvariation(locals()[f'psi_{s}_reg'][-1]) # !!! same -> -1 correct?
             logging.info(f"{plot_args[c]['label']} - Variation: {locals()[f'TV_psi_{s}']:.4E}")
             logging.info('')
+
         elif cases[c]['HRES'] == False:
+            # Set up time step and number of time steps for LRES
+            if cases[c]['AdImEx'] == True:
+                nt_LRES = nt_LRES_AdImEx
+                dt_LRES = dt_LRES_AdImEx
+            else:
+                nt_LRES = nt_LRES_Ex
+                dt_LRES = dt_LRES_Ex
+
+            # Run case
             locals()[f'psi_{s}_{l}'] = callscheme(cases[c], nt_LRES, dt_LRES, uf_LRES, dxc_LRES, psi_in_LRES, u_setting)
+
+            # Plot final time step
             plt.plot(xc_LRES, locals()[f'psi_{s}_reg'][-1], **plot_args[c]) # !!! same -> -1 correct?
+
+            # Do experiments
             locals()[f'csv_psi_{s}'] = epm.check_conservation(psi_in_LRES, locals()[f'psi_{s}_reg'][-1], dxc_LRES) # !!! same -> -1 correct?
             logging.info(f"{plot_args[c]['label']} - Mass gained: {locals()[f'csv_psi_{s}']:.4E}")
             locals()[f'bdn_psi_{s}'] = epm.check_boundedness(psi_in_LRES, locals()[f'psi_{s}_reg'][-1]) # !!! same -> -1 correct?
@@ -362,178 +250,27 @@ def main():
             locals()[f'TV_psi_{s}'] = epm.totalvariation(locals()[f'psi_{s}_reg'][-1]) # !!! same -> -1 correct?
             logging.info(f"{plot_args[c]['label']} - Variation: {locals()[f'TV_psi_{s}']:.4E}")
             logging.info('')
-        print(f'psi_{s}_{l}')
-
-#####!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
 
 
     ##########################
     #### Plotting schemes ####
     ##########################
-    
-    # Plotting the final time step for each scheme in the same plot
-    #if u_setting != 'varying_space_time' or ( u_setting == 'varying_space_time' and time1rev == True ): # if it is varying_space_time, the analytic solution is only valid for a full revolution in time
-    #    plt.plot(xc, locals()['psi_an_reg'][nt], label='Analytic', linestyle='-', color='k')
 
-    #for c in range(len(cases)):        
-    #    s = plot_args[c]['label']
-    #    plt.plot(xc, locals()[f'psi_{s}_reg'][nt], **plot_args[c])
-    #if u_setting == 'constant':
-    #    cconstant = uconstant*dt/(xmax/nx)  # Courant number # only used for title in final.pdf
-    #    ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with C={cconstant}', \
-    #                 'x', '$\\Psi$', 0., xmax, True, -0.1, 1.1)
-    #elif u_setting == 'varying_space':
-    #    ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with $u$ varying in space', \
-    #                 'x', '$\\Psi$', 0., xmax, True, 0.1, 100)#15)#1.1)
-    #elif u_setting == 'varying_space_time':
-    #    ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with $u$ varying in space and time', \
-    #                 'x', '$\\Psi$', 0., xmax, True, -0.1, 1.1)
-    
     ut.design_figure(plotname, f'$\\Psi$ at t={total_time} with $u$ varying', \
                      'x', '$\\Psi$', 0., xmax, True, -0.1, ymax)
-    
-    #####################
-    #### Experiments ####
-    #####################
-
-    # Print experiment results in .log
-    #logging.info('')
-    #logging.info('========== Data at the final time step ==========')
-    #logging.info('')
-    #
-    ## Conservation, boundedness and total variation Psi
-    ##csv_psi_analytic = epm.check_conservation(psi_in, locals()['psi_an_reg'][nt], dxc)
-    ##logging.info(f'Analytic - Mass gained: {csv_psi_analytic:.4E}')    
-    ##bdn_psi_analytic = epm.check_boundedness(psi_in, locals()['psi_an_reg'][nt])
-    ##logging.info(f'Analytic - Boundedness: {bdn_psi_analytic}')    
-    ##logging.info('')
-    #for c in range(len(cases)):        
-    #    s = plot_args[c]['label']
-    #    locals()[f'csv_psi_{s}'] = epm.check_conservation(psi_in, locals()[f'psi_{s}_reg'][nt], dxc)
-    #    logging.info(f"{plot_args[c]['label']} - Mass gained: {locals()[f'csv_psi_{s}']:.4E}")
-    #    locals()[f'bdn_psi_{s}'] = epm.check_boundedness(psi_in, locals()[f'psi_{s}_reg'][nt])
-    #    logging.info(f"{plot_args[c]['label']} - Boundedness: {locals()[f'bdn_psi_{s}']}")         
-    #    locals()[f'TV_psi_{s}'] = epm.totalvariation(locals()[f'psi_{s}_reg'][nt])
-    #    logging.info(f"{plot_args[c]['label']} - Variation: {locals()[f'TV_psi_{s}']:.4E}")
-    #    logging.info('')
-#
-    ##########################
-    #### Plot experiments ####
-    ##########################
-    
-    #logging.info('')
-    #logging.info('========== Data during the time integration ==========')
-#
-    ## Setup plot for results (mass, min/max, RMSE) over time
-    #fig, ((ax1, ax2, ax3)) = plt.subplots(1, 3, figsize=(17, 7))
-#
-    ## Mass over time (ax1)
-    #for c in range(len(cases)):        
-    #    s = plot_args[c]['label']
-    #    mass = np.zeros(nt+1)
-    #    for it in range(nt+1):
-    #        mass[it] = epm.totalmass(locals()[f'psi_{s}_reg'][it], dxc)
-    #    ax1.plot(np.arange(0,nt+1), mass, **plot_args[c])
-    #ax1.set_title('Mass')
-    #ax1.set_xlabel('Time')
-    #ax1.legend()
-#
-    ## Boundedness (min/max) over time (ax2)
-    #for c in range(len(cases)):        
-    #    s = plot_args[c]['label']
-    #    minarr = np.min(locals()[f'psi_{s}_reg'], axis=1)
-    #    maxarr = np.max(locals()[f'psi_{s}_reg'], axis=1)
-    #    logging.info('')
-    #    logging.info(f'{plot_args[c]['label']} - Minimum during the time integration: {np.min(minarr)}')
-    #    logging.info(f'{plot_args[c]['label']} - Maximum during the time integration: {np.max(maxarr)}')
-    #    ax2.plot(np.arange(0,nt+1), minarr, **plot_args[c])
-    #    ax2.plot(np.arange(0,nt+1), maxarr, **plot_args[c])
-    #ax2.set_title('Bounds')
-    #ax2.set_xlabel('Time')
-    #ax2.legend()
-    #    
-    ## Error over time (ax3)
-    #for c in range(len(cases)):        
-    #    s = plot_args[c]['label']
-    #    rmse_time = np.zeros(nt+1)
-    #    for it in range(nt+1):     
-    #        rmse_time[it] = epm.l2norm(locals()[f'psi_{s}_reg'][it], locals()['psi_an_reg'][it], dxc) 
-    #    logging.info('')
-    #    logging.info(f'{plot_args[c]['label']} - Max L2 norm during the time integration: {np.max(rmse_time)}')
-    #    ax3.plot(np.arange(0,nt+1), rmse_time, **plot_args[c])
-    #ax3.set_yscale('log')
-    #ax3.set_title('$l_2$')
-    #ax3.set_xlabel('Time')
-    #ax3.legend()
-#
-    ## Save plot for results (mass, min/max, RMSE) over time
-    #plt.savefig(outputdir + f'experiments.pdf')
-    #plt.tight_layout()
-    #plt.close()
-#
-    ## Calculate and plot error over grid spacing (for the final timestep) if check_orderofconvergence is True
-    #if check_orderofconvergence == True:
-    #    # Setup plot
-    #    fig, ax1 = plt.subplots(1, 1, figsize=(10, 5))
-    #    gridscale = np.logspace(0, np.log10(2*factor), num=10)
-    #    gridsizes = resolution[0]*gridscale
-    #    for c in range(len(cases)):        
-    #        s = plot_args[c]['label']
-    #        # Calculate error for each grid spacing (one or three)
-    #        rmse = np.zeros(len(nx_arr))
-    #        dxc_arr = np.zeros(len(nx_arr))
-    #        for xi in range(len(nx_arr)):
-    #            l = gridlabels[xi]
-    #            nx = nx_arr[xi]
-    #            nt = nt_arr[xi]                
-    #            # Calculate RMSE for each grid spacing at the final time, assume uniform grid
-    #            rmse[xi] = epm.l2norm(locals()[f'psi_{s}_{l}'][nt], locals()[f'psi_an_{l}'][nt], resolution[xi]) # Calculate RMSE for each grid spacing at the final time            
-#
-    #        # Plot error over grid spacing
-    #        ax1.scatter(resolution, rmse, marker=plot_args[c]['marker'], label=f'$\\Psi$ {plot_args[c]['label']}', color=plot_args[c]['color'])
-    #        logging.info('')
-    #        logging.info(f'{cases[c]['scheme']} - L2 norm array for the different resolutions (fine, coarse, reg): {rmse}')
-#
-    #        # Order of accuracy lines in the plot for reference
-    #        firstorder = rmse[0]*gridscale
-    #        secondorder = rmse[0]*gridscale*gridscale
-    #        thirdorder = rmse[0]*gridscale*gridscale*gridscale
-    #        fourthorder = rmse[0]*gridscale*gridscale*gridscale*gridscale
-    #        ax1.plot(gridsizes, firstorder, color='grey', linestyle=':', linewidth=0.5)
-    #        ax1.plot(gridsizes, secondorder, color='grey', linestyle='-', linewidth=0.5)
-    #        ax1.plot(gridsizes, thirdorder, color='black', linestyle=':', linewidth=0.5)
-    #        ax1.plot(gridsizes, fourthorder, color='black', linestyle='-', linewidth=0.5)
-    #    
-    #    # Plot details
-    #    ax1.set_xscale('log')
-    #    ax1.set_yscale('log')
-    #    ax1.set_title(f'$l_2$ vs {var_acc} at t={nt*dt}')
-    #    ax1.set_ylabel('$l_2$')
-    #    ax1.set_xlabel(var_acc)
-    #    ax1.legend()
-#
-    #    # Save plot of error over grid spacing
-    #    plt.tight_layout()
-    #    if save_as == 'test':
-    #        plt.savefig(outputdir + 'L2.pdf')
-    #    elif save_as == 'store':
-    #        plt.savefig(outputdir + f'L2_{var_acc}.pdf')
-    #    plt.close()
 
     ###########################
     #### Create animations ####
     ###########################
 
-    fields, HRESbool, colors = [], [], []
+    fields,  colors = [], []
     # Create animation from the data
     if create_animation == True:
         for c in range(len(cases)):        
             s = plot_args[c]['label']
             fields.append(locals()[f'psi_{s}_reg'])
-            HRESbool.append(cases[c]['HRES'])
-        anim.create_animation_from_HRESnLRESdata(fields, len(schemenames), psi_in_HRES, nt_LRES, dt_LRES, xc_LRES, dtfactor_HRESLRES, xc_HRES, outputdir, plot_args, xmax, HRESbool, ymax=ymax)
+        #anim.create_animation_from_HRESLRESdata(fields, len(schemenames), psi_in_HRES, nt_LRES, dt_LRES, xc_LRES, dtfactor_HRESLRES, xc_HRES, outputdir, plot_args, xmax, HRESbool, ymax=ymax)
+        anim.create_animation_from_HRESLRES_ExAdImExdata(fields, len([case["scheme"] for case in cases]), psi_in_HRES, nt_LRES_AdImEx, dt_LRES_AdImEx, xc_LRES, dtfactor_HRESLRES, xc_HRES, outputdir, plot_args, xmax, HRESbool, dtfactor_ExAdImEx, AdImExbool, ymax=ymax)
 
     print('Done')
     logging.info('')
@@ -544,7 +281,7 @@ def main():
 def callscheme(case, nt, dt, uf, dxc, psi_in, u_setting, verbose=True):
     """Takes all the input variables and the scheme name and calls the scheme with the appropriate input arguments."""
 
-    # Tranlate the scheme name to a function in schemes.py
+    # Translate the scheme name to a function in schemes.py
     sc = case["scheme"]
     fn = getattr(sch, f'{sc}')
 
@@ -554,20 +291,10 @@ def callscheme(case, nt, dt, uf, dxc, psi_in, u_setting, verbose=True):
 
     # Call the scheme
     if verbose == True: print(f'Running {sc} with parameters {params}')
-    #startscheme = timeit.default_timer()
-    #print(f'--> Starting runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.4f} s, {nt}, {len(psi_in)}')
     psi = fn(psi_in.copy(), nt, dt, uf, dxc, u_setting, **params) # check whether the scheme is called correctly!!! with the u_setting parameters etc
-    ##print(case)
-    ##print(psi[-1])
-    ##print()
-    #plt.plot(psi[-1])
-    #plt.title('After exiting the scheme function')
-    #plt.show()
     if verbose == True:
         logging.info(f'Final psi for {sc} with parameters {params} and nx={len(psi_in)}: {psi[-1]}')
         logging.info('')
-    #print(f'--> Runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.4f} s, {nt}, {len(psi[-1])}')
-
     return psi
 
     

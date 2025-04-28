@@ -3001,7 +3001,7 @@ def ImExARS3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22', butcher
     return field
 
 
-def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22', RK='UJ31e32', blend='off', clim=1.6, HRES=None): # !!! add option for non uconstant in TIME to be recalculated every time step
+def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22', RK='UJ31e32', blend='off', clim=1.6, HRES=None, AdImEx=None): # !!! add option for non uconstant in TIME to be recalculated every time step
     """This scheme implements the timestepping from the double butcher tableau defined with RK, combined with various (default: the fourth order centred) spatial discretisations. Assumes u>0 constant.
     
     21-04-2025: uf is probably just the first value of the velocity field if it changes in time. If the velocity changes in time, we need to recalculate the u, c and beta every time step. If the velocity is constant in space and time or only varies in space, we can use uf throughout the time stepping, without need to reculculate it every time step and for intermediate stages within a RK time step."""
@@ -3017,7 +3017,7 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
 
     beta = np.ones(nx) # beta[i] is at i-1/2
 
-    if u_setting == 'constant' or u_setting == 'varying_space':
+    if u_setting == 'constant' or u_setting == 'varying_space' or u_setting == 'varying_space2':
         c = dt*uf/dxc # assumes uniform grid c # This c is used for the calculation of the off-centring in time. 
         # Setting the off-centring in time 
         if blend == 'off':    
@@ -3082,7 +3082,7 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
             #c = dt*maxuf/dxc # !!! adjust # !!! 21-04-2025: put into the time loop? # !!! and do I want to assume a smooth beta blend for this i.e. when in time loop to avoid 
             #----
 
-    elif u_setting == 'varying_space':
+    elif u_setting == 'varying_space' or u_setting == 'varying_space2':
         # Resetting AEx to include b
         AEx = np.concatenate((AEx,bEx), axis=0)
         AIm = np.concatenate((AIm,bIm), axis=0)
