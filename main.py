@@ -70,11 +70,13 @@ def main():
         
         #{'scheme': 'ImExRK', 'RK':'SSP3433', 'SD':'fifth302', 'blend':'sm'},
         ##{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fourth301', 'blend':'sm'},
-        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm'},
         #{'scheme': 'ImExRK', 'RK':'ARS3233', 'SD':'fifth302', 'blend':'sm'},
 
         #{'scheme':'LW3'},
         #{'scheme':'LW3', 'FCT':True},        
+        {'scheme':'aiUpwind'},
+        #{'scheme':'aiMPDATA', 'do_beta': 'blend'},
+        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm'},
         ]
     
     plot_args = [\
@@ -100,11 +102,13 @@ def main():
     
         #{'label':'ImEx SSP3 5th302 sm', 'color':'cyan', 'marker':'o', 'linestyle':'-'},
         ##{'label':'ImEx UJ3 4th301 sm', 'color':'blue', 'marker':'+', 'linestyle':'-'},
-        {'label':'AdImEx UJ3 5th302', 'color':'seagreen', 'marker':'x', 'linestyle':'-'},
         #{'label':'ImEx ARS3 5th302 sm', 'color':'orange', 'marker':'+', 'linestyle':'-'},
 
         #{'label':'Original non-monotonic', 'color':'blue', 'marker':'+', 'linestyle':'-'},
         #{'label':'Limited monotonic', 'color':'red', 'marker':'x', 'linestyle':'-'},
+        {'label':'AdImEx Upwind', 'color':'darkgreen', 'marker':'x', 'linestyle':'-'},
+       # {'label':'AdImEx MPDATA', 'color':'orange', 'marker':'x', 'linestyle':'-'},
+        {'label':'AdImEx Strang', 'color':'purple', 'marker':'x', 'linestyle':'-'},
         ]
 
     # Initial conditions
@@ -115,8 +119,8 @@ def main():
     if len(sys.argv) == 2:
         uconstant = float(sys.argv[1]) # velocity
     else:
-        uconstant = 10000000.3#0.5#12.5#6.25#2.#3.125#6.25           # constant velocity
-    nt = 500#10*int(100/uconstant)                  # number of time steps
+        uconstant = 1.#10000000.3#0.5#12.5#6.25#2.#3.125#6.25           # constant velocity
+    nt = 1#int(100/uconstant)                  # number of time steps
     dt = 0.01#0.03125                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching'
     cconstant = uconstant*dt/(xmax/nx)  # Courant number # only used for title in final.pdf
@@ -155,7 +159,7 @@ def main():
         os.mkdir(outputdir)
         print("Folder %s created" % outputdir)
         filename = outputdir + 'out.log'
-    plotname = outputdir + 'final.pdf'
+    plotname = outputdir + 'final.png'#pdf'
 
     # Set up logging
     print(f'See output file {filename}')    

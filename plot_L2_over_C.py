@@ -24,7 +24,7 @@ def plot():
     # Cases to analyse
     cases = [\
         {'scheme': 'aiUpwind'}, # already defaults to a theta blend
-        {'scheme': 'aiMPDATA', 'do_beta': 'blend'},
+        #{'scheme': 'aiMPDATA', 'do_beta': 'blend'},
         {'scheme': 'ImExRK', 'RK': 'UJ31e32', 'SD':'fifth302', 'blend':'sm'},
         #{'scheme': 'PPM'},
         ###{'scheme': 'ImExRK', 'RK': 'ARS3233', 'SD':'fifth302', 'blend':'off'},
@@ -50,8 +50,8 @@ def plot():
     
     plot_args = [\
         {'label':'AdImEx Upwind', 'color':'darkgreen', 'marker':'x', 'linestyle':'-'},
-        {'label':'AdImEx MPDATA', 'color':'orange', 'marker':'x', 'linestyle':'-'},  
-        {'label':'AdImEx Strang Carryover', 'color':'purple', 'marker':'x', 'linestyle':'-'},
+        #{'label':'AdImEx MPDATA', 'color':'orange', 'marker':'x', 'linestyle':'-'},  
+        {'label':'AdImEx Strang', 'color':'purple', 'marker':'x', 'linestyle':'-'},
         #{'label':'PPM', 'color':'red', 'marker':'+', 'linestyle':'-'},
         ###{'label':'ImEx ARS3 5th302 noblend', 'color':'green', 'marker':'o', 'linestyle':'-'},
         ###{'label':'ImEx ARS3 5th302 sm', 'color':'orange', 'marker':'x', 'linestyle':'-'},
@@ -78,7 +78,7 @@ def plot():
     schemenames = [case["scheme"] for case in cases]
     analytic = an.sine
     dt, nt, u, xmin, xmax = 0.01, 1, 1., 0., 1. 
-    c = np.arange(0.075, 3., 0.05) # array of Courant numbers
+    c = np.logspace(-1., 2., num=80) #np.arange(0.075, 3., 0.05) # array of Courant numbers
     dx = u*dt/c # array of grid spacings
     nx = np.array([int((xmax-xmin)/dx_) for dx_ in dx]) # array of number of grid points
     domainsize = nx*dx # array of domain sizes
@@ -122,11 +122,13 @@ def plot():
     plt.figure()
     for case in range(len(cases)):
         plt.plot(c, locals()[f'L2_{plot_args[case]["label"]}'], label=plot_args[case]["label"], color=plot_args[case]["color"], marker=plot_args[case]["marker"], linestyle=plot_args[case]["linestyle"])
-    plt.xlabel('Courant number')
-    plt.ylabel('L2 norm')
+    plt.xlabel('$C$')#'Courant number')
+    plt.ylabel('$l_2$ norm')
+    plt.xscale('log')
     plt.yscale('log')
+    plt.axvline(1.0, color='grey', linestyle=':')
     plt.legend()
-    plt.title(f'L2 norm over C for dt={dt} and u={u}')
+    #plt.title(f'L2 norm over C for dt={dt} and u={u}')
     plt.tight_layout()
     plt.savefig(plotname)
     plt.close()

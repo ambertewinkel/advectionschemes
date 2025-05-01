@@ -150,7 +150,7 @@ def create_animation_from_data(fields, nfields, analytic, nt, dt, xc, outputdir,
     filenames, images = [], []
     for it in range(nt+1):   
         # Plot each timestep in a figure and save in the plots subdirectory
-        plt.plot(xc, field_in, label='Initial', linestyle='-', color='grey')
+        #plt.plot(xc, field_in, label='Initial', linestyle='-', color='grey')
         plt.plot(xc, analytic[it], label='Analytic', linestyle='-', color='k')
         for si in range(nfields):   
             field = fields[si]        
