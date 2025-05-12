@@ -3017,7 +3017,7 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
 
     beta = np.ones(nx) # beta[i] is at i-1/2
 
-    if u_setting == 'constant' or u_setting == 'varying_space' or u_setting == 'varying_space2':
+    if u_setting == 'constant' or u_setting == 'varying_space' or u_setting == 'varying_space2' or u_setting == 'varying_space3':
         c = dt*uf/dxc # assumes uniform grid c # This c is used for the calculation of the off-centring in time. 
         # Setting the off-centring in time 
         if blend == 'off':    
@@ -3082,7 +3082,7 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
             #c = dt*maxuf/dxc # !!! adjust # !!! 21-04-2025: put into the time loop? # !!! and do I want to assume a smooth beta blend for this i.e. when in time loop to avoid 
             #----
 
-    elif u_setting == 'varying_space' or u_setting == 'varying_space2':
+    elif u_setting == 'varying_space' or u_setting == 'varying_space2' or u_setting == 'varying_space3':
         # Resetting AEx to include b
         AEx = np.concatenate((AEx,bEx), axis=0)
         AIm = np.concatenate((AIm,bIm), axis=0)

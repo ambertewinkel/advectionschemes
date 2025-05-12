@@ -35,13 +35,13 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
     
     # We need to set: dt, nx, nt, u_setting, analytic
     xmax = 1.0
-    ymax = 100. # for plotting purposes
+    ymax = 50. # for plotting purposes
     dt_LRES_AdImEx = 0.01 # largest time step of the two dt's for the animation dt_LRES before
-    nt_LRES_AdImEx = 100 # largest number of time steps of the two nt's for the animation
+    nt_LRES_AdImEx = 0#100 # largest number of time steps of the two nt's for the animation
     nx_LRES = 40
     dx_LRES = xmax/nx_LRES
 
@@ -59,7 +59,7 @@ def main():
     dt_HRES_Ex = dt_LRES_Ex/dtfactor_HRESLRES 
     nt_HRES_Ex = nt_LRES_Ex*dtfactor_HRESLRES
 
-    u_setting = 'varying_space2'
+    u_setting = 'varying_space3'
     analytic = an.analytic_constant
     total_time = nt_LRES_AdImEx*dt_LRES_AdImEx
 
@@ -72,17 +72,17 @@ def main():
 
     # Input cases
     cases = [\
-        {'scheme': 'ImExRK', 'RK': 'aiUpwind', 'SD': 'BS', 'blend': 'sm', 'HRES': True, 'AdImEx': False},
-        {'scheme': 'ImExRK', 'RK': 'aiUpwind', 'SD': 'BS', 'blend': 'sm', 'HRES': True, 'AdImEx': True},
+        #{'scheme': 'ImExRK', 'RK': 'aiUpwind', 'SD': 'BS', 'blend': 'sm', 'HRES': True, 'AdImEx': False},
+        #{'scheme': 'ImExRK', 'RK': 'aiUpwind', 'SD': 'BS', 'blend': 'sm', 'HRES': True, 'AdImEx': True},
         {'scheme': 'ImExRK', 'RK': 'UJ31e32', 'SD': 'fifth302', 'blend': 'sm', 'HRES': False, 'AdImEx': False},
         {'scheme': 'ImExRK', 'RK': 'UJ31e32', 'SD': 'fifth302', 'blend': 'sm', 'HRES': False, 'AdImEx': True},
         ]
     
     plot_args = [\
-        {'label':'Ex Upwind HRES', 'color':'blue', 'marker':'', 'linestyle':'-'},
-        {'label':'AdImEx Upwind HRES', 'color':'red', 'marker':'', 'linestyle':'-'},
-        {'label':'Ex Strang', 'color':'magenta', 'marker':'', 'linestyle':'-'},
-        {'label':'AdImEx Strang', 'color':'seagreen', 'marker':'', 'linestyle':'-'},
+        #{'label':'Ex Upwind HRES', 'color':'blue', 'marker':'', 'linestyle':'-'},
+        #{'label':'AdImEx Upwind HRES', 'color':'red', 'marker':'', 'linestyle':'-'},
+        {'label':'Ex Strang', 'color':'darkturquoise', 'marker':'+', 'linestyle':'-'},
+        {'label':'AdImEx Strang', 'color':'purple', 'marker':'x', 'linestyle':'-'},
         ]
 
     schemenames = "-".join([case["scheme"] for case in cases])
@@ -123,7 +123,7 @@ def main():
         os.mkdir(outputdir)
         print("Folder %s created" % outputdir)
         filename = outputdir + 'out.log'
-    plotname = outputdir + 'final.pdf'
+    plotname = outputdir + 'final.png'#.pdf'
 
     # Set up logging
     print(f'See output file {filename}')    
@@ -167,35 +167,74 @@ def main():
     uf_LRES = getattr(an, 'velocity_' + u_setting)(xf_LRES)
     l = 'reg'
 
-    plt.plot(xf_HRES, uf_HRES, linestyle='-', color='k') 
+    plt.plot(xf_LRES, uf_LRES, linestyle='-', color='k') 
     plt.title('Velocity')
     plt.xlabel('x')
     plt.ylabel('$u$')
-    plt.savefig('velocity.png')
+    plt.savefig('velocity3.png')
     plt.close()
 
-
     for c in range(len(cases)):
-        if cases[c]['HRES'] == True:
+        #if cases[c]['HRES'] == True:
+        #    if cases[c]['AdImEx'] == True:
+        #        dtplot = dt_HRES_AdImEx
+        #        cplot = dtplot*uf_HRES/dx_HRES # courant number for HRES
+        #        plt.plot(xf_HRES, cplot, label='AdImEx', color='purple', linestyle='-')            
+        #    else:
+        #        dtplot = dt_HRES_Ex
+        #        cplot = dtplot*uf_HRES/dx_HRES # courant number for HRES
+        #        plt.plot(xf_HRES, cplot, label='Ex', color='darkturquoise', linestyle='-')
+        if cases[c]['HRES'] == False:
             if cases[c]['AdImEx'] == True:
-                dtplot = dt_HRES_AdImEx
-                cplot = dtplot*uf_HRES/dx_HRES # courant number for HRES
-                plt.plot(xf_HRES, cplot, label='AdImEx', color='red', linestyle='-')            
+                dtplot = dt_LRES_AdImEx
+                cplot = dtplot*uf_LRES/dx_LRES # courant number for LRES
+                plt.plot(xf_LRES, cplot, label='AdImEx', color='purple', linestyle='-')            
             else:
-                dtplot = dt_HRES_Ex
-                cplot = dtplot*uf_HRES/dx_HRES # courant number for HRES
-                plt.plot(xf_HRES, cplot, label='Ex', color='blue', linestyle='-')
+                dtplot = dt_LRES_Ex
+                cplot = dtplot*uf_LRES/dx_LRES # courant number for LRES
+                plt.plot(xf_LRES, cplot, label='Ex', color='darkturquoise', linestyle='-')
     plt.title('Courant number')
     plt.xlabel('x')
     plt.ylabel('$C$')
     plt.legend()
     plt.axhline(1, color='k', linestyle=':')
-    plt.savefig('courantnumber.png')
+    plt.savefig('courantnumber3.png')
     plt.close()
 
 
 
-    exit()
+
+    for c in range(len(cases)):
+        #if cases[c]['HRES'] == True:
+        #    if cases[c]['AdImEx'] == True:
+        #        dtplot = dt_HRES_AdImEx
+        #        cplot = dtplot*uf_HRES/dx_HRES # courant number for HRES
+        #        beta = np.maximum(0., 1. - 1./cplot) # beta for HRES
+        #        plt.plot(xf_HRES, cplot, label='AdImEx', color='purple', linestyle='-')            
+        #    else:
+        #        dtplot = dt_HRES_Ex
+        #        cplot = dtplot*uf_HRES/dx_HRES # courant number for HRES
+        #        beta = np.maximum(0., 1. - 1./cplot) # beta for HRES
+        #        plt.plot(xf_HRES, cplot, label='Ex', color='darkturquoise', linestyle='-')                
+        if cases[c]['HRES'] == False:
+            if cases[c]['AdImEx'] == True:
+                dtplot = dt_LRES_AdImEx
+                cplot = dtplot*uf_LRES/dx_LRES # courant number for LRES
+                beta = np.maximum(0., 1. - 1./cplot) # beta for LRES
+                plt.plot(xf_LRES, beta, label='AdImEx', color='purple', linestyle='-')            
+            else:
+                dtplot = dt_LRES_Ex
+                cplot = dtplot*uf_LRES/dx_LRES # courant number for LRES
+                beta = np.maximum(0., 1. - 1./cplot) # beta for LRES
+                plt.plot(xf_LRES, beta, label='Ex', color='darkturquoise', linestyle='-')
+    plt.title('Off-centering in time')
+    plt.xlabel('x')
+    plt.ylabel('$\\theta$')
+    plt.ylim(-0.1, 1.1)
+    plt.legend()
+    #plt.axhline(1, color='k', linestyle=':')
+    plt.savefig('offcentering3.png')
+    plt.close()
 
     plt.figure(figsize=(7,4))
     plt.plot(xc_HRES, psi_in_HRES, linestyle='--', color='grey', label='Initial') # plot initial condition
