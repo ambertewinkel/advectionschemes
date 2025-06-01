@@ -13,7 +13,7 @@ def design_figure(filename, title, xlabel, ylabel, xlim1, xlim2, bool_ylim = Fal
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.title(title)
-    plt.legend(framealpha=1.)
+    #plt.legend(framealpha=1.)
     plt.tight_layout()
     plt.savefig(filename)
     plt.clf()

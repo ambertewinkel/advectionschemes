@@ -119,8 +119,8 @@ def main():
     if len(sys.argv) == 2:
         uconstant = float(sys.argv[1]) # velocity
     else:
-        uconstant = 1.#10000000.3#0.5#12.5#6.25#2.#3.125#6.25           # constant velocity
-    nt = 1#int(100/uconstant)                  # number of time steps
+        uconstant = 1.#3.125#6.25           # constant velocity
+    nt = int(100/uconstant)                  # number of time steps
     dt = 0.01#0.03125                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching'
     cconstant = uconstant*dt/(xmax/nx)  # Courant number # only used for title in final.pdf
@@ -319,7 +319,7 @@ def main():
     for c in range(len(cases)):        
         s = plot_args[c]['label']
         plt.plot(xc, locals()[f'psi_{s}_reg'][nt], **plot_args[c])
-    ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with C={cconstant}', \
+    ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt}', \
                      'x', '$\\Psi$', 0., xmax, True, -0.1, 1.1)
         
     #####################
