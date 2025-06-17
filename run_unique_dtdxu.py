@@ -41,7 +41,7 @@ def main():
     xmax = 1.0
     ymax = 50. # for plotting purposes
     dt_LRES_AdImEx = 0.01 # largest time step of the two dt's for the animation dt_LRES before
-    nt_LRES_AdImEx = 0#100 # largest number of time steps of the two nt's for the animation
+    nt_LRES_AdImEx = 50#100 # largest number of time steps of the two nt's for the animation
     nx_LRES = 40
     dx_LRES = xmax/nx_LRES
 
