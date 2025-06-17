@@ -35,7 +35,7 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
     
     # We need to set: dt, nx, nt, u_setting, analytic
     xmax = 1.0
@@ -188,10 +188,14 @@ def main():
             if cases[c]['AdImEx'] == True:
                 dtplot = dt_LRES_AdImEx
                 cplot = dtplot*uf_LRES/dx_LRES # courant number for LRES
+                logging.info(f'Velocity for {plot_args[c]["label"]} with dt={dtplot:.4f}, dx={dx_LRES:.4f}: {uf_LRES}')
+                logging.info(f'Courant number for {plot_args[c]["label"]} with dt={dtplot:.4f}, dx={dx_LRES:.4f}: {cplot}')
                 plt.plot(xf_LRES, cplot, label='AdImEx', color='purple', linestyle='-')            
             else:
                 dtplot = dt_LRES_Ex
                 cplot = dtplot*uf_LRES/dx_LRES # courant number for LRES
+                logging.info(f'Velocity for {plot_args[c]["label"]} with dt={dtplot:.4f}, dx={dx_LRES:.4f}: {uf_LRES}')
+                logging.info(f'Courant number for {plot_args[c]["label"]} with dt={dtplot:.4f}, dx={dx_LRES:.4f}: {cplot}')
                 plt.plot(xf_LRES, cplot, label='Ex', color='darkturquoise', linestyle='-')
     plt.title('Courant number')
     plt.xlabel('x')
@@ -221,11 +225,13 @@ def main():
                 dtplot = dt_LRES_AdImEx
                 cplot = dtplot*uf_LRES/dx_LRES # courant number for LRES
                 beta = np.maximum(0., 1. - 1./cplot) # beta for LRES
+                logging.info(f'Off-centring for {plot_args[c]["label"]} with dt={dtplot:.4f}, dx={dx_LRES:.4f}: {beta}')
                 plt.plot(xf_LRES, beta, label='AdImEx', color='purple', linestyle='-')            
             else:
                 dtplot = dt_LRES_Ex
                 cplot = dtplot*uf_LRES/dx_LRES # courant number for LRES
                 beta = np.maximum(0., 1. - 1./cplot) # beta for LRES
+                logging.info(f'Off-centring for {plot_args[c]["label"]} with dt={dtplot:.4f}, dx={dx_LRES:.4f}: {beta}')
                 plt.plot(xf_LRES, beta, label='Ex', color='darkturquoise', linestyle='-')
     plt.title('Off-centering in time')
     plt.xlabel('x')
