@@ -41,7 +41,7 @@ def main():
     # Input booleans
     limitCto1 = False
     create_animation = False
-    check_orderofconvergence = False
+    check_orderofconvergence = True
     accuracy_in = 'space with C const' # 'space with dt const' or 'time with dx const' or 'space with C const'; (relevant only if check_orderofconvergence == True)
     date = dati.date.today().strftime("%Y%m%d")                   # date of the run
     datetime = dati.datetime.now().strftime("%d%m%Y-%H%M%S")      # date and time of the run
@@ -100,7 +100,7 @@ def main():
     
         #{'label':'ImEx SSP3 5th302 sm', 'color':'cyan', 'marker':'o', 'linestyle':'-'},
         ##{'label':'ImEx UJ3 4th301 sm', 'color':'blue', 'marker':'+', 'linestyle':'-'},
-        {'label':'AdImEx UJ3 5th302', 'color':'seagreen', 'marker':'x', 'linestyle':'-'},
+        {'label':'AdImEx Strang', 'color':'seagreen', 'marker':'x', 'linestyle':'-'},
         #{'label':'ImEx ARS3 5th302 sm', 'color':'orange', 'marker':'+', 'linestyle':'-'},
 
         #{'label':'Original non-monotonic', 'color':'blue', 'marker':'+', 'linestyle':'-'},
@@ -108,15 +108,15 @@ def main():
         ]
 
     # Initial conditions
-    analytic = an.combi#rho_varuspace         # initial condition, options: sine, cosbell, tophat, or combi
+    analytic = an.sine#rho_varuspace         # initial condition, options: sine, cosbell, tophat, or combi
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
     u_setting = 'constant'#'1psinlx'       # 'constant' or '1psinlx'
     if len(sys.argv) == 2:
         uconstant = float(sys.argv[1]) # velocity
     else:
-        uconstant = 10000000.3#0.5#12.5#6.25#2.#3.125#6.25           # constant velocity
-    nt = 500#10*int(100/uconstant)                  # number of time steps
+        uconstant = 6.25#0.1#10000000.3#0.5#12.5#6.25#2.#3.125#6.25           # constant velocity
+    nt = 2#500#10*int(100/uconstant)                  # number of time steps
     dt = 0.01#0.03125                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching'
     cconstant = uconstant*dt/(xmax/nx)  # Courant number # only used for title in final.pdf
