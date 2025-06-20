@@ -3112,7 +3112,8 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
                 field_k = np.linalg.solve(M, rhs_k)
                 flx[ik,:] = fluxfn(field_k) # [i] defined at i-1/2
                 f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
-                flx_HO += flx[ik,:]*bIm[ik]*beta + flx[ik,:]*bEx[ik]*(1 - beta)
+                print(f'ik: {ik}, bIm: {bIm[0,ik]}, bEx: {bEx[0,ik]}, beta: {beta}')
+                flx_HO += flx[ik,:]*bIm[0,ik]*beta + flx[ik,:]*bEx[0,ik]*(1 - beta)
             if MULES == True:
                 flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter) # !!! do I need to use a different c here? Not one that is based on the max velocity from n to n+1 locally?
             field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc)

@@ -35,87 +35,35 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     limitCto1 = False
-    create_animation = False
-    check_orderofconvergence = True # Be careful with this setting with the varying velocity field in space (and time). Has not been adjusted to work with this yet, if that is necessary (probably not necessary for the varying in space and time as you only compare after a ful revolution in time; probably necessary for the varying in space as we can compare the behaviour after 1/2/4 time steps as it is independent of time).
+    create_animation = True
+    check_orderofconvergence = False # Be careful with this setting with the varying velocity field in space (and time). Has not been adjusted to work with this yet, if that is necessary (probably not necessary for the varying in space and time as you only compare after a ful revolution in time; probably necessary for the varying in space as we can compare the behaviour after 1/2/4 time steps as it is independent of time).
     accuracy_in = 'space with C const' # 'space with dt const' or 'time with dx const' or 'space with C const'; (relevant only if check_orderofconvergence == True)
     date = dati.date.today().strftime("%Y%m%d")                   # date of the run
     datetime = dati.datetime.now().strftime("%d%m%Y-%H%M%S")      # date and time of the run
 
     # Input cases
     cases = [\
-        #{'scheme': 'lExrImRK3QC'},
-        #{'scheme': 'RK3QC'},
-        #{'scheme': 'ImRK3QC'},
-        #{'scheme': 'PPM'},
-        #{'scheme': 'SSP3', 'SD':'fourth301'},
-        #{'scheme': 'SSP3', 'SD':'fifth302'},        
-        #{'scheme': 'ARS3', 'SD':'fourth301'},
-        #{'scheme': 'ARS3', 'SD':'fifth302'},        
-        #{'scheme': 'UJ3', 'SD':'fourth301'},
-        #{'scheme': 'UJ3', 'SD':'fifth302'},        
-        ##{'scheme': 'SSP3', 'SD':'fifth401'},        
-        ##{'scheme': 'ARS3', 'SD':'fifth401'},        
-        ##{'scheme': 'UJ3', 'SD':'fifth401'},
-        ##{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth401', 'blend':'rExlIm'},
-        ##{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth401', 'blend':'rExlIm_sm'},
-        #{'scheme': 'ImExRK', 'RK':'SSP3433', 'SD':'fifth401', 'blend':'rExlIm'},
-        #{'scheme': 'ImExRK', 'RK':'SSP3433', 'SD':'fifth401', 'blend':'rExlIm_sm'},
-        #!{'scheme': 'ImExRK', 'RK':'ARS3233', 'SD':'fifth401', 'blend':'rExlIm'},
-        #!{'scheme': 'ImExRK', 'RK':'ARS3233', 'SD':'fifth401', 'blend':'rExlIm_sm'},
-        
-        #{'scheme': 'ImExRK', 'RK':'SSP3433', 'SD':'fifth302', 'blend':'sm'},
-        ##{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fourth301', 'blend':'sm'},
-        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm'},
-        #{'scheme': 'ImExRK', 'RK':'ARS3233', 'SD':'fifth302', 'blend':'sm'},
-
-        #{'scheme':'LW3'},
-        #{'scheme':'LW3', 'FCT':True},        
+        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm'},      
         ]
     
     plot_args = [\
-        #{'label':'lEx-rIm RK3QC', 'color':'magenta', 'marker':'x', 'linestyle':'-'},
-        #{'label':'Ex RK3QC', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        #{'label':'Im RK3QC', 'color':'green', 'marker':'+', 'linestyle':'-'},
-        #{'label':'PPM', 'color':'red', 'marker':'o', 'linestyle':'-'},
-        #{'label':'Im SSP3fourth301', 'color':'cyan', 'marker':'x', 'linestyle':'-'},
-        #{'label':'Im SSP3fifth302', 'color':'dodgerblue', 'marker':'+', 'linestyle':'-'},
-        #{'label':'Im ARS3fourth301', 'color':'springgreen', 'marker':'x', 'linestyle':'-'},
-        #{'label':'Im ARS3fifth302', 'color':'darkgreen', 'marker':'+', 'linestyle':'-'},
-        #{'label':'ImEx UJ3fourth301', 'color':'pink', 'marker':'x', 'linestyle':'-'},
-        #{'label':'ImEx UJ3fifth302', 'color':'purple', 'marker':'+', 'linestyle':'-'},
-        ##{}'label':'Im SSP3fifth401', 'color':'dodgerblue', 'marker':'+', 'linestyle':'-'},
-        ##{}'label':'Im ARS3fifth401', 'color':'darkgreen', 'marker':'+', 'linestyle':'-'},
-        ##{}'label':'ImEx UJ3fifth401', 'color':'purple', 'marker':'+', 'linestyle':'-'},
-        ##{'label':'ImEx UJ3 5th401 lExrIm', 'color':'seagreen', 'marker':'+', 'linestyle':'-'},
-        ##{'label':'ImEx UJ3 5th401 lExrIm_sm', 'color':'darkgreen', 'marker':'x', 'linestyle':'-'},
-        #{'label':'ImEx SSP3 5th401 lExrIm', 'color':'cyan', 'marker':'+', 'linestyle':'-'},
-        #{'label':'ImEx SSP3 5th401 lExrIm_sm', 'color':'blue', 'marker':'x', 'linestyle':'-'},
-        #!{'label':'ImEx ARS3 5th401 lExrIm', 'color':'orange', 'marker':'+', 'linestyle':'-'},
-        #!{'label':'ImEx ARS3 5th401 lExrIm_sm', 'color':'red', 'marker':'x', 'linestyle':'-'},
-    
-        #{'label':'ImEx SSP3 5th302 sm', 'color':'cyan', 'marker':'o', 'linestyle':'-'},
-        ##{'label':'ImEx UJ3 4th301 sm', 'color':'blue', 'marker':'+', 'linestyle':'-'},
         {'label':'AdImEx Strang', 'color':'seagreen', 'marker':'x', 'linestyle':'-'},
-        #{'label':'ImEx ARS3 5th302 sm', 'color':'orange', 'marker':'+', 'linestyle':'-'},
-
-        #{'label':'Original non-monotonic', 'color':'blue', 'marker':'+', 'linestyle':'-'},
-        #{'label':'Limited monotonic', 'color':'red', 'marker':'x', 'linestyle':'-'},
         ]
 
     # Initial conditions
-    ymax = 1.5#100.         # for plotting purposes
+    ymax = 50.#1.5#100.         # for plotting purposes
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
     nt = 100                     # number of time steps
     dt = 0.01                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching' # note: stretching won't work with a varying velocity field
     schemenames = [case["scheme"] for case in cases]
-    u_setting = 'constant'#'varying_space'       # 'constant' or 'varying_space' or 'varying_space_time' ---- # !!! 'constant' to 'uniform' and 'varying' to 'nonuniform'? # v!!! I am choosing on 21-04-2025 to keep the u_setting the same for all schemes, I could put it into the scheme parameters at a later point in time.  
-    if u_setting == 'varying_space' or u_setting == 'varying_space_time':
+    u_setting = 'varying_space3'#'varying_space'       # 'constant' or 'varying_space' or 'varying_space_time' ---- # !!! 'constant' to 'uniform' and 'varying' to 'nonuniform'? # v!!! I am choosing on 21-04-2025 to keep the u_setting the same for all schemes, I could put it into the scheme parameters at a later point in time.  
+    if u_setting == 'varying_space' or u_setting == 'varying_space_time' or u_setting == 'varying_space3':
         analytic = an.analytic_constant#an.analytic_velocity_varying_space
         time1rev = False            # This boolean is set by hand - determines whether, for a varying velocity field in space and time, the u ~ cos(wt) has gone through a full revolution in time (and space?). It determines whether the analytic solution is plotted for a certain number of time steps or not. 
                                 # Note: This is currently (21-04-2025) only applied to the .pdf final field output, not to the animation .gif file. v!!! could be changed in the future.    
@@ -263,6 +211,8 @@ def main():
             uf = np.full(nx, uconstant)
         elif u_setting == 'varying_space':
             uf = an.velocity_varying_space(xf)
+        elif u_setting == 'varying_space3':
+            uf = an.velocity_varying_space3(xf)
         else:
             logging.info('Error: invalid velocity setting')
             print('Error: invalid velocity setting')
@@ -289,7 +239,7 @@ def main():
             cmin = np.min(cc)
             logging.info(f'Min Courant number: {cmin:.4f}')
             logging.info(f'Max Courant number: {cmax:.4f}')  
-        if u_setting == 'varying_space' or u_setting == 'varying_space_time':
+        if u_setting == 'varying_space' or u_setting == 'varying_space_time' or u_setting == 'varying_space3':
             # FYI - for the nonuniform velocity schemes I need to calculate the Courant number at cell faces
             logging.info('The Courant numbers values and plot wont be exactly correct for varying velocity, as the ones I would calculate here are defined at cell centers -> hence I have set them to be NaNs.')
             uc = np.full(nx, np.nan)
@@ -309,7 +259,7 @@ def main():
         for it in range(nt+1):
             locals()[f'psi_an_{l}'][it] = analytic(xc, xmax, uc, it*dt) # analytic solution uses uc. For the varying velocity fields, I can pass on uc but the analytic solution function doesn't actually need it as the velocity is basically already prescribed in the equation it calculates, that is, if an analytic solution exists.
         a = locals()[f'psi_an_{l}'][-1].copy()
-        if u_setting == 'varying_space':
+        if u_setting == 'varying_space' or u_setting == 'varying_space3':
             logging.info("NOTE: the analytic solution is only sensible for a variable velocity field in space for a couple of time steps into the simulation due to accummulation of the field.")
         elif u_setting == 'varying_space_time':
             logging.info("NOTE: the analytic solution is only sensible for a variable velocity field in space and time after a full revolution in time.")
@@ -347,6 +297,9 @@ def main():
     elif u_setting == 'varying_space_time':
         ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with $u$ varying in space and time', \
                      'x', '$\\Psi$', 0., xmax, True, -0.1, 1.1)
+    elif u_setting == 'varying_space3':
+        ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with $u$ varying in space (3)', \
+                     'x', '$\\Psi$', 0., xmax, True, -0.1, ymax)
 
     #####################
     #### Experiments ####
