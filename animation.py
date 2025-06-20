@@ -134,13 +134,15 @@ def create_single_animation_from_data(filebasename, field, analytic, nt, dt, xc,
     os.rmdir(plotdir)
 
 
-def create_animation_from_data(fields, nfields, analytic, nt, dt, xc, outputdir, plot_args, xmax):
+def create_animation_from_data(fields, nfields, analytic, nt, dt, xc, outputdir, plot_args, xmax, ymax=None):
     """This function creates an animation from a given data file of a single scheme. The input is a 2D field of a single scheme (shape = 1d time x 1d space), analytic solution (shape = 1d time x 1d space), nt, dx in the centers (dxc; shape 1d space) and ....
     This is a function that is to be called from other files, not from produce_standalone_animation()."""
 
     # Directory to put animation and subdirectory for plots in
     plotdir = outputdir + 'plots/'
     os.mkdir(plotdir)
+    if ymax is None:
+        ymax = 1.1
 
     # Calculate initial functions
     field_in = analytic[0]
@@ -156,7 +158,7 @@ def create_animation_from_data(fields, nfields, analytic, nt, dt, xc, outputdir,
             field = fields[si]        
             plt.plot(xc, field[it], **plot_args[si])
         ut.design_figure(f'{plotdir}timestep_{it}.png', f'$\\Psi$ at t={it*dt:.2f}', \
-                        'x', '$\\Psi$', 0., xmax, True, -0.1, 1.1)
+                        'x', '$\\Psi$', 0., xmax, True, -0.1, ymax)
         filenames.append(f'{plotdir}timestep_{it}.png')
 
     # Create animation from plots in the plots subdirectory
@@ -170,5 +172,100 @@ def create_animation_from_data(fields, nfields, analytic, nt, dt, xc, outputdir,
         os.remove(filename)
     os.rmdir(plotdir)
 
+#        anim.create_animation_from_data(fields, len(schemenames), locals()['psi_an_reg'], nt_LRES, dt_LRES, xc_LRES, dtfactor, xc_HRES, outputdir, plot_args, xmax, HRESbool, ymax=ymax)
+
+
+def create_animation_from_HRESLRESdata(fields, nfields, initial_HRES, nt_LRES, dt_LRES, xc_LRES, dtfactor, xc_HRES, outputdir, plot_args, xmax, HRESbool, ymax=None):
+    """This function creates an animation from a given data file of a single scheme. The input is a 2D field of a single scheme (shape = 1d time x 1d space), analytic solution (shape = 1d time x 1d space), nt, dx in the centers (dxc; shape 1d space) and ....
+    This is a function that is to be called from other files, not from produce_standalone_animation().
+    initial is given at HRES resolution"""
+
+    # Directory to put animation and subdirectory for plots in
+    plotdir = outputdir + 'plots/'
+    os.mkdir(plotdir)
+    if ymax is None:
+        ymax = 1.1
+
+    # Timestepping loop to create plots and save filenames
+    fig = plt.figure(figsize=(7,4))
+    filenames, images = [], []
+    for it in range(nt_LRES+1):   
+        # Plot each timestep in a figure and save in the plots subdirectory
+        plt.plot(xc_HRES, initial_HRES, label='Initial HRES', linestyle='-', color='grey')
+        for si in range(nfields):
+            field = fields[si]    
+            #print(len(xc_HRES), len(field[it*dtfactor]))    
+            if HRESbool[si]:
+                #print('we are in HRES')
+                #print(len(xc_HRES), len(field[it*dtfactor]))    
+                plt.plot(xc_HRES, field[it*dtfactor], **plot_args[si])
+            else:
+                #print('we are in LRES')
+                #print(len(xc_LRES), len(field[it]))    
+                plt.plot(xc_LRES, field[it], **plot_args[si])
+        ut.design_figure(f'{plotdir}timestep_{it}LRES.png', f'$\\Psi$ at t={it*dt_LRES:.2f}', \
+                        'x', '$\\Psi$', 0., xmax, True, -0.1, ymax)
+        filenames.append(f'{plotdir}timestep_{it}LRES.png')
+
+    # Create animation from plots in the plots subdirectory
+    for filename in filenames:
+        images.append(imageio.imread(filename))
+    anim_filename = f'{outputdir}animation.gif'
+    imageio.mimsave(anim_filename, images, duration=500)
+
+    # Remove .png files used to create the animation
+    for filename in filenames:
+        os.remove(filename)
+    os.rmdir(plotdir)
+
+
+def create_animation_from_HRESLRES_ExAdImExdata(fields, nfields, initial_HRES, nt_LRES_AdImEx, dt_LRES_AdImEx, xc_LRES, dtfactor_HRESLRES, xc_HRES, outputdir, plot_args, xmax, HRESbool, dtfactor_ExAdImEx, AdImExbool,  ymax=None):
+    """This function creates an animation from a given data file of a single scheme. The input is a 2D field of a single scheme (shape = 1d time x 1d space), analytic solution (shape = 1d time x 1d space), nt, dx in the centers (dxc; shape 1d space) and ....
+    This is a function that is to be called from other files, not from produce_standalone_animation().
+    initial is given at HRES resolution"""
+
+    # Directory to put animation and subdirectory for plots in
+    plotdir = outputdir + 'plots/'
+    os.mkdir(plotdir)
+    if ymax is None:
+        ymax = 1.1
+
+    # Timestepping loop to create plots and save filenames
+    fig = plt.figure(figsize=(7,4))
+    filenames, images = [], []
+    for it in range(nt_LRES_AdImEx+1):   
+        # Plot each timestep in a figure and save in the plots subdirectory
+        #plt.plot(xc_HRES, initial_HRES, label='Initial', linestyle='--', color='grey')
+        plt.axvline(0.25, linestyle=':', color='grey')
+        plt.axvline(0.75, linestyle=':', color='grey')
+        for si in range(nfields):
+            field = fields[si]    
+            if HRESbool[si]:
+                if AdImExbool[si]:
+                    plt.plot(xc_HRES, field[it*dtfactor_HRESLRES], **plot_args[si])
+                else:
+                    plt.plot(xc_HRES, field[it*dtfactor_HRESLRES*dtfactor_ExAdImEx], **plot_args[si])
+            else:
+                if AdImExbool[si]:
+                    plt.plot(xc_LRES, field[it], **plot_args[si])
+                else:
+                    plt.plot(xc_LRES, field[it*dtfactor_ExAdImEx], **plot_args[si])
+            
+            #        plt.plot(xc_HRES, field[it*dtfactor], **plot_args[si])
+            #        plt.plot(xc_LRES, field[it], **plot_args[si])
+        ut.design_figure(f'{plotdir}timestep_{it}LRES.png', f'$\\Psi$ at t={it*dt_LRES_AdImEx:.2f}', \
+                        'x', '$\\Psi$', 0., xmax, True, -0.1, ymax)
+        filenames.append(f'{plotdir}timestep_{it}LRES.png')
+
+    # Create animation from plots in the plots subdirectory
+    for filename in filenames:
+        images.append(imageio.imread(filename))
+    anim_filename = f'{outputdir}animation.gif'
+    imageio.mimsave(anim_filename, images, duration=500)
+
+    # Remove .png files used to create the animation
+    for filename in filenames:
+        os.remove(filename)
+    os.rmdir(plotdir)
 
 if __name__ == "__main__": produce_standalone_animation()

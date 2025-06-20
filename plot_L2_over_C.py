@@ -89,7 +89,7 @@ def plot():
     if not os.path.exists('./output/L2_over_C/' + date + '/'):
         os.mkdir('./output/L2_over_C/' + date + '/')
         print("Folder %s created" % date)
-    plotname = f'./output/L2_over_C/{date}/{'L2_over_C-' + "-".join(schemenames)}' + '.svg' #+ '.pdf' 
+    plotname = f'./output/L2_over_C/{date}/{'L2_over_C-' + "-".join(schemenames)}.pdf' 
     filename = f'./output/L2_over_C/{date}/{'L2_over_C-' + "-".join(schemenames)}.log'
     i = 0 
     while os.path.exists(plotname):

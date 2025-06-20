@@ -11,6 +11,7 @@ from numba_config import jitflags
 from numba import njit, prange
 import matplotlib.pyplot as plt
 import spatialdiscretisations as sd
+import analytic as an
 
 
 def FTBS(init, nt, dt, uf, dxc):
@@ -1346,6 +1347,20 @@ def LW_aicorrection(init, nt, dt, u, dx, solver='NumPy', niter=0):
     return field
 
 
+def butcherExaiUpwind():
+    # I.e., forward Euler Butcher tableau
+    A = np.array([[0.]])
+    b = np.array([[1.]])
+    return A, b
+
+
+def butcherImaiUpwind():
+    # I.e., forward Euler Butcher tableau
+    A = np.array([[1.]])
+    b = np.array([[1.]])
+    return A, b
+
+
 @njit(**jitflags)
 def aiUpwind(init, nt, dt, u, dx, solver='NumPy', niter=0):
     """This scheme test the accuracy of adaptively implicit upwind. (Needs to be first-order accurate to have a nice second/third-order correction to it.)
@@ -2569,7 +2584,7 @@ def PPM(init, nt, dt, uf, dxc, MULES=False, nIter=1):
 def butcherExSSP3433():
     """Left explicit Butcher tableau of the SSP3(4,3,3) scheme (Table VI from Pareschi and Russo 2005)."""
     A = np.array([[0, 0, 0, 0], [0, 0, 0, 0], [0, 1, 0, 0], [0, 0.25, 0.25, 0]])
-    b = np.array([0, 1/6, 1/6, 2/3])
+    b = np.array([[0, 1/6, 1/6, 2/3]])
     return A, b
 
 
@@ -2577,7 +2592,7 @@ def butcherImSSP3433():
     """Right implicit Butcher tableau of the SSP3(4,3,3) scheme (Table VI from Pareschi and Russo 2005)."""
     alpha, beta, eta = 0.24169426078821, 0.06042356519705, 0.12915286960590
     A = np.array([[alpha, 0, 0, 0], [-alpha, alpha, 0, 0], [0, 1 - alpha, alpha, 0], [beta, eta, 0.5 - beta - eta - alpha, alpha]])
-    b = np.array([0, 1/6, 1/6, 2/3])
+    b = np.array([[0, 1/6, 1/6, 2/3]])
     return A, b
 
 
@@ -2631,7 +2646,7 @@ def butcherExARS3233():
     """Left explicit Butcher tableau of the ARS3(2,3,3) scheme (see Weller, Lock, Wood 2013 - note the b definition is incorrect in that paper)."""
     gamma = 0.5 + np.sqrt(3)/6
     A = np.array([[0, 0, 0], [gamma, 0, 0], [gamma - 1, 2*(1 - gamma), 0]])
-    b = np.array([0, 0.5, 0.5])
+    b = np.array([[0, 0.5, 0.5]])
     return A, b
 
 
@@ -2639,7 +2654,7 @@ def butcherImARS3233():
     """Right implicit Butcher tableau of the ARS3(2,3,3) scheme (see Weller, Lock, Wood 2013 - note the b definition is incorrect in that paper)."""
     gamma = 0.5 + np.sqrt(3)/6
     A = np.array([[0, 0, 0], [0, gamma, 0], [0, 1 - 2*gamma, gamma]])
-    b = np.array([0, 0.5, 0.5])
+    b = np.array([[0, 0.5, 0.5]])
     return A, b
 
 
@@ -2724,14 +2739,14 @@ def ImARS3C4(init, nt, dt, uf, dxc, MULES=False, nIter=1):
 def butcherExUJ31e32():
     """Left (explicit) butcher tableau from Ullrich and Jablonowski 2012. See the Weller Lock and Wood (2013) UJ3(1+e,3,2) scheme."""   
     A = np.array([[0., 0., 0., 0., 0., 0.],[0., 0., 0., 0., 0., 0.],[0., 1., 0., 0., 0., 0.],[0., 0.25, 0.25, 0., 0., 0.],[0., 1/6, 1/6, 2/3, 0., 0.],[0., 1/6, 1/6, 2/3, 0., 0.]])
-    b = np.array([0., 1/6, 1/6, 2/3, 0., 0.])
+    b = np.array([[0., 1/6, 1/6, 2/3, 0., 0.]])
     return A, b
 
 
 def butcherImUJ31e32():
     """Right (implicit) butcher tableau from Ullrich and Jablonowski 2012. See the Weller Lock and Wood (2013) UJ3(1+e,3,2) scheme."""   
     A = np.array([[0., 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.5]])
-    b = np.array([0.5, 0., 0., 0., 0., 0.5])
+    b = np.array([[0.5, 0., 0., 0., 0., 0.5]])
     return A, b
 
 
@@ -2986,61 +3001,120 @@ def ImExARS3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22', butcher
     return field
 
 
-def ImExRK(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22', RK='UJ31e32', blend='off', clim=1.6):
-    """This scheme implements the timestepping from the double butcher tableau defined with RK, combined with various (default: the fourth order centred) spatial discretisations. Assumes u>0 constant."""
+def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22', RK='UJ31e32', blend='off', clim=1.6, HRES=None, AdImEx=None): # !!! add option for non uconstant in TIME to be recalculated every time step
+    """This scheme implements the timestepping from the double butcher tableau defined with RK, combined with various (default: the fourth order centred) spatial discretisations. Assumes u>0 constant.
+    
+    21-04-2025: uf is probably just the first value of the velocity field if it changes in time. If the velocity changes in time, we need to recalculate the u, c and beta every time step. If the velocity is constant in space and time or only varies in space, we can use uf throughout the time stepping, without need to reculculate it every time step and for intermediate stages within a RK time step."""
     # SD: spatial discretisation, default is centered fourth order, i.e. fourth22
     nx = len(init)
     field = np.zeros((nt+1, nx))
     field[0] = init.copy()
-    c = dt*uf/dxc
+    xf = np.zeros(nx) 
+    for i in range(len(dxc)-1): # assumes uniform grid v!!!
+        xf[i+1] = xf[i] + dxc[i]
+
+    # !!! ALSO: CHECK THE RK SCHEME DEFINITION IN ANY CASE COMPARING IT TO THE SLB DEFINITION FROM BEGINNING OF APRIL.
 
     beta = np.ones(nx) # beta[i] is at i-1/2
-    # Setting the off-centring in time 
-    if blend == 'off':    
-        for i in range(nx):
-            if c[i] <= clim: 
-                beta[i] = 0.
-    elif blend == 'rExlIm':
-        for i in range(int(nx/2)):
-            beta[i] = 0. 
-    elif blend == 'rExlIm_sm': # linear smoothing for 1/10 of the domain
-        for i in range(int(nx/10)):
-            beta[i] = (int(nx/10) - i)/int(nx/10)
-        for i in range(int(nx/10), int(nx/2)):
-            beta[i] = 0. 
-        for i in range(int(nx/2), int(nx/2) + int(nx/10)):
-            beta[i] = (i - int(nx/2))/int(nx/10)
-    elif blend == 'sm': # smooth transition from 0 to 1 with 1-1/c
-        for i in range(nx):
-            beta[i] = np.maximum(0., 1. - 1./c[i])
-    elif blend == 'Im':
-        beta = np.ones(nx)
-    elif blend == 'Ex':
-        beta = np.zeros(nx)
-    else:
-        print('Error: Blend in off-centering not recognised.')
-    #print('blend:', blend)
-    #print('beta with that blend is', beta)
 
-    AIm, bIm = globals()['butcherIm' + RK]()#butcherIm()
-    AEx, bEx = globals()['butcherEx' + RK]()#butcherEx() 
-    nstages = len(bIm)
-    flx, f = np.zeros((nstages, nx)), np.zeros((nstages, nx))
+    if u_setting == 'constant' or u_setting == 'varying_space' or u_setting == 'varying_space2' or u_setting == 'varying_space3':
+        c = dt*uf/dxc # assumes uniform grid c # This c is used for the calculation of the off-centring in time. 
+        # Setting the off-centring in time 
+        if blend == 'off':    
+            for i in range(nx):
+                if c[i] <= clim: 
+                    beta[i] = 0.
+        elif blend == 'rExlIm':
+            for i in range(int(nx/2)):
+                beta[i] = 0. 
+        elif blend == 'rExlIm_sm': # linear smoothing for 1/10 of the domain
+            for i in range(int(nx/10)):
+                beta[i] = (int(nx/10) - i)/int(nx/10)
+            for i in range(int(nx/10), int(nx/2)):
+                beta[i] = 0. 
+            for i in range(int(nx/2), int(nx/2) + int(nx/10)):
+                beta[i] = (i - int(nx/2))/int(nx/10)
+        elif blend == 'sm': # smooth transition from 0 to 1 with 1-1/c
+            for i in range(nx):
+                beta[i] = np.maximum(0., 1. - 1./c[i])
+        elif blend == 'sm_centredspace': # smooth transition from 0 to 1 with 1-1/c and then spatial smoothing between neighbouring points. Centered in space: 0.25*[i-3/2] + 0.5*[i-1/2] + 0.25*[i+1/2] for face i-1/2
+            for i in range(nx):
+                beta[i] = np.maximum(0., 1. - 1./c[i])
+            beta = 0.25*np.roll(beta, 1) + 0.5*beta + 0.25*np.roll(beta, -1) # centered in space: 0.25*[i-3/2] + 0.5*[i-1/2] + 0.25*[i+1/2] for face i-1/2
+        elif blend == 'Im':
+            beta = np.ones(nx)
+        elif blend == 'Ex':
+            beta = np.zeros(nx)
+        else:
+            raise ValueError('Blend in off-centering not recognised.')
+
+    if u_setting == 'varying_space_time' and blend != 'sm':
+        raise ValueError('For a varying velocity field, off-centering in time is only implemented for a smooth transition from 0 to 1 with 1-1/c.')
+
+    AIm, bIm = globals()['butcherIm' + RK]()
+    cIm = AIm.sum(axis=1)
+    AEx, bEx = globals()['butcherEx' + RK]() 
+    cEx = AEx.sum(axis=1)
+    nstages = np.shape(bIm)[1] # I changed bIm to be multidimensional - len(bIm) won't work properly anymore in this case. (i.e. other ImEx schemes won't work with the butcher functions as of 25-04-2025)
+    flx, fEx, fIm, flx_field, f = np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx))
     matrix = getattr(sd, 'M' + SD)
     fluxfn = getattr(sd, SD)
 
-    for it in range(nt):
-        field_k = field[it].copy()
-        flx_HO = np.zeros(nx)
-        for ik in range(nstages):
-            M = matrix(nx, dt, dxc, beta*uf, AIm[ik,ik])
-            rhs_k = field[it] + dt*np.dot(AEx[ik,:ik], (1 - beta[:])*f[:ik,:]) + dt*np.dot(AIm[ik,:ik], beta[:]*f[:ik,:])
-            field_k = np.linalg.solve(M, rhs_k)
-            flx[ik,:] = fluxfn(field_k) # [i] defined at i-1/2
-            f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
-            flx_HO += flx[ik,:]*bIm[ik]*beta + flx[ik,:]*bEx[ik]*(1 - beta)
-        if MULES == True:
-            flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter)
-        field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc)
+    if u_setting == 'varying_space_time': # 25-04-2025: NOT WORKING 
+        # We are only setting this up with blend == 'sm' -> a smooth transition from 0 to 1 with 1-1/c
+        # For a varying velocity field in time, for the offcentring calculation, we need to use the maximum velocity that will appear locally at a certain face from n to n+1 to calculate the c and theta. 
+        for it in range(nt):
+        # to do: I NEED TO RECALCULATE at different intermediate stages. -- check uf below
+            betaset = False
+            uf = an.velocity_varying_space_time(xf, it*nt) # recalculate velocity # where to put this?
+            while betaset == False:  
+                maxuf = uf.copy() 
+                cf = maxuf*dt/(0.5*dxc) # recalculate Courant number # assumes uniform grid, which is the assumption in any case with the varying space time u setting
+                beta = np.maximum(0., 1. - 1./cf)   
+                for istage in range(nstages):
+                    ufstage = an.velocity_varying_space_time(xf, it*nt + (1-beta)*cEx[istage]*dt + beta*cIm[istage]*dt) # recalculate velocity for the stage
+                    maxuf = np.maximum(maxuf, ufstage)
+
+                #if  : betaset = True
+            # 21-04-2025: don't have this working yet. Not sure of the best way how to combine u and beta for stability. Have not tested varying_space_time yet. 
+            #----
+            #maxuf = # calculate the max velocity at the time points given by the Butcher c
+            #c = dt*maxuf/dxc # !!! adjust # !!! 21-04-2025: put into the time loop? # !!! and do I want to assume a smooth beta blend for this i.e. when in time loop to avoid 
+            #----
+
+    elif u_setting == 'varying_space' or u_setting == 'varying_space2' or u_setting == 'varying_space3':
+        # Resetting AEx to include b
+        AEx = np.concatenate((AEx,bEx), axis=0)
+        AIm = np.concatenate((AIm,bIm), axis=0)
+        AEx = np.concatenate((AEx, np.zeros((nstages+1,1))), axis=1)
+        AIm = np.concatenate((AIm, np.zeros((nstages+1,1))), axis=1)
+
+        for it in range(nt):
+            field_k = field[it].copy()
+            flx_HO = np.zeros(nx)
+            for ik in range(nstages+1):
+                # Calculate the field at stage k
+                M = matrix(nx, dt, dxc, beta*uf, AIm[ik,ik])
+                rhs_k = field[it] + dt*np.dot(AEx[ik,:ik], fEx[:ik,:]) + dt*np.dot(AIm[ik,:ik], fIm[:ik,:])
+                field_k = np.linalg.solve(M, rhs_k)
+                # Calculate the flux based on the field at stage k
+                flx_field[ik,:] = fluxfn(field_k) # [i] defined at i-1/2
+                fEx[ik,:] = -ddx((1 - beta[:])*uf*flx_field[ik,:], np.roll((1 - beta[:])*uf*flx_field[ik,:],-1), dxc)
+                fIm[ik,:] = -ddx(beta[:]*uf*flx_field[ik,:], np.roll(beta[:]*uf*flx_field[ik,:],-1), dxc)                
+            field[it+1] = field_k.copy()
+    elif u_setting == 'constant':
+        for it in range(nt):
+            field_k = field[it].copy()
+            flx_HO = np.zeros(nx)
+            for ik in range(nstages):
+                M = matrix(nx, dt, dxc, beta*uf, AIm[ik,ik])
+                rhs_k = field[it] + dt*np.dot(AEx[ik,:ik], (1 - beta[:])*f[:ik,:]) + dt*np.dot(AIm[ik,:ik], beta[:]*f[:ik,:])
+                field_k = np.linalg.solve(M, rhs_k)
+                flx[ik,:] = fluxfn(field_k) # [i] defined at i-1/2
+                f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
+                flx_HO += flx[ik,:]*bIm[ik]*beta + flx[ik,:]*bEx[ik]*(1 - beta)
+            if MULES == True:
+                flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter) # !!! do I need to use a different c here? Not one that is based on the max velocity from n to n+1 locally?
+            field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc)
 
     return field
