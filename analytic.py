@@ -213,3 +213,15 @@ def velocity_varying_space3(x, l=2.*np.pi):
     """This function returns a velocity field that is varying in space. The velocity field is given by u = 5.5 + 4.5*sin(lx), where l is a real number, default 2*pi."""
     u = 2.5 + 1.5*np.sin(l*(x + 0.25))
     return u
+
+
+def velocity_varying_space4(x, l=2.*np.pi):
+    """This function returns a velocity field that is varying in space. The velocity field is given by u = 5.5 + 4.5*sin(lx), where l is a real number, default 2*pi."""
+    u = 20 - 18*(np.sin(l*(x+0.25))+1)**0.1
+    return u
+
+
+def velocity_varying_space5(x, l=2.*np.pi):
+    """This function returns a velocity field that is varying in space. The velocity field is given by u = 5.5 + 4.5*sin(lx), where l is a real number, default 2*pi."""
+    u = 10.3 + 9.7*np.sin(l*(x + 0.25))
+    return u

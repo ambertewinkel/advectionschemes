@@ -35,18 +35,18 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
     
     # We need to set: dt, nx, nt, u_setting, analytic
     xmax = 1.0
-    ymax = 50. # for plotting purposes
+    ymax = 200. # for plotting purposes
     dt_LRES_AdImEx = 0.01 # largest time step of the two dt's for the animation dt_LRES before
     nt_LRES_AdImEx = 50#100 # largest number of time steps of the two nt's for the animation
     nx_LRES = 40
     dx_LRES = xmax/nx_LRES
 
     dtfactor_HRESLRES = 10
-    dtfactor_ExAdImEx = 5
+    dtfactor_ExAdImEx = 10#5
 
     dt_HRES_AdImEx = dt_LRES_AdImEx/dtfactor_HRESLRES # used to be dt_HRES
     nt_HRES_AdImEx = nt_LRES_AdImEx*dtfactor_HRESLRES
@@ -59,7 +59,7 @@ def main():
     dt_HRES_Ex = dt_LRES_Ex/dtfactor_HRESLRES 
     nt_HRES_Ex = nt_LRES_Ex*dtfactor_HRESLRES
 
-    u_setting = 'varying_space3'
+    u_setting = 'varying_space5'
     analytic = an.analytic_constant
     total_time = nt_LRES_AdImEx*dt_LRES_AdImEx
 
@@ -171,7 +171,7 @@ def main():
     plt.title('Velocity')
     plt.xlabel('x')
     plt.ylabel('$u$')
-    plt.savefig('velocity3.png')
+    plt.savefig(outputdir + f'{u_setting}.png')
     plt.close()
 
     for c in range(len(cases)):
@@ -202,7 +202,7 @@ def main():
     plt.ylabel('$C$')
     plt.legend()
     plt.axhline(1, color='k', linestyle=':')
-    plt.savefig('courantnumber3.png')
+    plt.savefig(outputdir + 'courant.png')
     plt.close()
 
 
@@ -239,7 +239,7 @@ def main():
     plt.ylim(-0.1, 1.1)
     plt.legend()
     #plt.axhline(1, color='k', linestyle=':')
-    plt.savefig('offcentering3.png')
+    plt.savefig(outputdir + 'offcentering.png')
     plt.close()
 
     plt.figure(figsize=(7,4))

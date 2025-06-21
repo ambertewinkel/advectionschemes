@@ -3017,7 +3017,7 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
 
     beta = np.ones(nx) # beta[i] is at i-1/2
 
-    if u_setting == 'constant' or u_setting == 'varying_space' or u_setting == 'varying_space2' or u_setting == 'varying_space3':
+    if u_setting == 'constant' or u_setting == 'varying_space' or u_setting == 'varying_space2' or u_setting == 'varying_space3' or u_setting == 'varying_space4' or u_setting == 'varying_space5':
         c = dt*uf/dxc # assumes uniform grid c # This c is used for the calculation of the off-centring in time. 
         # Setting the off-centring in time 
         if blend == 'off':    
@@ -3047,6 +3047,9 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
             beta = np.zeros(nx)
         else:
             raise ValueError('Blend in off-centering not recognised.')
+        #plt.plot(xf, c)
+        #plt.title('Courant number')
+        #plt.show()
 
     if u_setting == 'varying_space_time' and blend != 'sm':
         raise ValueError('For a varying velocity field, off-centering in time is only implemented for a smooth transition from 0 to 1 with 1-1/c.')
@@ -3082,7 +3085,7 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
             #c = dt*maxuf/dxc # !!! adjust # !!! 21-04-2025: put into the time loop? # !!! and do I want to assume a smooth beta blend for this i.e. when in time loop to avoid 
             #----
 
-    elif u_setting == 'varying_space' or u_setting == 'varying_space2' or u_setting == 'varying_space3':
+    elif u_setting == 'varying_space' or u_setting == 'varying_space2' or u_setting == 'varying_space3' or u_setting == 'varying_space4' or u_setting == 'varying_space5':
         # Resetting AEx to include b
         AEx = np.concatenate((AEx,bEx), axis=0)
         AIm = np.concatenate((AIm,bIm), axis=0)
@@ -3112,7 +3115,6 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
                 field_k = np.linalg.solve(M, rhs_k)
                 flx[ik,:] = fluxfn(field_k) # [i] defined at i-1/2
                 f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
-                print(f'ik: {ik}, bIm: {bIm[0,ik]}, bEx: {bEx[0,ik]}, beta: {beta}')
                 flx_HO += flx[ik,:]*bIm[0,ik]*beta + flx[ik,:]*bEx[0,ik]*(1 - beta)
             if MULES == True:
                 flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter) # !!! do I need to use a different c here? Not one that is based on the max velocity from n to n+1 locally?

@@ -236,8 +236,8 @@ def create_animation_from_HRESLRES_ExAdImExdata(fields, nfields, initial_HRES, n
     for it in range(nt_LRES_AdImEx+1):   
         # Plot each timestep in a figure and save in the plots subdirectory
         #plt.plot(xc_HRES, initial_HRES, label='Initial', linestyle='--', color='grey')
-        plt.axvline(0.25, linestyle=':', color='grey')
-        plt.axvline(0.75, linestyle=':', color='grey')
+        #plt.axvline(0.25, linestyle=':', color='grey')
+        #plt.axvline(0.75, linestyle=':', color='grey')
         for si in range(nfields):
             field = fields[si]    
             if HRESbool[si]:
