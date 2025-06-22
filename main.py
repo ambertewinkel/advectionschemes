@@ -35,11 +35,11 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     limitCto1 = False
-    create_animation = True
+    create_animation = False
     check_orderofconvergence = False # Be careful with this setting with the varying velocity field in space (and time). Has not been adjusted to work with this yet, if that is necessary (probably not necessary for the varying in space and time as you only compare after a ful revolution in time; probably necessary for the varying in space as we can compare the behaviour after 1/2/4 time steps as it is independent of time).
     accuracy_in = 'space with C const' # 'space with dt const' or 'time with dx const' or 'space with C const'; (relevant only if check_orderofconvergence == True)
     date = dati.date.today().strftime("%Y%m%d")                   # date of the run
@@ -47,7 +47,7 @@ def main():
 
     # Input cases
     cases = [\
-        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm'},      
+        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
         ]
     
     plot_args = [\
@@ -58,11 +58,11 @@ def main():
     ymax = 50.#1.5#100.         # for plotting purposes
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    nt = 50#100                     # number of time steps
+    nt = 1 #50#100                     # number of time steps # needs to be 1 when output_substages is True for ImExRK scheme
     dt = 0.01                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching' # note: stretching won't work with a varying velocity field
     schemenames = [case["scheme"] for case in cases]
-    u_setting = 'varying_space5'#'varying_space'       # 'constant' or 'varying_space' or 'varying_space_time' ---- # !!! 'constant' to 'uniform' and 'varying' to 'nonuniform'? # v!!! I am choosing on 21-04-2025 to keep the u_setting the same for all schemes, I could put it into the scheme parameters at a later point in time.  
+    u_setting = 'varying_space4'#'varying_space'       # 'constant' or 'varying_space' or 'varying_space_time' ---- # !!! 'constant' to 'uniform' and 'varying' to 'nonuniform'? # v!!! I am choosing on 21-04-2025 to keep the u_setting the same for all schemes, I could put it into the scheme parameters at a later point in time.  
     if u_setting == 'varying_space' or u_setting == 'varying_space_time' or u_setting == 'varying_space2' or u_setting == 'varying_space3' or u_setting == 'varying_space4' or u_setting == 'varying_space5':
         analytic = an.analytic_constant#an.analytic_velocity_varying_space
         time1rev = False            # This boolean is set by hand - determines whether, for a varying velocity field in space and time, the u ~ cos(wt) has gone through a full revolution in time (and space?). It determines whether the analytic solution is plotted for a certain number of time steps or not. 

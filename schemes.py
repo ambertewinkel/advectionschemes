@@ -2738,15 +2738,15 @@ def ImARS3C4(init, nt, dt, uf, dxc, MULES=False, nIter=1):
 
 def butcherExUJ31e32():
     """Left (explicit) butcher tableau from Ullrich and Jablonowski 2012. See the Weller Lock and Wood (2013) UJ3(1+e,3,2) scheme."""   
-    A = np.array([[0., 0., 0., 0., 0., 0.],[0., 0., 0., 0., 0., 0.],[0., 1., 0., 0., 0., 0.],[0., 0.25, 0.25, 0., 0., 0.],[0., 1/6, 1/6, 2/3, 0., 0.],[0., 1/6, 1/6, 2/3, 0., 0.]])
-    b = np.array([[0., 1/6, 1/6, 2/3, 0., 0.]])
+    A = np.array([[0., 0., 0., 0., 0.],[0., 0., 0., 0., 0.],[0., 1., 0., 0., 0.],[0., 0.25, 0.25, 0., 0.],[0., 1/6, 1/6, 2/3, 0.]])
+    b = np.array([[0., 1/6, 1/6, 2/3, 0.]])
     return A, b
 
 
 def butcherImUJ31e32():
     """Right (implicit) butcher tableau from Ullrich and Jablonowski 2012. See the Weller Lock and Wood (2013) UJ3(1+e,3,2) scheme."""   
-    A = np.array([[0., 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0., 0.5]])
-    b = np.array([[0.5, 0., 0., 0., 0., 0.5]])
+    A = np.array([[0., 0., 0., 0., 0.],[0.5, 0., 0., 0., 0.],[0.5, 0., 0., 0., 0.],[0.5, 0., 0., 0., 0.],[0.5, 0., 0., 0., 0.5]])
+    b = np.array([[0.5, 0., 0., 0., 0.5]])
     return A, b
 
 
@@ -3001,10 +3001,11 @@ def ImExARS3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22', butcher
     return field
 
 
-def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22', RK='UJ31e32', blend='off', clim=1.6, HRES=None, AdImEx=None): # !!! add option for non uconstant in TIME to be recalculated every time step
+def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22', RK='UJ31e32', blend='off', clim=1.6, HRES=None, AdImEx=None, output_substages=False): # !!! add option for non uconstant in TIME to be recalculated every time step
     """This scheme implements the timestepping from the double butcher tableau defined with RK, combined with various (default: the fourth order centred) spatial discretisations. Assumes u>0 constant.
     
-    21-04-2025: uf is probably just the first value of the velocity field if it changes in time. If the velocity changes in time, we need to recalculate the u, c and beta every time step. If the velocity is constant in space and time or only varies in space, we can use uf throughout the time stepping, without need to reculculate it every time step and for intermediate stages within a RK time step."""
+    21-04-2025: uf is probably just the first value of the velocity field if it changes in time. If the velocity changes in time, we need to recalculate the u, c and beta every time step. If the velocity is constant in space and time or only varies in space, we can use uf throughout the time stepping, without need to reculculate it every time step and for intermediate stages within a RK time step.
+    - haven't tested but probably only want to use the output_substages option with nt=1"""
     # SD: spatial discretisation, default is centered fourth order, i.e. fourth22
     nx = len(init)
     field = np.zeros((nt+1, nx))
@@ -3062,6 +3063,7 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
     flx, fEx, fIm, flx_field, f = np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx))
     matrix = getattr(sd, 'M' + SD)
     fluxfn = getattr(sd, SD)
+    flx_contribution_from_stage_k = np.zeros((nstages+1, nx))
 
     if u_setting == 'varying_space_time': # 25-04-2025: NOT WORKING 
         # We are only setting this up with blend == 'sm' -> a smooth transition from 0 to 1 with 1-1/c
@@ -3091,20 +3093,32 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
         AIm = np.concatenate((AIm,bIm), axis=0)
         AEx = np.concatenate((AEx, np.zeros((nstages+1,1))), axis=1)
         AIm = np.concatenate((AIm, np.zeros((nstages+1,1))), axis=1)
-
+        
         for it in range(nt):
             field_k = field[it].copy()
             flx_HO = np.zeros(nx)
             for ik in range(nstages+1):
                 # Calculate the field at stage k
-                M = matrix(nx, dt, dxc, beta*uf, AIm[ik,ik])
-                rhs_k = field[it] + dt*np.dot(AEx[ik,:ik], fEx[:ik,:]) + dt*np.dot(AIm[ik,:ik], fIm[:ik,:])
-                field_k = np.linalg.solve(M, rhs_k)
+                M = matrix(nx, dt, dxc, beta*uf, AIm[ik,ik]) # at i
+                rhs_k = field[it] + dt*np.dot(AEx[ik,:ik], fEx[:ik,:]) + dt*np.dot(AIm[ik,:ik], fIm[:ik,:]) # at i
+                field_k = np.linalg.solve(M, rhs_k) # at i
+                #if output_substages: plt.plot(xf, field_k, label='stage ' + str(ik))
                 # Calculate the flux based on the field at stage k
                 flx_field[ik,:] = fluxfn(field_k) # [i] defined at i-1/2
+                if output_substages: 
+                    flx_contribution_from_stage_k[ik,:] = AEx[-1,ik]*(1 - beta[:])*uf*flx_field[ik,:] + AIm[-1,ik]*beta[:]*uf*flx_field[ik,:]
+                    if ik != nstages and (flx_contribution_from_stage_k[ik] == 0.).all() == False: plt.plot(xf, flx_contribution_from_stage_k[ik,:], label='stage ' + str(ik+1))
                 fEx[ik,:] = -ddx((1 - beta[:])*uf*flx_field[ik,:], np.roll((1 - beta[:])*uf*flx_field[ik,:],-1), dxc)
                 fIm[ik,:] = -ddx(beta[:]*uf*flx_field[ik,:], np.roll(beta[:]*uf*flx_field[ik,:],-1), dxc)                
             field[it+1] = field_k.copy()
+            #if output_substages: 
+            #    plt.title('Substage fields during time step ' + str(it+1))
+            #    plt.legend()
+            #    plt.show()            
+            if output_substages: 
+                plt.title('Flux contribution from the different stages during time step ' + str(it+1))
+                plt.legend()
+                plt.savefig(f'flx_contr_dt{dt}.png')
     elif u_setting == 'constant':
         for it in range(nt):
             field_k = field[it].copy()
@@ -3113,11 +3127,16 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
                 M = matrix(nx, dt, dxc, beta*uf, AIm[ik,ik])
                 rhs_k = field[it] + dt*np.dot(AEx[ik,:ik], (1 - beta[:])*f[:ik,:]) + dt*np.dot(AIm[ik,:ik], beta[:]*f[:ik,:])
                 field_k = np.linalg.solve(M, rhs_k)
+                #if output_substages: plt.plot(xf, field_k, label='stage ' + str(ik))
                 flx[ik,:] = fluxfn(field_k) # [i] defined at i-1/2
                 f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
                 flx_HO += flx[ik,:]*bIm[0,ik]*beta + flx[ik,:]*bEx[0,ik]*(1 - beta)
             if MULES == True:
                 flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter) # !!! do I need to use a different c here? Not one that is based on the max velocity from n to n+1 locally?
             field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc)
+            #if output_substages: 
+            #    plt.title('Substage fields during time step ' + str(it+1))
+            #    plt.legend()
+            #    plt.show()
 
     return field
