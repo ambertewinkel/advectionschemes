@@ -12,6 +12,7 @@ from numba import njit, prange
 import matplotlib.pyplot as plt
 import spatialdiscretisations as sd
 import analytic as an
+import logging
 
 
 def FTBS(init, nt, dt, uf, dxc):
@@ -3119,6 +3120,13 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
                 plt.title('Flux contribution from the different stages during time step ' + str(it+1))
                 plt.legend()
                 plt.savefig(f'flx_contr_dt{dt}.png')
+                plt.close()
+                total_flux = np.sum(flx_contribution_from_stage_k, axis=0)
+                logging.info(f'Total flux contribution from the different stages during time step {it+1}: {total_flux}')
+                logging.info(f'Sum of the total flux: {np.sum(total_flux)}')
+                plt.plot(xf, total_flux, label='Total flux')
+                plt.legend()
+                plt.savefig(f'flx_contr_total_dt{dt}.png')
     elif u_setting == 'constant':
         for it in range(nt):
             field_k = field[it].copy()
