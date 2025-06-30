@@ -2554,7 +2554,7 @@ def lExrImRK3QC(init, nt, dt, uf, dxc, butcherIm=PR05TVr, butcherEx=PR05TVl, sol
     return field
 
 
-def PPM(init, nt, dt, uf, dxc, MULES=False, nIter=1):
+def PPM(init, nt, dt, uf, dxc, MULES=False, nIter=1, iterFCT=False):
     """This scheme implements the piecewise parabolic method (PPM) by Colella and Woodward 1984. See HW notes MULES vs FCT 31-01-2025. Also works for large Courant numbers."""
 
     nx = len(init)
@@ -2577,7 +2577,12 @@ def PPM(init, nt, dt, uf, dxc, MULES=False, nIter=1):
         fieldh = 1./np.roll(c,1)*np.roll(ksum,1) + np.roll(dc,1)/np.roll(c,1)*np.roll(fieldh_dc,intc[0]) # assumes uniform c # [i] defined at i-1/2
         if MULES == True:
             fieldh = lim.MULES(field[it], fieldh, c, nIter=nIter)
-        field[it+1] = field[it] - c*(np.roll(fieldh,-1) - fieldh)
+        if iterFCT == True:
+            previous = [field[it][i] if c[i] <= 1. else None for i in range(len(init))] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used.
+            field[it+1] = lim.iterFCT(fieldh, dxc, dt, uf, c, field[it], previous, niter=nIter)
+        else:
+            field[it+1] = field[it] - c*(np.roll(fieldh,-1) - fieldh)
+            
 
     return field
 
@@ -3002,7 +3007,7 @@ def ImExARS3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22', butcher
     return field
 
 
-def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22', RK='UJ31e32', blend='off', clim=1.6, HRES=None, AdImEx=None, output_substages=False): # !!! add option for non uconstant in TIME to be recalculated every time step
+def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22', RK='UJ31e32', blend='off', clim=1.6, HRES=None, AdImEx=None, output_substages=False, iterFCT=False, FCT=False, FCT_HW=False): # !!! add option for non uconstant in TIME to be recalculated every time step
     """This scheme implements the timestepping from the double butcher tableau defined with RK, combined with various (default: the fourth order centred) spatial discretisations. Assumes u>0 constant.
     
     21-04-2025: uf is probably just the first value of the velocity field if it changes in time. If the velocity changes in time, we need to recalculate the u, c and beta every time step. If the velocity is constant in space and time or only varies in space, we can use uf throughout the time stepping, without need to reculculate it every time step and for intermediate stages within a RK time step.
@@ -3116,6 +3121,10 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
             #    plt.title('Substage fields during time step ' + str(it+1))
             #    plt.legend()
             #    plt.show()            
+            total_flux = np.sum(flx_contribution_from_stage_k, axis=0)
+            if iterFCT == True:
+                previous = [field[it][i] if c[i] <= 1. else None for i in range(nx)] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used.
+                field[it+1] = lim.iterFCT(flx_HO, dxc, dt, uf, c, field[it], previous=previous, niter=nIter) # also option for previous, ymin and ymax                
             if output_substages: 
                 plt.title('Flux contribution from the different stages during time step ' + str(it+1))
                 plt.legend()
@@ -3141,10 +3150,35 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
                 flx_HO += flx[ik,:]*bIm[0,ik]*beta + flx[ik,:]*bEx[0,ik]*(1 - beta)
             if MULES == True:
                 flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter) # !!! do I need to use a different c here? Not one that is based on the max velocity from n to n+1 locally?
-            field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc)
-            #if output_substages: 
-            #    plt.title('Substage fields during time step ' + str(it+1))
-            #    plt.legend()
-            #    plt.show()
+            
+            if FCT == True or FCT_HW == True: # !!! for iterFCT debugging purposes, comparing nIter=1 situation
+                # calculate low order solution
+                flx_bounded, field_bounded = np.zeros(nx), np.zeros(nx)# [i] is at i-1/2
+                beta_bounded = np.maximum(np.zeros(nx), 1. - 1./c) # [i] at i-1/2
+                M = np.zeros((nx, nx))
+                for i in range(nx):
+                    M[i,i] = 1. + beta_bounded[i]*c[i]
+                    M[i,(i-1)%nx] = -1.*beta_bounded[i]*c[i]
+                
+                # Calculate 1 time step of AdImEx Upwind 
+                rhs = field[it] - c*(1-beta_bounded)*(field[it] - np.roll(field[it],1))
+                field_bounded = np.linalg.solve(M, rhs)
+
+                # Calculate the bounded flux (the field value at i-1/2 that gives you the flux when *uf) based on the bounded field
+                flx_bounded = (1. - beta_bounded)*np.roll(field[it],1) + beta_bounded*np.roll(field_bounded,1) # [i] is at i-1/2
+                corr = flx_HO - flx_bounded # [i] is at i-1/2
+                previous = [field[it][i] if c[i] <= 1. else None for i in range(nx)] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used.
+                
+            if iterFCT == True: # !!! what about nonconstant u
+                previous = [field[it][i] if c[i] <= 1. else None for i in range(nx)] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used.
+                field[it+1] = lim.iterFCT(flx_HO, dxc, dt, uf, c, field[it], previous=previous, niter=nIter) # also option for previous, ymin and ymax
+            elif FCT_HW == True: # !!! for iterFCT debugging purposes, comparing nIter=1 situation - seeing if it is actually monotonic
+                flxB = np.roll(lim.FCT_HW(field[it], np.roll(c,-1), np.roll(flx_bounded,-1), np.roll(flx_HO,-1)),1) # [i] is at i-1/2 # valueAW at i-1/2 = np.roll(valueHW at i+1/2,1)
+                field[it+1] = field[it] - uf*dt*ddx(flxB, np.roll(flxB,-1), dxc)
+            elif FCT == True:
+                corrlim = lim.FCT(flx_bounded, corr, dxc, previous=previous) # dt factor is different from iterFCT ?!!!
+                field[it+1] = field_bounded - uf*dt*ddx(corrlim, np.roll(corrlim,-1), dxc)
+            else: 
+                field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc)
 
     return field
