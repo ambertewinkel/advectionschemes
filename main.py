@@ -48,51 +48,51 @@ def main():
     # Input cases
     cases = [\
         {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm'},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
-        ###{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':2},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
-        ###{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':3},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
-        ###{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':4},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
-        ###{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':5},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
-        ###{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':6},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
+        {'scheme': 'ImExRK', 'RK':'aiUpwind', 'SD':'BS', 'blend':'sm'},
+        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':1},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
+        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':2},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
+        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':3},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
+        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':4},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
+        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':5},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
+        #{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':6},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
         ####{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':7},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
         ####{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':8},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
         ####{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':9},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
         ####{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':10},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
-        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':1},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
         ####{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'FCT':True},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
-        #{'scheme': 'ImExRK', 'RK':'aiUpwind', 'SD':'BS', 'blend':'sm'},
         #{'scheme':'PPM'},
         #{'scheme':'PPM', 'iterFCT':True, 'nIter':1},
         ##{'scheme':'PPM', 'iterFCT':True, 'nIter':2},
         ##{'scheme':'PPM', 'iterFCT':True, 'nIter':3},
-        {'scheme':'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'FCT_HW':True},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
+        #{'scheme':'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'FCT_HW':True},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
         ]
     
     plot_args = [\
-        {'label':'AdImEx Strang', 'color':'seagreen', 'marker':'x', 'linestyle':'-'},
-        ###{'label':'AdImEx Strang FCT2', 'color':'magenta', 'marker':'x', 'linestyle':'-'},
-        ###{'label':'AdImEx Strang FCT3', 'color':'navy', 'marker':'x', 'linestyle':'-'},
-        ###{'label':'AdImEx Strang FCT4', 'color':'purple', 'marker':'x', 'linestyle':'-'},
-        ###{'label':'AdImEx Strang FCT5', 'color':'brown', 'marker':'x', 'linestyle':'-'},
-        ###{'label':'AdImEx Strang FCT6', 'color':'crimson', 'marker':'x', 'linestyle':'-'},
+        {'label':'AdImEx Strang', 'color':'seagreen', 'marker':'', 'linestyle':'-'},
+        {'label':'AdImEx Upwind', 'color':'cyan', 'marker':'', 'linestyle':':'},
+        {'label':'AdImEx Strang FCT1', 'color':'orange', 'marker':'x', 'linestyle':'-'},
+        {'label':'AdImEx Strang FCT2', 'color':'magenta', 'marker':'x', 'linestyle':'-'},
+        {'label':'AdImEx Strang FCT3', 'color':'navy', 'marker':'x', 'linestyle':'-'},
+        {'label':'AdImEx Strang FCT4', 'color':'purple', 'marker':'x', 'linestyle':'-'},
+        {'label':'AdImEx Strang FCT5', 'color':'brown', 'marker':'x', 'linestyle':'-'},
+        #{'label':'AdImEx Strang FCT6', 'color':'crimson', 'marker':'x', 'linestyle':'-'},
         ####{'label':'AdImEx Strang FCT7', 'color':'darkgreen', 'marker':'x', 'linestyle':'-'},
         ####{'label':'AdImEx Strang FCT8', 'color':'darkviolet', 'marker':'x', 'linestyle':'-'},
         ####{'label':'AdImEx Strang FCT9', 'color':'gold', 'marker':'x', 'linestyle':'-'},
         ####{'label':'AdImEx Strang FCT10', 'color':'darkred', 'marker':'x', 'linestyle':'-'},
-        {'label':'AdImEx Strang FCT1', 'color':'orange', 'marker':'x', 'linestyle':'-'},
         ####{'label':'AdImEx Strang FCT', 'color':'blue', 'marker':'x', 'linestyle':':'},
-        #{'label':'AdImEx Upwind', 'color':'darkorange', 'marker':'x', 'linestyle':'-'},
         #{'label':'PPM', 'color':'blue', 'marker':'o', 'linestyle':'-'},
         #{'label':'PPM FCT1', 'color':'red', 'marker':'o', 'linestyle':'-'},
         ##{'label':'PPM FCT2', 'color':'green', 'marker':'o', 'linestyle':'-'},
         ##{'label':'PPM FCT3', 'color':'purple', 'marker':'o', 'linestyle':'-'},
-        {'label':'AdImEx Strang FCT_HW1', 'color':'darkblue', 'marker':'x', 'linestyle':'-'},
+        #{'label':'AdImEx Strang FCT_HW1', 'color':'darkblue', 'marker':'x', 'linestyle':'-'},
         ]
 
     # Initial conditions
     ymax = 50.#1.5#100.         # for plotting purposes
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    nt = 1#28#16 #50#100                     # number of time steps # needs to be 1 when output_substages is True for ImExRK scheme
+    nt = 16#32#50#28#16 #50#100                     # number of time steps # needs to be 1 when output_substages is True for ImExRK scheme
     dt = 0.01                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching' # note: stretching won't work with a varying velocity field
     schemenames = [case["scheme"] for case in cases]
@@ -104,7 +104,7 @@ def main():
         schemenames_settings = str(analytic.__name__) + f'_t{nt*dt:.4f}_u{u_setting}_' + "-".join(schemenames) # v!!! how do I want to define this in case of non uconstant? # perhaps generalise schemename to simplify this?
     elif u_setting == 'constant':
         analytic = an.combi      # initial condition, options: sine, cosbell, tophat, or combi # and more for varying velocity field
-        uconstant = 3.575#6.25#0.5#3.125#0.5         # constant velocity # should only apply when u_setting == 'constant' # is used in the analytic function and for the title in the final.pdf plot for the constant velocity field
+        uconstant = 6.25#3.125#3.575#6.25#0.5#3.125#0.5         # constant velocity # should only apply when u_setting == 'constant' # is used in the analytic function and for the title in the final.pdf plot for the constant velocity field
         schemenames_settings = str(analytic.__name__) + f'_t{nt*dt:.4f}_u{uconstant}_' + "-".join(schemenames) # v!!! how do I want to define this in case of non uconstant? # perhaps generalise schemename to simplify this?
     else:
         print('Warning: potentially incorrect file naming.')
