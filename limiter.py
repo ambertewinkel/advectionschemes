@@ -35,7 +35,7 @@ def FCT(field_LO, corr, dxc, previous, double=False, secondfield=None):
 
         # Determine local max and min
         if previous[i] is not None and double == False:
-            fieldmax[i] = max([field_LO[i-1], field_LO[i], field_LO[(i+1)%n], previous[i-1], previous[i], previous[(i+1)%n]])
+            fieldmax[i] = max([field_LO[i-1], field_LO[i], field_LO[(i+1)%n], previous[i-1], previous[i], previous[(i+1)%n]]) # 01-07-2025: I think incorrect to use i-1 and i+1 from previous when those are independently set and could be None (aren't automatically the previous field). 
             fieldmin[i] = min([field_LO[i-1], field_LO[i], field_LO[(i+1)%n], previous[i-1], previous[i], previous[(i+1)%n]])
         elif previous[i] is not None and double == True:
             fieldmax[i] = max([field_LO[i-1], field_LO[i], field_LO[(i+1)%n], previous[i-1], previous[i], previous[(i+1)%n], secondfield[i-1], secondfield[i], secondfield[(i+1)%n]])
@@ -216,7 +216,7 @@ def iterFCT(flx_HO, dxc, dt, uf, C, field_previous, previous=None, niter=1, ymin
     """This function implements iterative FCT, as described in MULES_HW.pdf
     ymax and ymin are overall global min/max values if set.
     
-    previous: previous time step field - if an element in previous is None, it is not used.
+    previous: previous time step field - if an element in previous is None, it is not used. # 01-07-2025: previous is defined at face i-1/2
     """
     nx = len(flx_HO)
     #field_LO, flx_LO = np.zeros(nx), np.zeros(nx)
@@ -315,9 +315,16 @@ def iterFCT(flx_HO, dxc, dt, uf, C, field_previous, previous=None, niter=1, ymin
     # Set allowable min and max values (not iterated over!)
     fieldmin, fieldmax = np.zeros(nx), np.zeros(nx)
     for i in range(nx):
-        if previous[i] is not None: # is previous defined at the faces or at the cells? !!!
-            fieldmax[i] = max([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx], previous[i-1], previous[i], previous[(i+1)%nx]])
-            fieldmin[i] = min([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx], previous[i-1], previous[i], previous[(i+1)%nx]])
+        if previous[i]: # 01-07-2025: previous[i] is at i-1/2 so for cell i we check whether at least one of previous[i] or previous[i+1] is True (i.e. whether C is smaller than 1 on both sides) but what about u velocity? 
+            if uf[i] > 0.: # upwind value can be taken for max
+                fieldmax[i] = max([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx], field_previous[i-1], field_previous[i]])#, field_previous[(i+1)%nx]])
+                fieldmin[i] = min([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx], field_previous[i-1], field_previous[i]])#, field_previous[(i+1)%nx]])
+            elif uf[i] < 0.:
+                fieldmax[i] = max([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx], field_previous[i], field_previous[(i+1)%nx]])
+                fieldmin[i] = min([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx],  field_previous[i], field_previous[(i+1)%nx]])
+            else: 
+                fieldmax[i] = max([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx], field_previous[i]])
+                fieldmin[i] = min([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx],  field_previous[i]])
         else:
             fieldmax[i] = max([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx]])
             fieldmin[i] = min([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx]])

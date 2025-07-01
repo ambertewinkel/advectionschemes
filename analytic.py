@@ -176,6 +176,66 @@ def combi(x, xmax, u=0., t=0., shift=0., ampl=1., a=0., b=0.5, c=0.6, d=0.8):
     return psi
 
 
+def halfwave(x, xmax, u=0., t=0., shift=0., ampl=1., a=0.1, b=0.6):
+    """
+    This function returns an array from input array x and constants a and b advected 
+    by velocity u for a time t. The initial condition has output values 1 in the range
+    of the domain enclosed by a and b and outside of this region, 0. This function is 
+    a half wave with a drop on the right edge.
+    --- Input ---
+    x   : 1D array of floats, points to calculate the result of the function for
+    xmax: float, domain size
+    u   : float or 1D array of floats, velocity
+    t   : float, total time
+    shift: float, y shift of the half wave
+    ampl : float, amplitude of the half wave
+    a   : float, start of smooth half wave
+    b   : float, location of half wave drop
+    --- Output ---
+    psi : 1D array of floats, result from function at the points defined in x
+    """
+    psi = np.zeros(len(x))
+    x0 = (x - u*t)%xmax
+
+    # Define nonzero region of the cosine bell
+    if a < b:
+        psi = shift + ampl*np.where((x0 >= a) & (x0 <= b), 0.5*(1 - np.cos(np.pi*(x0-a)/(b-a))), 0.)
+    elif b < a: 
+        psi = shift + ampl*np.where((x0 >= b) & (x0 <= a), 0.5*(1 - np.cos(np.pi*(x0-a+1)/(b-a))), 0.)
+
+    return psi
+
+
+def revhalfwave(x, xmax, u=0., t=0., shift=0., ampl=1., a=0.6, b=0.1):
+    """
+    This function returns an array from input array x and constants a and b advected 
+    by velocity u for a time t. The initial condition has output values 1 in the range
+    of the domain enclosed by a and b and outside of this region, 0. This function is 
+    a reverse half wave - with a drop on the left edge (default a and b values are swapped, otherwise the same as halfwave()).
+    --- Input ---
+    x   : 1D array of floats, points to calculate the result of the function for
+    xmax: float, domain size
+    u   : float or 1D array of floats, velocity
+    t   : float, total time
+    shift: float, y shift of the half wave
+    ampl : float, amplitude of the half wave
+    a   : float, start of smooth half wave
+    b   : float, location of half wave drop
+    --- Output ---
+    psi : 1D array of floats, result from function at the points defined in x
+    """
+    psi = np.zeros(len(x))
+    x0 = (x - u*t)%xmax
+
+    # Define nonzero region of the cosine bell
+    if a < b:
+        psi = shift + ampl*np.where((x0 >= a) & (x0 <= b), 0.5*(1 - np.cos(np.pi*(x0-a)/(b-a))), 0.)
+    elif b < a: 
+        psi = shift + ampl*np.where((x0 >= b) & (x0 <= a), 0.5*(1 - np.cos(np.pi*(x0-a+1)/(b-a))), 0.)
+        
+    return psi
+
+
 def cotan(x):
     return -np.tan(x + np.pi/2)
 

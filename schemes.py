@@ -3123,7 +3123,7 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
             #    plt.show()            
             total_flux = np.sum(flx_contribution_from_stage_k, axis=0)
             if iterFCT == True:
-                previous = [field[it][i] if c[i] <= 1. else None for i in range(nx)] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used.
+                previous = [True if c[i] <= 1. else False for i in range(nx)] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used. # 01-07-2025L defined at i-1/2 and the setting to field[it]
                 field[it+1] = lim.iterFCT(flx_HO, dxc, dt, uf, c, field[it], previous=previous, niter=nIter) # also option for previous, ymin and ymax                
             if output_substages: 
                 plt.title('Flux contribution from the different stages during time step ' + str(it+1))
