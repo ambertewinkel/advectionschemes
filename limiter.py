@@ -212,196 +212,99 @@ def MULES(field, flx_HO, c, flx_b=upwindFlux, nIter=1, minField=None, maxField=N
 
     return flx_b + l*corr
 
+
 def iterFCT(flx_HO, dxc, dt, uf, C, field_previous, previous=None, niter=1, ymin=None, ymax=None):
-    """This function implements iterative FCT, as described in MULES_HW.pdf
+    """This function implements iterative FCT, as described in MULES_HW.pdf (/strang_carryover_1d paper as MULES_HW.pdf has some notational problems)
     ymax and ymin are overall global min/max values if set.
     
     previous: previous time step field - if an element in previous is None, it is not used. # 01-07-2025: previous is defined at face i-1/2
+    02-07-2025: dxc assumed constant. uf and C assumed potentially nonconstant (and potentially negative??) -> for this, we need to make sure that the velocity is part of the flux, as it determines how much mass is going I/O!
+    beta off-centering for AdImEx Upwind is assumed to be max(0,1-1/C) to ensure monotonicity.
+    02-07-2025: flx_HO needs to be u*field at face. before just field at face, excluding u
     """
     nx = len(flx_HO)
-    #field_LO, flx_LO = np.zeros(nx), np.zeros(nx)
+    flx_bounded, field_bounded = np.zeros(nx), np.zeros(nx)
 
-    # Calculate AdImEx Upwind low-order bounded solution (this will subsequently be updated in FCT iteration loop)
-    #C = dt/dxc*uf # [i] at i-1/2
-    #beta = np.maximum(np.zeros(nx), 1. - 1./C) # [i] at i-1/2
-
-    # Copy from ImExRK:----------------------------------
-    ###AEx, bEx = sch.butcherExaiUpwind()
-    ###AIm, bIm = sch.butcherImaiUpwind()
-    ###matrix = sd.MBS
-    ###fluxfn = sd.BS
-    ###fEx, fIm, flx_field = np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx))
-###
-    ###nstages = np.shape(bIm)[1]
-    #### Resetting AEx to include b
-    ###AEx = np.concatenate((AEx,bEx), axis=0)
-    ###AIm = np.concatenate((AIm,bIm), axis=0)
-    ###AEx = np.concatenate((AEx, np.zeros((nstages+1,1))), axis=1)
-    ###AIm = np.concatenate((AIm, np.zeros((nstages+1,1))), axis=1)
-    ###
-    ###field_k = field_previous.copy()
-    ###flx_HO, flx_bounded = np.zeros(nx), np.zeros(nx)
-    ###for ik in range(nstages+1):
-    ###    # Calculate the field at stage k
-    ###    M = matrix(nx, dt, dxc, beta*uf, AIm[ik,ik]) # at i
-    ###    rhs_k = field_previous + dt*np.dot(AEx[ik,:ik], fEx[:ik,:]) + dt*np.dot(AIm[ik,:ik], fIm[:ik,:]) # at i
-    ###    field_k = np.linalg.solve(M, rhs_k) # at i
-    ###    #if output_substages: plt.plot(xf, field_k, label='stage ' + str(ik))
-    ###    # Calculate the flux based on the field at stage k
-    ###    flx_field[ik,:] = fluxfn(field_k) # [i] defined at i-1/2
-    ###    fEx[ik,:] = -sch.ddx((1 - beta[:])*uf*flx_field[ik,:], np.roll((1 - beta[:])*uf*flx_field[ik,:],-1), dxc)
-    ###    fIm[ik,:] = -sch.ddx(beta[:]*uf*flx_field[ik,:], np.roll(beta[:]*uf*flx_field[ik,:],-1), dxc)
-    ###    flx_bounded +=   # how to sum? !!!
-###
-    #### -----------------------------
-    ####flx_bounded = np.where(.......) # upwind field value !!!
-    ####field_previous_upwind = np.where(uf >= 0., np.roll(field_previous,1), field_previous) # [i] is at i-1/2 ?!!!
-    ####field_bounded = field_previous - dt/dxc*(np.roll((1-beta)*uf*field_previous, -1) - (1-beta)*uf*field_previous + np.roll(beta*uf*flx_bounded, -1) - beta*uf*flx_bounded)
-    ###field_bounded = field_previous - dt/dxc*(np.roll(uf*flx_bounded, -1) - uf*flx_bounded) # !!! uf use inconsistent?!
-
-    # ------------------------------------- #
-
-    # Calculate bounded field and bounded flux    
-    # Calculate AdImEx Upwind low-order bounded solution (this will subsequently be updated in FCT iteration loop)    
-    # Assumes uf and C is positive
-    flx_bounded, field_bounded = np.zeros(nx), np.zeros(nx)# [i] is at i-1/2
-    #C = dt/dxc*uf # [i] at i-1/2
-    beta_bounded = np.maximum(np.zeros(nx), 1. - 1./C) # [i] at i-1/2
-    #field = np.zeros((nt+1, len(init)))
-    #field[0] = init.copy()
-
-    #c = dt*u/dx
-    #beta = np.zeros(len(init))
-    #if do_beta == 'blend':
-    #beta = np.maximum(1 - 1/c, np.zeros(len(init))) # beta: blend!
-    #elif do_beta == 'switch':
-    #    beta = np.invert((np.roll(c,1) <= 1.)*(c <= 1.)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit
-
+    # Calculate bounded field and bounded flux - 1 time step of AdImEx Upwind low-order bounded solution (this will subsequently be updated in FCT iteration loop)
+    beta = np.maximum(0., 1. - 1./C) # [i] at i-1/2
     M = np.zeros((nx, nx))
     for i in range(nx):
-        M[i,i] = 1. + beta_bounded[i]*C[i]
-        M[i,(i-1)%nx] = -1.*beta_bounded[i]*C[i]
-    
-    # Calculate 1 time step of AdImEx Upwind 
-    c1mbfield = C*(1-beta_bounded)*field_previous # [i] is at i-1/2
+        M[i,i] = 1. + beta[i]*C[i]
+        M[i,(i-1)%nx] = -1.*beta[i]*C[i]
+    c1mbfield = C*(1-beta)*field_previous # [i] at i-1/2
     rhs = field_previous - (c1mbfield - np.roll(c1mbfield,1))
-    field_bounded = np.linalg.solve(M, rhs)
-
-    # Calculate the bounded flux (the field value at i-1/2 that gives you the flux when *uf) based on the bounded field
-    # assumes uf>0 everywhere
-    flx_bounded = (1. - beta_bounded)*np.roll(field_previous,1) + beta_bounded*np.roll(field_bounded,1) # [i] is at i-1/2
-
-    #print(field_bounded)
-    #plt.plot(flx_bounded, label='flx_bounded')
-    #plt.legend()
-    #plt.show()
-
-    #field_bounded2 = field_previous - dt/dxc*(np.roll(uf*flx_bounded, -1) - uf*flx_bounded) # [i] is at i
-    #plt.plot(field_previous, label='field_previous')
-    #plt.plot(field_bounded2, label='field_bounded2')
-    #plt.plot(flx_bounded, label='flx_bounded')
-    #plt.legend()
-    #plt.show()
-
-
-    #plt.plot(flx_bounded, label='flx_LO AW')
-    #plt.plot(flx_HO, label='flx_HO AW')
-    #plt.plot(field_previous, label='field_previous AW')
-    #plt.legend()
-    #plt.show()
-
-    # ------------------------------------- #
+    field_bounded = np.linalg.solve(M, rhs) # [i] at i
+    #flx_bounded = (1. - beta)*np.roll(field_previous,1) + beta*np.roll(field_bounded,1) # [i] is at i-1/2 # (the field value at i-1/2 that gives you the flux when *uf) based on the AdImEx Upwind bounded field # Assumes uf and C is positive
+    flx_bounded = 0.5*(uf + np.abs(uf))*((1. - beta)*np.roll(field_previous,1) + beta*np.roll(field_bounded,1)) + 0.5*(uf - np.abs(uf))*((1. - beta)*field_previous + beta*field_bounded) # [i] is at i-1/2 ##!!! not anymore (the field value at i-1/2 that gives you the flux when *uf) based on the AdImEx Upwind bounded field # Assumes uf and C is positive -- not anymore!
 
     # Set allowable min and max values (not iterated over!)
+    fieldmin, fieldmax = set_extrema(nx, uf, field_bounded, field_previous, previous, ymin, ymax) 
+
+    # FCT iteration loop
+    for iiter in range(niter):
+        # Calculate high-order correction
+        corr = flx_HO - flx_bounded # [i] at i-1/2 # uf*field i.e. including uf!!
+
+        # Checking for rare cases where we need to set corr to zero # We do really need this for monotonicity! Fixed bug at 30-06-2025 with dip in the center of the cosine bell field after FCT excluding this part.
+        for i in range(nx):
+            if corr[i]*(field_bounded[i] - field_bounded[i-1]) <= 0. and (corr[i]*(field_bounded[(i+1)%nx] - field_bounded[i]) <= 0. or corr[i]*(field_bounded[i-1] - field_bounded[i-2]) <= 0.):
+                corr[i] = 0. # !!! Should this depend on the sign of uf? -> 02-07-2025: fixed
+
+        # Calculate allowable mass I/O for max rise and fall
+        Qp = dxc*(fieldmax - field_bounded) # [i] at i
+        Qm = dxc*(field_bounded - fieldmin) # [i] at i
+
+        # Calculate I/O fluxes at cell centers
+        #face_flux = uf*corr # [i] at i-1/2
+        #Pp = dt*(np.maximum(0, face_flux) - np.minimum(0, np.roll(face_flux,-1)))
+        #Pm = dt*(np.maximum(0, np.roll(face_flux,-1)) - np.minimum(0, face_flux)) 
+        #face_flux = uf*corr # [i] at i-1/2
+        Pp = dt*(np.maximum(0, corr) - np.minimum(0, np.roll(corr,-1)))
+        Pm = dt*(np.maximum(0, np.roll(corr,-1)) - np.minimum(0, corr))
+
+        # Calculate ratios of allowable (Q) to existing high-order (P) fluxes
+        Rp = np.where(Pp > 1e-12, np.minimum(1., Qp/np.maximum(Pp,1e-12)), 0.) 
+        Rm = np.where(Pm > 1e-12, np.minimum(1., Qm/np.maximum(Pm,1e-12)), 0.)
+
+        # Calculate the limiter for each face
+        face_limiter = np.where(corr >= 0., np.minimum(Rp, np.roll(Rm,1)), np.minimum(np.roll(Rp,1), Rm)) # [i] at i-1/2
+        
+        # Update the bounded flux and field
+        flx_bounded += face_limiter*corr # thus this includes uf as well
+        #field_bounded = field_previous - dt/dxc*(np.roll(uf*flx_bounded, -1) - uf*flx_bounded)
+        field_bounded = field_previous - dt/dxc*(np.roll(flx_bounded, -1) - flx_bounded)
+
+    # Output limited field[it+1] = field_bounded after niter iterations
+    return field_bounded
+
+
+def set_extrema(nx, uf, field_bounded, field_previous, previous=None, only_global=False, ymin=None, ymax=None):
+    """This function returns the min and max values allowed for each grid cell, defined at center. Used in iterFCT."""
+
     fieldmin, fieldmax = np.zeros(nx), np.zeros(nx)
-    for i in range(nx):
-        if previous[i]: # 01-07-2025: previous[i] is at i-1/2 so for cell i we check whether at least one of previous[i] or previous[i+1] is True (i.e. whether C is smaller than 1 on both sides) but what about u velocity? 
-            if uf[i] > 0.: # upwind value can be taken for max
-                fieldmax[i] = max([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx], field_previous[i-1], field_previous[i]])#, field_previous[(i+1)%nx]])
-                fieldmin[i] = min([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx], field_previous[i-1], field_previous[i]])#, field_previous[(i+1)%nx]])
-            elif uf[i] < 0.:
-                fieldmax[i] = max([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx], field_previous[i], field_previous[(i+1)%nx]])
-                fieldmin[i] = min([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx],  field_previous[i], field_previous[(i+1)%nx]])
-            else: 
-                fieldmax[i] = max([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx], field_previous[i]])
-                fieldmin[i] = min([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx],  field_previous[i]])
-        else:
-            fieldmax[i] = max([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx]])
-            fieldmin[i] = min([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx]])
+    if not only_global:
+        for i in range(nx):
+            if previous[i]: # 01-07-2025: previous[i] is at i-1/2 so for cell i we check whether at least one of previous[i] or previous[i+1] is True (i.e. whether C is smaller than 1 on both sides) but what about u velocity? 
+                if uf[i] > 0.: # upwind value can be taken for max # !!! discuss 2 or 3 values with HW
+                    fieldmax[i] = max([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx], field_previous[i-1], field_previous[i]])#, field_previous[(i+1)%nx]])
+                    fieldmin[i] = min([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx], field_previous[i-1], field_previous[i]])#, field_previous[(i+1)%nx]])
+                elif uf[i] < 0.:
+                    fieldmax[i] = max([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx], field_previous[i], field_previous[(i+1)%nx]])
+                    fieldmin[i] = min([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx],  field_previous[i], field_previous[(i+1)%nx]])
+                else: 
+                    fieldmax[i] = max([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx], field_previous[i]])
+                    fieldmin[i] = min([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx],  field_previous[i]])
+            else:
+                fieldmax[i] = max([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx]])
+                fieldmin[i] = min([field_bounded[i-1], field_bounded[i], field_bounded[(i+1)%nx]])
     # For global allowable min/max
     if ymin is not None:
         fieldmin = np.where(fieldmin < ymin, ymin, fieldmin)
     if ymax is not None:
         fieldmax = np.where(fieldmax > ymax, ymax, fieldmax)
 
-    # Check for special cases in which to fully remove the high-order fluxes (see Zalesak 1979) -!!! how to include this? Is it necessary to include this? (corr not yet defined properly here)
-    corr = flx_HO - flx_bounded # [i] is at i-1/2
-
-    for iiter in range(niter):
-        # Calculate high-order correction
-        corr = flx_HO - flx_bounded # [i] is at i-1/2
-
-        # We do really need this for monotonicity! Fixed bug at 30-06-2025 with dip in the center of the cosine bell field after FCT excluding this part.
-        for i in range(nx): # !!! redo this for each iteration?
-            if corr[i]*(field_bounded[i] - field_bounded[i-1]) <= 0. and (corr[i]*(field_bounded[(i+1)%nx] - field_bounded[i]) <= 0. or corr[i]*(field_bounded[i-1] - field_bounded[i-2]) <= 0.):
-                corr[i] = 0.
-
-        # Calculate allowable rise and fall
-        Qp = fieldmax - field_bounded # [i] is at i
-        Qm = field_bounded - fieldmin # [i] is at i
-        # Calculate in and out fluxes at cells
-        face_flux = uf*corr # [i] is at i-1/2
-        Pp = dt/dxc*(np.maximum(0, face_flux) - np.minimum(0, np.roll(face_flux,-1)))
-        Pm = dt/dxc*(np.maximum(0, np.roll(face_flux,-1)) - np.minimum(0, face_flux))
-        #outgoing_flux = -face_flux + np.roll(face_flux,-1) # [i] is at i # !!! is it wrong to sum here?
-        #Pp = -dt/dxc*np.where(outgoing_flux < 0., outgoing_flux, 0.) # [i] is at i
-        #Pm = dt/dxc*np.where(outgoing_flux > 0., outgoing_flux, 0.) # [i] is at i
-
-        # Calculate ratios of allowable to high-order fluxes
-        Rp = np.where(Pp > 1e-12, np.minimum(1., Qp/np.maximum(Pp,1e-12)), 0.) # [i] is at i # needs dt*uf factor to be consistent with FCT function above. This is included in the face_limiter to have it defined properly at the face. !!!
-        Rm = np.where(Pm > 1e-12, np.minimum(1., Qm/np.maximum(Pm,1e-12)), 0.) # [i] is at i # needs dt*uf factor to be consistent with FCT function above. This is included in the face_limiter to have it defined properly at the face.
-        #Rp = np.where(Pp > 0., np.minimum(1., Qp/(Pp+1e-12)), 0.) # [i] is at i
-        #Rm = np.where(Pm > 0., np.minimum(1., Qm/(Pm+1e-12)), 0.) # [i] is at i
-        plt.axvline(x=0, color='gray', linestyle=':')#, label='x=1')        
-        plt.axvline(x=12, color='gray', linestyle=':')#, label='x=12')
-        plt.axvline(x=11, color='gray', linestyle=':')
-        #plt.axvline(x=0, color='gray', linestyle=':')        
-        #plt.axvline(x=11, color='gray', linestyle=':')
-        plt.axvline(x=1, color='gray', linestyle=':')
-        plt.axhline(y=0, color='gray', linestyle=':')
-        plt.plot(corr, label='A iterFCT')
-        #plt.plot(Pp, label='Pp iterFCT')
-        #plt.plot(Pm, label='Pm iterFCT')        
-        #plt.plot(Qp, label='Qp iterFCT')
-        #plt.plot(Qm, label='Qm iterFCT')        
-        #plt.plot(Rp, label='Rp iterFCT')
-        #plt.plot(Rm, label='Rm iterFCT')
-        #plt.legend()
-        #plt.show()
-#
-        # Calculate the limiter for each face (maybe not consistent with step 7 in MULES_HW.pdf, but with Zalesak 1979 - we need to get from cell centers to faces somehow...)
-        face_limiter = np.where(corr >= 0., np.minimum(Rp, np.roll(Rm,1)), np.minimum(np.roll(Rp,1), Rm))#dt*uf*np.where(corr >= 0., np.minimum(Rp, np.roll(Rm,1)), np.minimum(np.roll(Rp,1), Rm)) # [i] is at i-1/2 # Zalesak 1979 version
-        #face_limiter = np.minimum(np.maximum(Rm, 0.), np.maximum(Rp, 0.)) # MULES_HW.pdf version
-
-        ##!plt.plot(corr, label='corr')
-        #plt.plot(Rp, label='Rp')
-        #plt.plot(Rm, label='Rm')
-        plt.plot(face_limiter, label='C iterFCT')
-        plt.plot(face_limiter*corr, label='C*A iterFCT')
-        #plt.legend()
-        #plt.show()
-        #exit()
-        flx_bounded += face_limiter*corr # reset flx_bounded
-        field_bounded = field_previous - dt/dxc*(np.roll(uf*flx_bounded, -1) - uf*flx_bounded)
-
-    #plt.plot(flx_bounded, label='flx_bounded iterFCT')
-    #plt.plot(fieldmin, label='fieldmin')
-    #plt.plot(fieldmax, label='fieldmax')
-    #plt.plot(field_bounded, label='field_bounded', color='black', linestyle='--')
-    plt.legend()
-    #plt.show()
-    # Output limited field[it+1] = field_bounded after niter iterations
-    return field_bounded
+    return fieldmin, fieldmax
+    
 
 def FCT_HW(phi, c, fluxB, fluxH, nCorr=1):#options={"HO":PPMflux, "LO":upwindFlux, "nCorr":1, 
                          #"minPhi": None, "maxPhi": None}):

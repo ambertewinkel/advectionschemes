@@ -3011,22 +3011,152 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
     """This scheme implements the timestepping from the double butcher tableau defined with RK, combined with various (default: the fourth order centred) spatial discretisations. Assumes u>0 constant.
     
     21-04-2025: uf is probably just the first value of the velocity field if it changes in time. If the velocity changes in time, we need to recalculate the u, c and beta every time step. If the velocity is constant in space and time or only varies in space, we can use uf throughout the time stepping, without need to reculculate it every time step and for intermediate stages within a RK time step.
-    - haven't tested but probably only want to use the output_substages option with nt=1"""
-    # SD: spatial discretisation, default is centered fourth order, i.e. fourth22
+    - haven't tested but probably only want to use the output_substages option with nt=1
+    SD: spatial discretisation, default is centered fourth order, i.e. fourth22"""
+
     nx = len(init)
     field = np.zeros((nt+1, nx))
     field[0] = init.copy()
     xf = np.zeros(nx) 
-    for i in range(len(dxc)-1): # assumes uniform grid v!!!
+    for i in range(len(dxc)-1): # assumes uniform grid
         xf[i+1] = xf[i] + dxc[i]
 
-    # !!! ALSO: CHECK THE RK SCHEME DEFINITION IN ANY CASE COMPARING IT TO THE SLB DEFINITION FROM BEGINNING OF APRIL.
+    c = uf*dt/dxc # [i] at i-1/2
+    beta = set_offcentring(nx, blend, u_setting, c, clim)
+    
+    AIm, bIm = globals()['butcherIm' + RK]()
+    cIm = AIm.sum(axis=1)
+    AEx, bEx = globals()['butcherEx' + RK]() 
+    cEx = AEx.sum(axis=1)
+    nstages = np.shape(bIm)[1] # I changed bIm to be multidimensional - len(bIm) won't work properly anymore in this case. (i.e. other ImEx schemes won't work with the butcher functions as of 25-04-2025)
+    flx_k, fEx, fIm, f_k = np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx))
+    matrix = getattr(sd, 'M' + SD)
+    fluxfn = getattr(sd, SD)
+    flx_contribution_from_stage_k = np.zeros((nstages+1, nx))
 
-    beta = np.ones(nx) # beta[i] is at i-1/2
+    if u_setting == 'varying_space_time': # 25-04-2025: NOT WORKING 
+        # We are only setting this up with blend == 'sm' -> a smooth transition from 0 to 1 with 1-1/c
+        # For a varying velocity field in time, for the offcentring calculation, we need to use the maximum velocity that will appear locally at a certain face from n to n+1 to calculate the c and theta. 
+        for it in range(nt):
+        # to do: I NEED TO RECALCULATE at different intermediate stages. -- check uf below
+            betaset = False
+            uf = an.velocity_varying_space_time(xf, it*nt) # recalculate velocity # where to put this?
+            while betaset == False:  
+                maxuf = uf.copy() 
+                cf = maxuf*dt/(0.5*dxc) # recalculate Courant number # assumes uniform grid, which is the assumption in any case with the varying space time u setting
+                beta = np.maximum(0., 1. - 1./cf)   
+                for istage in range(nstages):
+                    ufstage = an.velocity_varying_space_time(xf, it*nt + (1-beta)*cEx[istage]*dt + beta*cIm[istage]*dt) # recalculate velocity for the stage
+                    maxuf = np.maximum(maxuf, ufstage)
 
-    if u_setting == 'constant' or u_setting == 'varying_space' or u_setting == 'varying_space2' or u_setting == 'varying_space3' or u_setting == 'varying_space4' or u_setting == 'varying_space5':
-        c = dt*uf/dxc # assumes uniform grid c # This c is used for the calculation of the off-centring in time. 
-        # Setting the off-centring in time 
+                #if  : betaset = True
+            # 21-04-2025: don't have this working yet. Not sure of the best way how to combine u and beta for stability. Have not tested varying_space_time yet. 
+            #----
+            #maxuf = # calculate the max velocity at the time points given by the Butcher c
+            #c = dt*maxuf/dxc # !!! adjust # !!! 21-04-2025: put into the time loop? # !!! and do I want to assume a smooth beta blend for this i.e. when in time loop to avoid 
+            #----
+
+    elif u_setting == 'varying_space' or u_setting == 'varying_space2' or u_setting == 'varying_space3' or u_setting == 'varying_space4' or u_setting == 'varying_space5' or u_setting == 'constant':
+        # Resetting AEx to include b
+        AEx = np.concatenate((AEx,bEx), axis=0)
+        AIm = np.concatenate((AIm,bIm), axis=0)
+        AEx = np.concatenate((AEx, np.zeros((nstages+1,1))), axis=1)
+        AIm = np.concatenate((AIm, np.zeros((nstages+1,1))), axis=1)
+        
+        for it in range(nt):
+            field_k = field[it].copy()
+            flx_HO = np.zeros(nx)
+            for ik in range(nstages+1):
+                # Calculate the field at stage k
+                M = matrix(nx, dt, dxc, beta*uf, AIm[ik,ik]) # [i] at i
+                rhs_k = field[it] + dt*np.dot(AEx[ik,:ik], fEx[:ik,:]) + dt*np.dot(AIm[ik,:ik], fIm[:ik,:]) # at i
+                field_k = np.linalg.solve(M, rhs_k) # [i] at i
+                #if output_substages: plt.plot(xf, field_k, label='stage ' + str(ik))
+                # Calculate the flux based on the field at stage k
+                flx_k[ik,:] = uf*fluxfn(field_k) # [i] at i-1/2
+                fEx[ik,:] = -ddx((1 - beta)*flx_k[ik,:], np.roll((1 - beta)*flx_k[ik,:],-1), dxc)
+                fIm[ik,:] = -ddx(beta*flx_k[ik,:], np.roll(beta*flx_k[ik,:],-1), dxc)   
+                flx_contribution_from_stage_k[ik,:] = AEx[-1,ik]*(1 - beta)*flx_k[ik,:] + AIm[-1,ik]*beta*flx_k[ik,:]
+                flx_HO += flx_contribution_from_stage_k[ik,:]  
+                if output_substages: 
+                    if ik != nstages and (flx_contribution_from_stage_k[ik] == 0.).all() == False: plt.plot(xf, flx_contribution_from_stage_k[ik,:], label='stage ' + str(ik+1))
+            if iterFCT:
+                previous = [True if c[i] <= 1. else False for i in range(nx)] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used. # 01-07-2025: defined at i-1/2 and the setting to field[it]
+                field[it+1] = lim.iterFCT(flx_HO, dxc, dt, uf, c, field[it], previous=previous, niter=nIter) # also option for ymin and ymax         
+            else:     
+                field[it+1] = field_k.copy()
+            #if output_substages: 
+            #    plt.title('Substage fields during time step ' + str(it+1))
+            #    plt.legend()
+            #    plt.show()            
+            if output_substages: 
+                if iterFCT: 
+                    print('WARNING: substage output will be inconsistent with final field due to limiting.')
+                    logging.info('WARNING: substage output will be inconsistent with final field due to limiting.')
+                total_flux_unlimited = np.sum(flx_contribution_from_stage_k, axis=0) # = flx_HO unlimited
+                plt.title('Flux contribution from the different stages during time step ' + str(it+1) + ' before limiting')
+                plt.legend()
+                plt.savefig(f'flx_contr_dt{dt}.png')
+                plt.close()
+                logging.info(f'Total flux contribution from the different stages during time step {it+1} before limiting: {total_flux_unlimited}')
+                logging.info(f'Sum of the total flux: {np.sum(total_flux_unlimited)}')
+                plt.plot(xf, total_flux_unlimited, label='Total flux')
+                plt.legend()
+                plt.savefig(f'flx_contr_total_dt{dt}.png')        
+    #elif u_setting == 'constant':
+    #    for it in range(nt):
+    #        field_k = field[it].copy()
+    #        flx_HO = np.zeros(nx)
+    #        for ik in range(nstages):
+    #            M = matrix(nx, dt, dxc, beta*uf, AIm[ik,ik])
+    #            rhs_k = field[it] + dt*np.dot(AEx[ik,:ik], (1 - beta[:])*f_k[:ik,:]) + dt*np.dot(AIm[ik,:ik], beta[:]*f_k[:ik,:])
+    #            field_k = np.linalg.solve(M, rhs_k)
+    #            #if output_substages: plt.plot(xf, field_k, label='stage ' + str(ik))
+    #            flx_k[ik,:] = uf*fluxfn(field_k) # [i] defined at i-1/2
+    #            f_k[ik,:] = -ddx(flx_k[ik,:], np.roll(flx_k[ik,:],-1), dxc)
+    #            flx_HO += flx_k[ik,:]*bIm[0,ik]*beta + flx_k[ik,:]*bEx[0,ik]*(1 - beta) # !!! remember that for nonconstant u, I need to have b and beta in the ddx function - divergence % also note that I have now introduced uf into the definition of flx_HO so the MULES and FCT and FCT_HW options have been commented out now as they would need changing to work properly.
+    #        #if MULES == True:
+    #        #    flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter) # !!! do I need to use a different c here? Not one that is based on the max velocity from n to n+1 locally?
+    #        #if FCT == True or FCT_HW == True: # !!! for iterFCT debugging purposes, comparing nIter=1 situation
+    #        #    # calculate low order solution
+    #        #    flx_bounded, field_bounded = np.zeros(nx), np.zeros(nx)# [i] is at i-1/2
+    #        #    beta_bounded = np.maximum(np.zeros(nx), 1. - 1./c) # [i] at i-1/2
+    #        #    M = np.zeros((nx, nx))
+    #        #    for i in range(nx):
+    #        #        M[i,i] = 1. + beta_bounded[i]*c[i]
+    #        #        M[i,(i-1)%nx] = -1.*beta_bounded[i]*c[i]
+    #        #    
+    #        #    # Calculate 1 time step of AdImEx Upwind 
+    #        #    rhs = field[it] - c*(1-beta_bounded)*(field[it] - np.roll(field[it],1))
+    #        #    field_bounded = np.linalg.solve(M, rhs)
+    #        #
+    #        #    # Calculate the bounded flux (the field value at i-1/2 that gives you the flux when *uf) based on the bounded field
+    #        #    flx_bounded = (1. - beta_bounded)*np.roll(field[it],1) + beta_bounded*np.roll(field_bounded,1) # [i] is at i-1/2
+    #        #    corr = flx_HO - flx_bounded # [i] is at i-1/2
+    #        #    previous = [field[it][i] if c[i] <= 1. else None for i in range(nx)] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used.
+    #        if iterFCT == True: # !!! what about nonconstant u
+    #            #previous = [field[it][i] if c[i] <= 1. else None for i in range(nx)] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used.
+    #            previous = [True if c[i] <= 1. else False for i in range(nx)] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used. # 01-07-2025: defined at i-1/2 and the setting to field[it]
+    #            field[it+1] = lim.iterFCT(flx_HO, dxc, dt, uf, c, field[it], previous=previous, niter=nIter) # also option for previous, ymin and ymax
+    #        #elif FCT_HW == True: # !!! for iterFCT debugging purposes, comparing nIter=1 situation - seeing if it is actually monotonic
+    #        #    flxB = np.roll(lim.FCT_HW(field[it], np.roll(c,-1), np.roll(flx_bounded,-1), np.roll(flx_HO,-1)),1) # [i] is at i-1/2 # valueAW at i-1/2 = np.roll(valueHW at i+1/2,1)
+    #        #    field[it+1] = field[it] - uf*dt*ddx(flxB, np.roll(flxB,-1), dxc)
+    #        #elif FCT == True:
+    #        #    corrlim = lim.FCT(flx_bounded, corr, dxc, previous=previous) # dt factor is different from iterFCT ?!!!
+    #        #    field[it+1] = field_bounded - uf*dt*ddx(corrlim, np.roll(corrlim,-1), dxc)
+    #        else: 
+    #            field[it+1] = field[it] - dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc) 
+
+    return field
+
+
+def set_offcentring(nx, blend, u_setting, c, clim):
+    """Function to set the off-centring in time beta based on a given blend."""
+    beta = np.ones(nx) # [i] at i-1/2
+
+    if u_setting == 'varying_space_time' and blend != 'sm':
+        raise ValueError('For a varying velocity field, off-centering in time is only implemented for a smooth transition from 0 to 1 with 1-1/c.')
+    else:
         if blend == 'off':    
             for i in range(nx):
                 if c[i] <= clim: 
@@ -3054,131 +3184,5 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
             beta = np.zeros(nx)
         else:
             raise ValueError('Blend in off-centering not recognised.')
-        #plt.plot(xf, c)
-        #plt.title('Courant number')
-        #plt.show()
-
-    if u_setting == 'varying_space_time' and blend != 'sm':
-        raise ValueError('For a varying velocity field, off-centering in time is only implemented for a smooth transition from 0 to 1 with 1-1/c.')
-
-    AIm, bIm = globals()['butcherIm' + RK]()
-    cIm = AIm.sum(axis=1)
-    AEx, bEx = globals()['butcherEx' + RK]() 
-    cEx = AEx.sum(axis=1)
-    nstages = np.shape(bIm)[1] # I changed bIm to be multidimensional - len(bIm) won't work properly anymore in this case. (i.e. other ImEx schemes won't work with the butcher functions as of 25-04-2025)
-    flx, fEx, fIm, flx_field, f = np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx))
-    matrix = getattr(sd, 'M' + SD)
-    fluxfn = getattr(sd, SD)
-    flx_contribution_from_stage_k = np.zeros((nstages+1, nx))
-
-    if u_setting == 'varying_space_time': # 25-04-2025: NOT WORKING 
-        # We are only setting this up with blend == 'sm' -> a smooth transition from 0 to 1 with 1-1/c
-        # For a varying velocity field in time, for the offcentring calculation, we need to use the maximum velocity that will appear locally at a certain face from n to n+1 to calculate the c and theta. 
-        for it in range(nt):
-        # to do: I NEED TO RECALCULATE at different intermediate stages. -- check uf below
-            betaset = False
-            uf = an.velocity_varying_space_time(xf, it*nt) # recalculate velocity # where to put this?
-            while betaset == False:  
-                maxuf = uf.copy() 
-                cf = maxuf*dt/(0.5*dxc) # recalculate Courant number # assumes uniform grid, which is the assumption in any case with the varying space time u setting
-                beta = np.maximum(0., 1. - 1./cf)   
-                for istage in range(nstages):
-                    ufstage = an.velocity_varying_space_time(xf, it*nt + (1-beta)*cEx[istage]*dt + beta*cIm[istage]*dt) # recalculate velocity for the stage
-                    maxuf = np.maximum(maxuf, ufstage)
-
-                #if  : betaset = True
-            # 21-04-2025: don't have this working yet. Not sure of the best way how to combine u and beta for stability. Have not tested varying_space_time yet. 
-            #----
-            #maxuf = # calculate the max velocity at the time points given by the Butcher c
-            #c = dt*maxuf/dxc # !!! adjust # !!! 21-04-2025: put into the time loop? # !!! and do I want to assume a smooth beta blend for this i.e. when in time loop to avoid 
-            #----
-
-    elif u_setting == 'varying_space' or u_setting == 'varying_space2' or u_setting == 'varying_space3' or u_setting == 'varying_space4' or u_setting == 'varying_space5':
-        # Resetting AEx to include b
-        AEx = np.concatenate((AEx,bEx), axis=0)
-        AIm = np.concatenate((AIm,bIm), axis=0)
-        AEx = np.concatenate((AEx, np.zeros((nstages+1,1))), axis=1)
-        AIm = np.concatenate((AIm, np.zeros((nstages+1,1))), axis=1)
         
-        for it in range(nt):
-            field_k = field[it].copy()
-            flx_HO = np.zeros(nx)
-            for ik in range(nstages+1):
-                # Calculate the field at stage k
-                M = matrix(nx, dt, dxc, beta*uf, AIm[ik,ik]) # at i
-                rhs_k = field[it] + dt*np.dot(AEx[ik,:ik], fEx[:ik,:]) + dt*np.dot(AIm[ik,:ik], fIm[:ik,:]) # at i
-                field_k = np.linalg.solve(M, rhs_k) # at i
-                #if output_substages: plt.plot(xf, field_k, label='stage ' + str(ik))
-                # Calculate the flux based on the field at stage k
-                flx_field[ik,:] = fluxfn(field_k) # [i] defined at i-1/2
-                if output_substages: 
-                    flx_contribution_from_stage_k[ik,:] = AEx[-1,ik]*(1 - beta[:])*uf*flx_field[ik,:] + AIm[-1,ik]*beta[:]*uf*flx_field[ik,:]
-                    if ik != nstages and (flx_contribution_from_stage_k[ik] == 0.).all() == False: plt.plot(xf, flx_contribution_from_stage_k[ik,:], label='stage ' + str(ik+1))
-                fEx[ik,:] = -ddx((1 - beta[:])*uf*flx_field[ik,:], np.roll((1 - beta[:])*uf*flx_field[ik,:],-1), dxc)
-                fIm[ik,:] = -ddx(beta[:]*uf*flx_field[ik,:], np.roll(beta[:]*uf*flx_field[ik,:],-1), dxc)                
-            field[it+1] = field_k.copy()
-            #if output_substages: 
-            #    plt.title('Substage fields during time step ' + str(it+1))
-            #    plt.legend()
-            #    plt.show()            
-            total_flux = np.sum(flx_contribution_from_stage_k, axis=0)
-            if iterFCT == True:
-                previous = [True if c[i] <= 1. else False for i in range(nx)] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used. # 01-07-2025L defined at i-1/2 and the setting to field[it]
-                field[it+1] = lim.iterFCT(flx_HO, dxc, dt, uf, c, field[it], previous=previous, niter=nIter) # also option for previous, ymin and ymax                
-            if output_substages: 
-                plt.title('Flux contribution from the different stages during time step ' + str(it+1))
-                plt.legend()
-                plt.savefig(f'flx_contr_dt{dt}.png')
-                plt.close()
-                total_flux = np.sum(flx_contribution_from_stage_k, axis=0)
-                logging.info(f'Total flux contribution from the different stages during time step {it+1}: {total_flux}')
-                logging.info(f'Sum of the total flux: {np.sum(total_flux)}')
-                plt.plot(xf, total_flux, label='Total flux')
-                plt.legend()
-                plt.savefig(f'flx_contr_total_dt{dt}.png')
-    elif u_setting == 'constant':
-        for it in range(nt):
-            field_k = field[it].copy()
-            flx_HO = np.zeros(nx)
-            for ik in range(nstages):
-                M = matrix(nx, dt, dxc, beta*uf, AIm[ik,ik])
-                rhs_k = field[it] + dt*np.dot(AEx[ik,:ik], (1 - beta[:])*f[:ik,:]) + dt*np.dot(AIm[ik,:ik], beta[:]*f[:ik,:])
-                field_k = np.linalg.solve(M, rhs_k)
-                #if output_substages: plt.plot(xf, field_k, label='stage ' + str(ik))
-                flx[ik,:] = fluxfn(field_k) # [i] defined at i-1/2
-                f[ik,:] = -uf*ddx(flx[ik,:], np.roll(flx[ik,:],-1), dxc)
-                flx_HO += flx[ik,:]*bIm[0,ik]*beta + flx[ik,:]*bEx[0,ik]*(1 - beta)
-            if MULES == True:
-                flx_HO = lim.MULES(field[it], flx_HO, c, nIter=nIter) # !!! do I need to use a different c here? Not one that is based on the max velocity from n to n+1 locally?
-            
-            if FCT == True or FCT_HW == True: # !!! for iterFCT debugging purposes, comparing nIter=1 situation
-                # calculate low order solution
-                flx_bounded, field_bounded = np.zeros(nx), np.zeros(nx)# [i] is at i-1/2
-                beta_bounded = np.maximum(np.zeros(nx), 1. - 1./c) # [i] at i-1/2
-                M = np.zeros((nx, nx))
-                for i in range(nx):
-                    M[i,i] = 1. + beta_bounded[i]*c[i]
-                    M[i,(i-1)%nx] = -1.*beta_bounded[i]*c[i]
-                
-                # Calculate 1 time step of AdImEx Upwind 
-                rhs = field[it] - c*(1-beta_bounded)*(field[it] - np.roll(field[it],1))
-                field_bounded = np.linalg.solve(M, rhs)
-
-                # Calculate the bounded flux (the field value at i-1/2 that gives you the flux when *uf) based on the bounded field
-                flx_bounded = (1. - beta_bounded)*np.roll(field[it],1) + beta_bounded*np.roll(field_bounded,1) # [i] is at i-1/2
-                corr = flx_HO - flx_bounded # [i] is at i-1/2
-                previous = [field[it][i] if c[i] <= 1. else None for i in range(nx)] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used.
-                
-            if iterFCT == True: # !!! what about nonconstant u
-                previous = [field[it][i] if c[i] <= 1. else None for i in range(nx)] # determines whether FCT also uses field[it] for bounds. If an element is None, it is not used.
-                field[it+1] = lim.iterFCT(flx_HO, dxc, dt, uf, c, field[it], previous=previous, niter=nIter) # also option for previous, ymin and ymax
-            elif FCT_HW == True: # !!! for iterFCT debugging purposes, comparing nIter=1 situation - seeing if it is actually monotonic
-                flxB = np.roll(lim.FCT_HW(field[it], np.roll(c,-1), np.roll(flx_bounded,-1), np.roll(flx_HO,-1)),1) # [i] is at i-1/2 # valueAW at i-1/2 = np.roll(valueHW at i+1/2,1)
-                field[it+1] = field[it] - uf*dt*ddx(flxB, np.roll(flxB,-1), dxc)
-            elif FCT == True:
-                corrlim = lim.FCT(flx_bounded, corr, dxc, previous=previous) # dt factor is different from iterFCT ?!!!
-                field[it+1] = field_bounded - uf*dt*ddx(corrlim, np.roll(corrlim,-1), dxc)
-            else: 
-                field[it+1] = field[it] - uf*dt*ddx(flx_HO, np.roll(flx_HO,-1), dxc)
-
-    return field
+    return beta
