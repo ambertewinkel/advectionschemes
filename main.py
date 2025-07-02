@@ -35,11 +35,11 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     limitCto1 = False
-    create_animation = False
+    create_animation = True
     check_orderofconvergence = False # Be careful with this setting with the varying velocity field in space (and time). Has not been adjusted to work with this yet, if that is necessary (probably not necessary for the varying in space and time as you only compare after a ful revolution in time; probably necessary for the varying in space as we can compare the behaviour after 1/2/4 time steps as it is independent of time).
     accuracy_in = 'space with C const' # 'space with dt const' or 'time with dx const' or 'space with C const'; (relevant only if check_orderofconvergence == True)
     date = dati.date.today().strftime("%Y%m%d")                   # date of the run
@@ -49,22 +49,22 @@ def main():
     cases = [\
         {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm'},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
         {'scheme': 'ImExRK', 'RK':'aiUpwind', 'SD':'BS', 'blend':'sm'},
-        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':1},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
-        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':2},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
-        #{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':3},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
-        #{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':4},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
-        #!{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':5},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
-        #{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':6},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
-        ####{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':7},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
-        ####{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':8},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
-        ####{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':9},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
-        ####{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':10},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
-        ####{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'FCT':True},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
+        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':1},#, 'output_substages':True},
+        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':2},#, 'output_substages':True},
+        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':3},#, 'output_substages':True},
+        #{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':4},#, 'output_substages':True},
+        #!{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':5},#, 'output_substages':True},
+        #{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':6},#, 'output_substages':True},
+        ####{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':7},#, 'output_substages':True},
+        ####{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':8},#, 'output_substages':True},
+        ####{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':9},#, 'output_substages':True},
+        ####{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':10},#, 'output_substages':True},
+        ####{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'FCT':True},#, 'output_substages':True},
         #{'scheme':'PPM'},
         #{'scheme':'PPM', 'iterFCT':True, 'nIter':1},
         ##{'scheme':'PPM', 'iterFCT':True, 'nIter':2},
         ##{'scheme':'PPM', 'iterFCT':True, 'nIter':3},
-        #{'scheme':'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'FCT_HW':True},#, 'output_substages':True}, # Strang splitting with RK31e32 and fifth order substage
+        #{'scheme':'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'FCT_HW':True},#, 'output_substages':True},
         ]
     
     plot_args = [\
@@ -72,7 +72,7 @@ def main():
         {'label':'AdImEx Upwind', 'color':'cyan', 'marker':'', 'linestyle':':'},
         {'label':'AdImEx Strang FCT1', 'color':'orange', 'marker':'x', 'linestyle':'-'},
         {'label':'AdImEx Strang FCT2', 'color':'magenta', 'marker':'x', 'linestyle':'-'},
-        #{'label':'AdImEx Strang FCT3', 'color':'navy', 'marker':'x', 'linestyle':'-'},
+        {'label':'AdImEx Strang FCT3', 'color':'navy', 'marker':'x', 'linestyle':'-'},
         #{'label':'AdImEx Strang FCT4', 'color':'purple', 'marker':'x', 'linestyle':'-'},
         #!{'label':'AdImEx Strang FCT5', 'color':'brown', 'marker':'x', 'linestyle':'-'},
         #{'label':'AdImEx Strang FCT6', 'color':'crimson', 'marker':'x', 'linestyle':'-'},
@@ -89,15 +89,15 @@ def main():
         ]
 
     # Initial conditions
-    ymax = 1.2         # for plotting purposes (animation)
+    ymax = 30.         # for plotting purposes (animation)
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    nt = 100                     # number of time steps # needs to be 1 when output_substages is True for ImExRK scheme
+    nt = 50                     # number of time steps # needs to be 1 when output_substages is True for ImExRK scheme
     dt = 0.01                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching' # note: stretching won't work with a varying velocity field
     schemenames = [case["scheme"] for case in cases]
     analytic = an.analytic_constant # initial condition, options: sine, cosbell, tophat, or combi, halfwave, revhalfwave, and more for varying velocity field
-    u_setting = 'constant' # 'constant' or various 'varying_space..' options
+    u_setting = 'varying_space6' # 'constant' or various 'varying_space..' options
     time1rev = False            # This boolean is set by hand - determines whether, for a varying velocity field in space and time, the u ~ cos(wt) has gone through a full revolution in time (and space?). It determines whether the analytic solution is plotted for a certain number of time steps or not. # Note: This is currently (21-04-2025) only applied to the .pdf final field output, not to the animation .gif file.
     if u_setting == 'constant':
         uconstant = 1.        # constant velocity # should only apply when u_setting == 'constant' # is used in the analytic function and for the title in the final.pdf plot for the constant velocity field
@@ -248,6 +248,8 @@ def main():
             uf = an.velocity_varying_space4(xf) 
         elif u_setting == 'varying_space5':
             uf = an.velocity_varying_space5(xf)
+        elif u_setting == 'varying_space6':
+            uf = an.velocity_varying_space6(xf)
         else:
             logging.info('Error: invalid velocity setting')
             print('Error: invalid velocity setting')
@@ -274,7 +276,7 @@ def main():
             cmin = np.min(cc)
             logging.info(f'Min Courant number: {cmin:.4f}')
             logging.info(f'Max Courant number: {cmax:.4f}')  
-        if u_setting == 'varying_space' or u_setting == 'varying_space_time' or u_setting == 'varying_space2' or u_setting == 'varying_space3' or u_setting == 'varying_space4' or u_setting == 'varying_space5':
+        if u_setting == 'varying_space' or u_setting == 'varying_space_time' or u_setting == 'varying_space2' or u_setting == 'varying_space3' or u_setting == 'varying_space4' or u_setting == 'varying_space5' or u_setting == 'varying_space6':
             # FYI - for the nonuniform velocity schemes I need to calculate the Courant number at cell faces
             logging.info('The Courant numbers values and plot wont be exactly correct for varying velocity, as the ones I would calculate here are defined at cell centers -> hence I have set them to be NaNs.')
             uc = np.full(nx, np.nan)
@@ -294,7 +296,7 @@ def main():
         for it in range(nt+1):
             locals()[f'psi_an_{l}'][it] = analytic(xc, xmax, uc, it*dt) # analytic solution uses uc. For the varying velocity fields, I can pass on uc but the analytic solution function doesn't actually need it as the velocity is basically already prescribed in the equation it calculates, that is, if an analytic solution exists.
         a = locals()[f'psi_an_{l}'][-1].copy()
-        if u_setting == 'varying_space' or u_setting == 'varying_space2' or u_setting == 'varying_space3' or u_setting == 'varying_space4' or u_setting == 'varying_space5':
+        if u_setting == 'varying_space' or u_setting == 'varying_space2' or u_setting == 'varying_space3' or u_setting == 'varying_space4' or u_setting == 'varying_space5' or u_setting == 'varying_space6':
             logging.info("NOTE: the analytic solution is only sensible for a variable velocity field in space for a couple of time steps into the simulation due to accummulation of the field.")
         elif u_setting == 'varying_space_time':
             logging.info("NOTE: the analytic solution is only sensible for a variable velocity field in space and time after a full revolution in time.")
@@ -302,7 +304,7 @@ def main():
         logging.info('')
 
         # Calculate initial condition
-        psi_in = locals()[f'psi_an_{l}'][0]
+        psi_in = analytic(xc, xmax, 0., 0.)#locals()[f'psi_an_{l}'][0] # this adjustment allows the initial condition to be nonzero for the velocity varying space settings. 
         
         # Calculate numerical solutions for each scheme through time
         # Output is 2D field ([1d time, 1d space])
@@ -332,8 +334,8 @@ def main():
     elif u_setting == 'varying_space_time':
         ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with $u$ varying in space and time', \
                      'x', '$\\Psi$', 0., xmax, True, -0.1, 1.1)
-    elif u_setting == 'varying_space2' or u_setting == 'varying_space3' or u_setting == 'varying_space4' or u_setting == 'varying_space5':
-        ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with $u$ $u_setting$', \
+    elif u_setting == 'varying_space2' or u_setting == 'varying_space3' or u_setting == 'varying_space4' or u_setting == 'varying_space5' or u_setting == 'varying_space6':
+        ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with $u$ {u_setting}', \
                      'x', '$\\Psi$', 0., xmax, True, -0.1, ymax)
 
     #####################
@@ -474,7 +476,7 @@ def main():
         for c in range(len(cases)):        
             s = plot_args[c]['label']
             fields.append(locals()[f'psi_{s}_reg'])
-        anim.create_animation_from_data(fields, len(schemenames), locals()['psi_an_reg'], nt, dt, xc, outputdir, plot_args, xmax, ymax=ymax)
+        anim.create_animation_from_data(fields, len(schemenames), locals()['psi_an_reg'], psi_in, nt, dt, xc, outputdir, plot_args, xmax, ymax=ymax)
 
     print('Done')
     logging.info('')

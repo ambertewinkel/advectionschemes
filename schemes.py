@@ -3016,7 +3016,6 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
 
     nx = len(init)
     field = np.zeros((nt+1, nx))
-    flx_k, fEx, fIm, flx_contribution_from_stage_k = np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx))
     matrix = getattr(sd, 'M' + SD)
     fluxfn = getattr(sd, SD)
     field[0] = init.copy()
@@ -3036,6 +3035,7 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
     AIm = np.concatenate((AIm,bIm), axis=0)
     AEx = np.concatenate((AEx, np.zeros((nstages+1,1))), axis=1)
     AIm = np.concatenate((AIm, np.zeros((nstages+1,1))), axis=1)
+    flx_k, fEx, fIm, flx_contribution_from_stage_k = np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx)), np.zeros((nstages+1, nx))
 
     if u_setting == 'varying_space_time': # 25-04-2025: NOT WORKING 
         # We are only setting this up with blend == 'sm' -> a smooth transition from 0 to 1 with 1-1/c

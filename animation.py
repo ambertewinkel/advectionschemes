@@ -134,7 +134,7 @@ def create_single_animation_from_data(filebasename, field, analytic, nt, dt, xc,
     os.rmdir(plotdir)
 
 
-def create_animation_from_data(fields, nfields, analytic, nt, dt, xc, outputdir, plot_args, xmax, ymax=None):
+def create_animation_from_data(fields, nfields, analytic, field_in, nt, dt, xc, outputdir, plot_args, xmax, ymax=None):
     """This function creates an animation from a given data file of a single scheme. The input is a 2D field of a single scheme (shape = 1d time x 1d space), analytic solution (shape = 1d time x 1d space), nt, dx in the centers (dxc; shape 1d space) and ....
     This is a function that is to be called from other files, not from produce_standalone_animation()."""
 
@@ -143,9 +143,6 @@ def create_animation_from_data(fields, nfields, analytic, nt, dt, xc, outputdir,
     os.mkdir(plotdir)
     if ymax is None:
         ymax = 1.1
-
-    # Calculate initial functions
-    field_in = analytic[0]
 
     # Timestepping loop to create plots and save filenames
     fig = plt.figure(figsize=(7,4))

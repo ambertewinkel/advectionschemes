@@ -285,3 +285,9 @@ def velocity_varying_space5(x, l=2.*np.pi):
     """This function returns a velocity field that is varying in space. The velocity field is given by u = 5.5 + 4.5*sin(lx), where l is a real number, default 2*pi."""
     u = 10.3 + 9.7*np.sin(l*(x + 0.25))
     return u
+
+
+def velocity_varying_space6(x, l=2.*np.pi):
+    """This function returns a velocity field that is varying in space. This gives a Courant number always lower than 1 for dt=0.01 and dx=0.025"""
+    u = 1.5 + 0.5*np.sin(l*(x + 0.25))
+    return u
