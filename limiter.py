@@ -55,11 +55,6 @@ def FCT(field_LO, corr, dxc, previous, double=False, secondfield=None):
         Qm[i] = (field_LO[i] - fieldmin[i])*dxc[i]
         Rm[i] = min([1., Qm[i]/Pm[i]]) if Pm[i] > 0. else 0.
 
-    #plt.plot(Rp, label='Rp FCT')
-    #plt.plot(Rm, label='Rm FCT')
-    #plt.legend()
-    #plt.show()
-
     for i in range(n):
         # Determine C at face i-1/2
         C[i] = min([Rp[i-1], Rm[i]]) if corr[i] < 0. else min([Rp[i], Rm[i-1]])
@@ -216,11 +211,10 @@ def MULES(field, flx_HO, c, flx_b=upwindFlux, nIter=1, minField=None, maxField=N
 def iterFCT(flx_HO, dxc, dt, uf, C, field_previous, previous=None, niter=1, ymin=None, ymax=None):
     """This function implements iterative FCT, as described in MULES_HW.pdf (/strang_carryover_1d paper as MULES_HW.pdf has some notational problems)
     ymax and ymin are overall global min/max values if set.
-    
-    previous: previous time step field - if an element in previous is None, it is not used. # 01-07-2025: previous is defined at face i-1/2
-    02-07-2025: dxc assumed constant. uf and C assumed potentially nonconstant (and potentially negative??) -> for this, we need to make sure that the velocity is part of the flux, as it determines how much mass is going I/O!
+    previous: previous time step field - True: element uses field_previous for extrema, not if False. Defined at i-1/2
+    02-07-2025: dxc assumed constant. uf and C assumed potentially nonconstant and negative
     beta off-centering for AdImEx Upwind is assumed to be max(0,1-1/C) to ensure monotonicity.
-    02-07-2025: flx_HO needs to be u*field at face. before just field at face, excluding u
+    flx_HO needs to be u*field at i-1/2
     """
     nx = len(flx_HO)
     flx_bounded, field_bounded = np.zeros(nx), np.zeros(nx)
@@ -234,8 +228,7 @@ def iterFCT(flx_HO, dxc, dt, uf, C, field_previous, previous=None, niter=1, ymin
     c1mbfield = C*(1-beta)*field_previous # [i] at i-1/2
     rhs = field_previous - (c1mbfield - np.roll(c1mbfield,1))
     field_bounded = np.linalg.solve(M, rhs) # [i] at i
-    #flx_bounded = (1. - beta)*np.roll(field_previous,1) + beta*np.roll(field_bounded,1) # [i] is at i-1/2 # (the field value at i-1/2 that gives you the flux when *uf) based on the AdImEx Upwind bounded field # Assumes uf and C is positive
-    flx_bounded = 0.5*(uf + np.abs(uf))*((1. - beta)*np.roll(field_previous,1) + beta*np.roll(field_bounded,1)) + 0.5*(uf - np.abs(uf))*((1. - beta)*field_previous + beta*field_bounded) # [i] is at i-1/2 ##!!! not anymore (the field value at i-1/2 that gives you the flux when *uf) based on the AdImEx Upwind bounded field # Assumes uf and C is positive -- not anymore!
+    flx_bounded = 0.5*(uf + np.abs(uf))*((1. - beta)*np.roll(field_previous,1) + beta*np.roll(field_bounded,1)) + 0.5*(uf - np.abs(uf))*((1. - beta)*field_previous + beta*field_bounded) # [i] is at i-1/2
 
     # Set allowable min and max values (not iterated over!)
     fieldmin, fieldmax = set_extrema(nx, uf, field_bounded, field_previous, previous, ymin, ymax) 
@@ -243,22 +236,18 @@ def iterFCT(flx_HO, dxc, dt, uf, C, field_previous, previous=None, niter=1, ymin
     # FCT iteration loop
     for iiter in range(niter):
         # Calculate high-order correction
-        corr = flx_HO - flx_bounded # [i] at i-1/2 # uf*field i.e. including uf!!
+        corr = flx_HO - flx_bounded # [i] at i-1/2 # uf*field
 
-        # Checking for rare cases where we need to set corr to zero # We do really need this for monotonicity! Fixed bug at 30-06-2025 with dip in the center of the cosine bell field after FCT excluding this part.
+        # Checking for rare cases where we need to set corr to zero - necessary for monotonicity (bug 30-06-2025)
         for i in range(nx):
             if corr[i]*(field_bounded[i] - field_bounded[i-1]) <= 0. and (corr[i]*(field_bounded[(i+1)%nx] - field_bounded[i]) <= 0. or corr[i]*(field_bounded[i-1] - field_bounded[i-2]) <= 0.):
-                corr[i] = 0. # !!! Should this depend on the sign of uf? -> 02-07-2025: fixed
+                corr[i] = 0. 
 
         # Calculate allowable mass I/O for max rise and fall
         Qp = dxc*(fieldmax - field_bounded) # [i] at i
         Qm = dxc*(field_bounded - fieldmin) # [i] at i
 
         # Calculate I/O fluxes at cell centers
-        #face_flux = uf*corr # [i] at i-1/2
-        #Pp = dt*(np.maximum(0, face_flux) - np.minimum(0, np.roll(face_flux,-1)))
-        #Pm = dt*(np.maximum(0, np.roll(face_flux,-1)) - np.minimum(0, face_flux)) 
-        #face_flux = uf*corr # [i] at i-1/2
         Pp = dt*(np.maximum(0, corr) - np.minimum(0, np.roll(corr,-1)))
         Pm = dt*(np.maximum(0, np.roll(corr,-1)) - np.minimum(0, corr))
 
@@ -270,8 +259,7 @@ def iterFCT(flx_HO, dxc, dt, uf, C, field_previous, previous=None, niter=1, ymin
         face_limiter = np.where(corr >= 0., np.minimum(Rp, np.roll(Rm,1)), np.minimum(np.roll(Rp,1), Rm)) # [i] at i-1/2
         
         # Update the bounded flux and field
-        flx_bounded += face_limiter*corr # thus this includes uf as well
-        #field_bounded = field_previous - dt/dxc*(np.roll(uf*flx_bounded, -1) - uf*flx_bounded)
+        flx_bounded += face_limiter*corr
         field_bounded = field_previous - dt/dxc*(np.roll(flx_bounded, -1) - flx_bounded)
 
     # Output limited field[it+1] = field_bounded after niter iterations
@@ -304,183 +292,3 @@ def set_extrema(nx, uf, field_bounded, field_previous, previous=None, only_globa
         fieldmax = np.where(fieldmax > ymax, ymax, fieldmax)
 
     return fieldmin, fieldmax
-    
-
-def FCT_HW(phi, c, fluxB, fluxH, nCorr=1):#options={"HO":PPMflux, "LO":upwindFlux, "nCorr":1, 
-                         #"minPhi": None, "maxPhi": None}):
-    """Returns the corrected high-order fluxes with nCorr corrections"""
-    # Sort out options
-    #if not isinstance(options, dict):
-    #    options = {}
-    #HO =  options["HO"] if "HO" in options else PPMflux
-    #LO =  options["LO"] if "LO" in options else upwindFlux
-    #nCorr = options["nCorr"] if "nCorr" in options else 1
-    #minPhi = options["minPhi"] if "minPhi" in options else None
-    #maxPhi = options["maxPhi"] if "maxPhi" in options else None
-    
-    # First approximation of the bounded flux and the full HO flux
-    #fluxB = LO(phi,c, options=options)
-    #fluxH = HO(phi,c, options=options)
-
-    #plt.plot(np.roll(fluxB,-1), label='flx_LO HW')
-    #plt.plot(np.roll(fluxH,-1), label='flx_HO HW')
-    #plt.plot(phi, label='field_previous HW')
-#
-    #plt.legend()
-    #plt.show()
-    
-    # The first bounded solution
-    phid = advect(phi, c, fluxB)
-
-    # The allowable min and max
-    if c[0] <= 1: # assumes uniform Courant number
-        phiMin, phiMax = findMinMax(phid, phi, minPhi=None, maxPhi=None)
-    else:
-        phiMin, phiMax = findMinMax(phid, None, minPhi=None, maxPhi=None)
-
-    #plt.plot(phi, label='phi_in')
-    #plt.plot(phid, label='phid')
-    #plt.plot(np.roll(fluxB,-1), label='flx_LO HW before')
-
-    #print('phiMin', phiMin)
-    #print('phiMax', phiMax)
-
-    #plt.plot(fluxH - fluxB, label='corr', color='k')
-    #plt.plot(fluxB, label='flx_LO')
-    #plt.plot(fluxH, label='flx_HO')
-    #plt.legend()
-    #plt.show()
-    total = np.zeros(len(phi))
-    # Add a corrected HO flux
-    for it in range(nCorr):
-        # The antidiffusive fluxes
-        A = fluxH - fluxB
-
-        #plt.plot(fluxH, label='flx_HO')
-        #plt.plot(fluxB, label='flx_LO')
-        #plt.plot(A, label='A')
-        #plt.legend()
-        #plt.show()
-        # The allowable rise and fall using an updated bounded solution
-        if it > 0:
-            phid = advect(phi, c, fluxB)
-            #if it == 2:
-                #print(phid)
-            #    break
-
-        # Removing this does not remove the nonmonotonic problem
-        #for i in range(len(A)): # Check for special cases in which to fully remove the high-order fluxes (see Zalesak 1979)
-        #    #if A[i-1]*(phid[i] - phid[i-1]) <= 0. and (A[i-1]*(phid[(i+1)%len(A)] - phid[i]) <= 0. or A[i-1]*(phid[i-1] - phid[i-2]) <= 0.):
-        #    #    print('this is applied', i)
-        #    #    A[i-1] = 0.
-        #    if A[i]*(phid[(i+1)%len(A)] - phid[i]) < 0. and (A[i]*(phid[(i+2)%len(A)] - phid[(i+1)%len(A)]) < 0. or A[i]*(phid[i] - phid[i-1]) < 0.):
-        #        print('this is applied', i)
-        #        A[i] = 0.
-
-        # Sums of influxes ad outfluxes
-        Pp = c*(np.maximum(0, np.roll(A,1)) - np.minimum(0, A))
-        Pm = c*(np.maximum(0, A) - np.minimum(0, np.roll(A,1)))
-        #dt = 0.01
-        ##uf = 3.575
-        #dxc = 0.025
-        #Pp = uf*dt*(np.maximum(0, np.roll(A,1)) - np.minimum(0, A))
-        #Pm = uf*dt*(np.maximum(0, A) - np.minimum(0, np.roll(A,1)))
-
-        Qp = phiMax - phid
-        Qm = phid - phiMin
-        #Qp = (phiMax - phid)*dxc
-        #Qm = (phid - phiMin)*dxc
-        #if it == 1:
-        #    d=21
-        #    #print('Qp', Qp)
-        #    #print('Qm', Qm)
-        #    print('it = ', it, 'i=', d)
-        #    print('phiMax', phiMax[d])
-        #    print('phid', phid[d])
-        #    print('Qp', Qp[d])
-
-
-        # Ratios of allowable to HO fluxes
-        Rp = np.where(Pp > 0., np.minimum(1, Qp/np.maximum(Pp,1e-12)), 0.)
-        Rm = np.where(Pm > 0., np.minimum(1, Qm/np.maximum(Pm,1e-12)), 0.)
-        print(Rp[28])
-
-        plt.plot(Pp[27:30], label='Pp')
-        plt.plot(Pm[27:30], label='Pm')
-        plt.plot(Qp[27:30], label='Qp')
-        plt.plot(Qm[27:30], label='Qm')        
-        plt.plot(Rp[27:30]/10., label='Rp')
-        plt.plot(Rm[27:30]/10., label='Rm')
-        plt.axhline(0, color='k', linestyle='--')
-        plt.legend()
-        plt.show()
-
-        # The flux limiter
-        C = np.where(A >= 0, np.minimum(np.roll(Rp,-1), Rm),
-                             np.minimum(Rp, np.roll(Rm,-1))) # defined at i+1/2
-        fluxB = fluxB + C*A
-
-        #plt.plot(Rp, label='Rp iter '+str(it+1))
-        #plt.plot(Rm, label='Rm iter '+str(it+1))
-        #plt.plot(C, label='limiter iter'+str(it+1))
-        #plt.legend()
-        #plt.show()
-#
-        #exit()
-
-        total += C*A
-        ##if it == 1:
-            #plt.plot(C, label='C iter '+str(it+1))
-            ##plt.plot(Rp, label='Rp iter '+str(it+1))
-            ##plt.plot(Rm, label='Rm iter '+str(it+1))
-            #plt.plot(A, label='A iter '+str(it+1))
-            #plt.plot(C*A, label='CA iter '+str(it+1))
-        ##    print('iter', it+1, 'CA', C*A)
-        #plt.plot(total, label='Total after iteration '+str(it+1))
-
-    print('C', C[26:30])
-    print('A', A[26:30])
-    print('C*A', (C*A)[26:30])    
-
-    plt.plot(C[26:30], label='C')
-    plt.plot(A[26:30], label='A')
-    plt.plot((C*A)[26:30], label='C*A')
-    plt.axhline(0, color='k', linestyle='--')
-    plt.legend()
-    plt.show()
-
-    plt.plot(C, label='C')
-    plt.plot(A, label='A')
-    plt.plot((C*A), label='C*A')
-    plt.axhline(0, color='k', linestyle='--')
-    plt.legend()
-    plt.show()
-    
-    #plt.legend()
-    #plt.show()
-
-    phiH = advect(phi, c, fluxH)
-    phiFCT = advect(phi, c, fluxB)
-    plt.plot(phiH, label='phiH')
-    plt.plot(phiFCT, label='phiFCT')
-    ##plt.plot(np.roll(fluxB,-1), label='flx_LO HW after')
-    ##plt.plot(np.roll(fluxH,-1), label='flx_HO HW')
-    plt.legend()
-    #plt.show()
-
-    fluxsum = C*A + np.roll(C*A,1)
-    plt.plot(fluxsum, label='fluxsum')
-    plt.axhline(0, color='k', linestyle='--')
-    plt.legend()
-    #plt.show()
-
-    #print(phiFCT[26:31])
-    print('Rp[28]', Rp[28])
-    print('Rm[27]', Rm[27])
-    print('Rm[27] supp', np.roll(Rm,-1)[28])   
-
-    for i in range(len(A)):
-        if Rm[i-1] != np.roll(Rm,1)[i]:
-            print('Rm not equal at i-1/2', i, Rm[i-1], np.roll(Rm,1)[i])
-
-    return fluxB
