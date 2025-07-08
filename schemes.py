@@ -1350,40 +1350,42 @@ def LW_aicorrection(init, nt, dt, u, dx, solver='NumPy', niter=0):
 
 def butcherExaiUpwind():
     # I.e., forward Euler Butcher tableau
-    A = np.array([[0.]])
-    b = np.array([[1.]])
+    A = np.array([[0., 0.],[1., 0.]])
+    b = np.array([[1.,0.]])
     return A, b
 
 
 def butcherImaiUpwind():
-    # I.e., forward Euler Butcher tableau
-    A = np.array([[1.]])
-    b = np.array([[1.]])
+    # I.e., backward Euler Butcher tableau
+    A = np.array([[0., 0.],[0., 1.]])
+    b = np.array([[0., 1.]])
     return A, b
 
 
 @njit(**jitflags)
-def aiUpwind(init, nt, dt, u, dx, solver='NumPy', niter=0):
+def aiUpwind(init, nt, dt, uf, dxc, solver='NumPy', niter=0):
     """This scheme test the accuracy of adaptively implicit upwind. (Needs to be first-order accurate to have a nice second/third-order correction to it.)
     Currently not upwind just FTBS - i.e. not accounting for the sign of u.
-    Assuming constant velocity and dx."""
+    Assuming constant dx."""
     field = np.zeros((nt+1, len(init)))
     field[0] = init.copy()
 
-    c = dt*u/dx
-    beta = np.zeros(len(init))
-    #if do_beta == 'blend':
-    beta = np.maximum(1 - 1/c, np.zeros(len(init))) # beta: blend!
-    #elif do_beta == 'switch':
-    #    beta = np.invert((np.roll(c,1) <= 1.)*(c <= 1.)) # beta[i] is at i-1/2 # 0: explicit, 1: implicit
-
+    cf = uf*dt/dxc # [i] at i-1/2
+    cc_out = 0.5*(np.abs(uf) - uf + np.abs(np.roll(uf,-1)) + np.roll(uf,-1))*dt/dxc # [i] at i, Courant defined at cell centers based on the *outward* pointing velocities
+    cc_in = 0.5*(np.abs(uf) + uf + np.abs(np.roll(uf,-1)) - np.roll(uf,-1))*dt/dxc # [i] at i, Courant defined at cell centers based on the *inward* pointing velocities
+    betac_out = np.maximum(0., 1.-1./cc_out)
+    betac_in = np.maximum(0., 1.-1./cc_in)
+    beta = np.maximum(np.maximum(betac_out, np.roll(betac_out,1)), np.maximum(betac_in, np.roll(betac_in, 1))) # [i] at i-1/2
+    
     M = np.zeros((len(init), len(init)))
     for i in prange(len(init)):
-        M[i,i] = 1. + beta[i]*c[i]
-        M[i,(i-1)%len(init)] = -1.*beta[i]*c[i]
+        M[i,i] = 1. + beta[(i+1)%len(init)]*cf[(i+1)%len(init)]
+        M[i,i-1] = -1.*beta[i]*cf[i] 
+        #M[i,i-1] = -1.*beta[(i+1)%nx]*cf[i] # Using this makes the AdImEx boundary artefact disappear but also makes it nonconservative
     
     for it in prange(nt):
-        rhs = field[it] - c*(1-beta)*(field[it] - np.roll(field[it],1))
+        rhs = field[it] - (np.roll(cf*(1-beta),-1)*field[it] - cf*(1-beta)*np.roll(field[it],1))
+        #rhs = field[it] - (1-beta)*(cf*field[it] - np.roll(cf*field[it],1)) # Using this makes the AdImEx boundary artefact disappear but also makes it nonconservative
         field[it+1] = np.linalg.solve(M, rhs)
     
     return field
@@ -3023,8 +3025,11 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
     for i in range(len(dxc)-1): # assumes uniform grid
         xf[i+1] = xf[i] + dxc[i]
     cf = uf*dt/dxc # [i] at i-1/2
-    cc_out = 0.5*(np.abs(uf) - uf + np.roll(uf,-1) + np.abs(np.roll(uf,-1)))*dt/dxc # [i] at i, Courant defined at cell centers based on the *outward* pointing velocities
-    beta = np.maximum(0., np.maximum(1. - 1./cc_out, 1. - 1./np.roll(cc_out,1))) # [i] at i-1/2
+    cc_out = 0.5*(np.abs(uf) - uf + np.abs(np.roll(uf,-1)) + np.roll(uf,-1))*dt/dxc # [i] at i, Courant defined at cell centers based on the *outward* pointing velocities
+    cc_in = 0.5*(np.abs(uf) + uf + np.abs(np.roll(uf,-1)) - np.roll(uf,-1))*dt/dxc # [i] at i, Courant defined at cell centers based on the *inward* pointing velocities
+    betac_out = np.maximum(0., 1.-1./cc_out)
+    betac_in = np.maximum(0., 1.-1./cc_in)
+    beta = np.maximum(np.maximum(betac_out, np.roll(betac_out,1)), np.maximum(betac_in, np.roll(betac_in, 1))) # [i] at i-1/2
 
     AIm, bIm = globals()['butcherIm' + RK]()
     cIm = AIm.sum(axis=1)
@@ -3068,38 +3073,29 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
                 M = matrix(nx, dt, dxc, beta*uf, AIm[ik,ik]) # [i] at i
                 rhs_k = field[it] + dt*np.dot(AEx[ik,:ik], fEx[:ik,:]) + dt*np.dot(AIm[ik,:ik], fIm[:ik,:]) # [i] at i
                 field_k = np.linalg.solve(M, rhs_k) # [i] at i
-                #if output_substages: plt.plot(xf, field_k, label='stage ' + str(ik))
+                if output_substages: 
+                    plt.plot(xf, field_k, label='stage ' + str(ik))
+                    print('k =', ik)
+                    print('field_k', field_k)
+                    print()
                 # Calculate the flux based on the field at stage k
                 flx_k[ik,:] = uf*fluxfn(field_k) # [i] at i-1/2
                 fEx[ik,:] = -ddx((1 - beta)*flx_k[ik,:], np.roll((1 - beta)*flx_k[ik,:],-1), dxc)
                 fIm[ik,:] = -ddx(beta*flx_k[ik,:], np.roll(beta*flx_k[ik,:],-1), dxc)   
                 flx_contribution_from_stage_k[ik,:] = AEx[-1,ik]*(1 - beta)*flx_k[ik,:] + AIm[-1,ik]*beta*flx_k[ik,:]
                 flx_HO += flx_contribution_from_stage_k[ik,:]  
-                if output_substages: 
-                    if ik != nstages and (flx_contribution_from_stage_k[ik] == 0.).all() == False: plt.plot(xf, flx_contribution_from_stage_k[ik,:], label='stage ' + str(ik+1))
             if iterFCT:
                 previous = np.full(nx, False) #[True if cf[i] <= 1. else False for i in range(nx)] # [i] at i-1/2 # determines whether FCT also uses field[it] for bounds (True/False) # could use further consideration
                 field[it+1] = lim.iterFCT(flx_HO, dxc, dt, uf, cf, beta, field[it], previous=previous, niter=nIter) # also option for ymin and ymax         
             else:     
                 field[it+1] = field_k.copy()
-            #if output_substages: 
-            #    plt.title('Substage fields during time step ' + str(it+1))
-            #    plt.legend()
-            #    plt.show()            
             if output_substages: 
+                plt.title('Substage fields during time step ' + str(it+1))
+                plt.legend()
+                plt.show()            
                 if iterFCT: 
                     print('WARNING: substage output will be inconsistent with final field due to limiting.')
-                    logging.info('WARNING: substage output will be inconsistent with final field due to limiting.')
-                total_flux_unlimited = np.sum(flx_contribution_from_stage_k, axis=0) # = flx_HO unlimited
-                plt.title('Flux contribution from the different stages during time step ' + str(it+1) + ' before limiting')
-                plt.legend()
-                plt.savefig(f'flx_contr_dt{dt}.png')
-                plt.close()
-                logging.info(f'Total flux contribution from the different stages during time step {it+1} before limiting: {total_flux_unlimited}')
-                logging.info(f'Sum of the total flux: {np.sum(total_flux_unlimited)}')
-                plt.plot(xf, total_flux_unlimited, label='Total flux')
-                plt.legend()
-                plt.savefig(f'flx_contr_total_dt{dt}.png')        
+                    logging.info('WARNING: substage output will be inconsistent with final field due to limiting.')  
 
     return field
 
