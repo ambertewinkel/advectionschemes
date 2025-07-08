@@ -3022,9 +3022,10 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
     xf = np.zeros(nx) 
     for i in range(len(dxc)-1): # assumes uniform grid
         xf[i+1] = xf[i] + dxc[i]
-    c = uf*dt/dxc # [i] at i-1/2
-    beta = set_offcentring(nx, blend, u_setting, c, clim)
-    
+    cf = uf*dt/dxc # [i] at i-1/2
+    cc_out = 0.5*(np.abs(uf) - uf + np.roll(uf,-1) + np.abs(np.roll(uf,-1)))*dt/dxc # [i] at i, Courant defined at cell centers based on the *outward* pointing velocities
+    beta = np.maximum(0., np.maximum(1. - 1./cc_out, 1. - 1./np.roll(cc_out,1))) # [i] at i-1/2
+
     AIm, bIm = globals()['butcherIm' + RK]()
     cIm = AIm.sum(axis=1)
     AEx, bEx = globals()['butcherEx' + RK]() 
@@ -3077,8 +3078,8 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
                 if output_substages: 
                     if ik != nstages and (flx_contribution_from_stage_k[ik] == 0.).all() == False: plt.plot(xf, flx_contribution_from_stage_k[ik,:], label='stage ' + str(ik+1))
             if iterFCT:
-                previous = [True if c[i] <= 1. else False for i in range(nx)] # [i] at i-1/2 # determines whether FCT also uses field[it] for bounds (True/False)
-                field[it+1] = lim.iterFCT(flx_HO, dxc, dt, uf, c, field[it], previous=previous, niter=nIter) # also option for ymin and ymax         
+                previous = np.full(nx, False) #[True if cf[i] <= 1. else False for i in range(nx)] # [i] at i-1/2 # determines whether FCT also uses field[it] for bounds (True/False) # could use further consideration
+                field[it+1] = lim.iterFCT(flx_HO, dxc, dt, uf, cf, beta, field[it], previous=previous, niter=nIter) # also option for ymin and ymax         
             else:     
                 field[it+1] = field_k.copy()
             #if output_substages: 
