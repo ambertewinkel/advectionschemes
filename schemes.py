@@ -1375,19 +1375,21 @@ def aiUpwind(init, nt, dt, uf, dxc, solver='NumPy', niter=0):
     cc_in = 0.5*(np.abs(uf) + uf + np.abs(np.roll(uf,-1)) - np.roll(uf,-1))*dt/dxc # [i] at i, Courant defined at cell centers based on the *inward* pointing velocities
     betac_out = np.maximum(0., 1.-1./cc_out)
     betac_in = np.maximum(0., 1.-1./cc_in)
-    beta = np.maximum(np.maximum(betac_out, np.roll(betac_out,1)), np.maximum(betac_in, np.roll(betac_in, 1))) # [i] at i-1/2
-    
+    betaf = np.maximum(np.maximum(betac_out, np.roll(betac_out,1)), np.maximum(betac_in, np.roll(betac_in, 1))) # [i] at i-1/2
+    #betaf = np.maximum(0., 1.-1./cf)
+
     M = np.zeros((len(init), len(init)))
     for i in prange(len(init)):
-        M[i,i] = 1. + beta[(i+1)%len(init)]*cf[(i+1)%len(init)]
-        M[i,i-1] = -1.*beta[i]*cf[i] 
+        M[i,i] = 1. + betaf[(i+1)%len(init)]*cf[(i+1)%len(init)]
+        M[i,i-1] = -1.*betaf[i]*cf[i] # this is not upwind with just i-1 element !!!
         #M[i,i-1] = -1.*beta[(i+1)%nx]*cf[i] # Using this makes the AdImEx boundary artefact disappear but also makes it nonconservative
     
     for it in prange(nt):
-        rhs = field[it] - (np.roll(cf*(1-beta),-1)*field[it] - cf*(1-beta)*np.roll(field[it],1))
-        #rhs = field[it] - (1-beta)*(cf*field[it] - np.roll(cf*field[it],1)) # Using this makes the AdImEx boundary artefact disappear but also makes it nonconservative
+        rhs = field[it] - (np.roll(cf*(1.-betaf),-1)*field[it] - cf*(1.-betaf)*np.roll(field[it],1))
+        #rhs = field[it] - (1-betaf)*(cf*field[it] - np.roll(cf*field[it],1)) # Using this makes the AdImEx boundary artefact disappear but also makes it nonconservative
         field[it+1] = np.linalg.solve(M, rhs)
     
+    print(field[-1])
     return field
 
 

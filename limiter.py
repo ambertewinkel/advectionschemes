@@ -219,12 +219,13 @@ def iterFCT(flx_HO, dxc, dt, uf, C, beta, field_previous, previous=None, niter=1
     nx = len(flx_HO)
     flx_bounded, field_bounded = np.zeros(nx), np.zeros(nx)
 
+    #beta = np.maximum(0., 1.-1./C)
     # Calculate bounded field and bounded flux - 1 time step of AdImEx Upwind low-order bounded solution (this will subsequently be updated in FCT iteration loop)
     M = np.zeros((nx, nx))
     for i in range(nx):
-        M[i,i] = 1. + beta[i]*C[i]
+        M[i,i] = 1. + beta[(i+1)%nx]*C[(i+1)%nx]
         M[i,(i-1)%nx] = -1.*beta[i]*C[i] # this is not upwind with just i-1? !!!
-    c1mbfield = C*(1-beta)*field_previous # [i] at i-1/2
+    c1mbfield = np.roll(C*(1-beta),-1)*field_previous # [i] at i-1/2
     rhs = field_previous - (c1mbfield - np.roll(c1mbfield,1))
     field_bounded = np.linalg.solve(M, rhs) # [i] at i
     flx_bounded = 0.5*(uf + np.abs(uf))*((1. - beta)*np.roll(field_previous,1) + beta*np.roll(field_bounded,1)) + 0.5*(uf - np.abs(uf))*((1. - beta)*field_previous + beta*field_bounded) # [i] is at i-1/2
