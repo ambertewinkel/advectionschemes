@@ -2229,7 +2229,7 @@ def aiUexcorr2(init, nt, dt, uf, dxc, solver='NumPy', do_beta='blend', niter=1):
     return field
 
 
-def RK2QC(init, nt, dt, uf, dxc, solver='NumPy', kmax=2, set_alpha='max', set_beta=None):
+def RK2QC(init, nt, dt, uf, dxc, u_setting, solver='NumPy', kmax=2, set_alpha='max', set_beta=None):
     """This scheme solves second-order Runge-Kutta quasi-cubic scheme. See HW notes sent on 27-11-2024."""
     # assumes u>0
 
@@ -3094,7 +3094,7 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
             if output_substages: 
                 plt.title('Substage fields during time step ' + str(it+1))
                 plt.legend()
-                plt.show()            
+                plt.savefig('substage_fields.png')            
                 if iterFCT: 
                     print('WARNING: substage output will be inconsistent with final field due to limiting.')
                     logging.info('WARNING: substage output will be inconsistent with final field due to limiting.')  

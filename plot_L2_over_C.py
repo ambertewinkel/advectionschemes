@@ -23,8 +23,9 @@ def plot():
 
     # Cases to analyse
     cases = [\
-        {'scheme': 'aiUpwind'}, # already defaults to a theta blend
-        {'scheme': 'aiMPDATA', 'do_beta': 'blend'},
+        {'scheme': 'RK2QC'},
+        #{'scheme': 'aiUpwind'}, # already defaults to a theta blend
+        #{'scheme': 'aiMPDATA', 'do_beta': 'blend'},
         {'scheme': 'ImExRK', 'RK': 'UJ31e32', 'SD':'fifth302', 'blend':'sm'},
         #{'scheme': 'PPM'},
         ###{'scheme': 'ImExRK', 'RK': 'ARS3233', 'SD':'fifth302', 'blend':'off'},
@@ -49,9 +50,10 @@ def plot():
         ]
     
     plot_args = [\
-        {'label':'AdImEx Upwind', 'color':'darkgreen', 'marker':'x', 'linestyle':'-'},
-        {'label':'AdImEx MPDATA', 'color':'orange', 'marker':'x', 'linestyle':'-'},  
-        {'label':'AdImEx Strang Carryover', 'color':'purple', 'marker':'x', 'linestyle':'-'},
+        {'label': 'WKS24', 'color':'magenta', 'marker':'x', 'linestyle':'-'},
+        #{'label':'AdImEx Upwind', 'color':'darkgreen', 'marker':'x', 'linestyle':'-'},
+        #{'label':'AdImEx MPDATA', 'color':'orange', 'marker':'x', 'linestyle':'-'},  
+        {'label':'AdImEx Strang', 'color':'darkgreen', 'marker':'x', 'linestyle':'-'},
         #{'label':'PPM', 'color':'red', 'marker':'+', 'linestyle':'-'},
         ###{'label':'ImEx ARS3 5th302 noblend', 'color':'green', 'marker':'o', 'linestyle':'-'},
         ###{'label':'ImEx ARS3 5th302 sm', 'color':'orange', 'marker':'x', 'linestyle':'-'},
@@ -77,6 +79,7 @@ def plot():
     # Setup 
     schemenames = [case["scheme"] for case in cases]
     analytic = an.sine
+    u_setting = 'constant'
     dt, nt, u, xmin, xmax = 0.01, 1, 1., 0., 1. 
     c = np.arange(0.075, 3., 0.05) # array of Courant numbers
     dx = u*dt/c # array of grid spacings
@@ -114,7 +117,7 @@ def plot():
         # Loop over schemes
         for case in range(len(cases)):
             # Calculate numerical solution
-            psi_num = main.callscheme(cases[case], nt, dt, np.full(nx[ic], u), np.full(nx[ic], dx[ic]), psi_in, verbose=False)[-1]
+            psi_num = main.callscheme(cases[case], nt, dt, np.full(nx[ic], u), np.full(nx[ic], dx[ic]), psi_in, u_setting=u_setting, verbose=False)[-1]
             # Calculate L2 norm
             locals()[f'L2_{plot_args[case]["label"]}'][ic] = epm.l2norm(psi_num, psi_an, dx[ic])
         

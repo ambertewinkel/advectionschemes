@@ -36,17 +36,18 @@ def main():
 
     # Test or save output in name-specified folder
     save_as = 'store'             # 'test' or 'store'; determines how the output is saved
-    
+    plot_all_timesteps = True
+
     # We need to set: dt, nx, nt, u_setting, analytic
     xmax = 1.0
     ymax = 25.#200. # for plotting purposes
     dt_LRES_AdImEx = 0.01 # largest time step of the two dt's for the animation dt_LRES before
-    nt_LRES_AdImEx = 1#50#100 # largest number of time steps of the two nt's for the animation
+    nt_LRES_AdImEx = 10#30#1#50#100 # largest number of time steps of the two nt's for the animation
     nx_LRES = 40
     dx_LRES = xmax/nx_LRES
 
     dtfactor_HRESLRES = 10
-    dtfactor_ExAdImEx = 10#5
+    dtfactor_ExAdImEx = 5
 
     dt_HRES_AdImEx = dt_LRES_AdImEx/dtfactor_HRESLRES # used to be dt_HRES
     nt_HRES_AdImEx = nt_LRES_AdImEx*dtfactor_HRESLRES
@@ -60,7 +61,7 @@ def main():
     nt_HRES_Ex = nt_LRES_Ex*dtfactor_HRESLRES
 
     u_setting = 'varying_space5'
-    analytic = an.analytic_constant
+    analytic = an.sine_yshift#analytic_constant
     total_time = nt_LRES_AdImEx*dt_LRES_AdImEx
 
     #!!! check the courant numbers for the different options! i.e. plot in a single plot?? when plotting the final fields as well?
@@ -260,8 +261,13 @@ def main():
             # Run case
             locals()[f'psi_{s}_{l}'] = callscheme(cases[c], nt_HRES, dt_HRES, uf_HRES, dxc_HRES, psi_in_HRES, u_setting)
 
-            # Plot final time step
-            plt.plot(xc_HRES, locals()[f'psi_{s}_reg'][-1], **plot_args[c]) # !!! check whether -1 is correct - I want to make sure that LRES and HRES are plotting at the same point in time!
+            # Plot time steps
+            #if plot_all_timesteps:
+            #    for it in range(nt_LRES_AdImEx):
+            #        plt.plot(xc_LRES, locals()[f'psi_{s}_reg'][it*dtfactor_ExAdImEx], marker='x', linestyle='', color='k')
+            #else: # Just plot final time step
+            #    plt.plot(xc_LRES, locals()[f'psi_{s}_reg'][-1], **plot_args[c]) # !!! check whether -1 is correct - I want to make sure that LRES and HRES are plotting at the same point in time!
+            plt.plot(xc_LRES, locals()[f'psi_{s}_reg'][-1], **plot_args[c]) # !!! check whether -1 is correct - I want to make sure that LRES and HRES are plotting at the same point in time!
 
             # Do experiments
             locals()[f'csv_psi_{s}'] = epm.check_conservation(psi_in_HRES, locals()[f'psi_{s}_reg'][-1], dxc_HRES) # !!! same -> -1 correct?
@@ -284,9 +290,18 @@ def main():
             # Run case
             locals()[f'psi_{s}_{l}'] = callscheme(cases[c], nt_LRES, dt_LRES, uf_LRES, dxc_LRES, psi_in_LRES, u_setting)
 
-            # Plot final time step
-            plt.plot(xc_LRES, locals()[f'psi_{s}_reg'][-1], **plot_args[c]) # !!! same -> -1 correct?
-
+            # Plot time steps
+            if plot_all_timesteps:
+                if AdImExbool[c]:
+                    AdImExcolors = ['#543005', '#8c510a', '#bf812d', '#dfc27d', '#f6e8c3', '#c7eae5', '#80cdc1', '#35978f', '#01665e', '#003c30']
+                    for it in range(nt_LRES_AdImEx):
+                        plt.plot(xc_LRES, locals()[f'psi_{s}_reg'][it+1], marker='', linestyle='-', color=AdImExcolors[it], label=f'nt = {it+1}')
+                else:
+                    for it in range(nt_LRES_AdImEx):
+                        plt.plot(xc_LRES, locals()[f'psi_{s}_reg'][(it+1)*dtfactor_ExAdImEx], marker='+', linestyle='', color='gray')
+            else: # Just plot final time step
+                plt.plot(xc_LRES, locals()[f'psi_{s}_reg'][-1], **plot_args[c]) # !!! same -> -1 correct?
+        
             # Do experiments
             locals()[f'csv_psi_{s}'] = epm.check_conservation(psi_in_LRES, locals()[f'psi_{s}_reg'][-1], dxc_LRES) # !!! same -> -1 correct?
             logging.info(f"{plot_args[c]['label']} - Mass gained: {locals()[f'csv_psi_{s}']:.4E}")
