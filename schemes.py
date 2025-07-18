@@ -1362,7 +1362,7 @@ def butcherImaiUpwind():
     return A, b
 
 
-@njit(**jitflags)
+#@njit(**jitflags)
 def aiUpwind(init, nt, dt, uf, dxc, solver='NumPy', niter=0):
     """This scheme test the accuracy of adaptively implicit upwind. (Needs to be first-order accurate to have a nice second/third-order correction to it.)
     Currently not upwind just FTBS - i.e. not accounting for the sign of u.
@@ -1371,20 +1371,35 @@ def aiUpwind(init, nt, dt, uf, dxc, solver='NumPy', niter=0):
     field[0] = init.copy()
 
     cf = uf*dt/dxc # [i] at i-1/2
-    cc_out = 0.5*(np.abs(uf) - uf + np.abs(np.roll(uf,-1)) + np.roll(uf,-1))*dt/dxc # [i] at i, Courant defined at cell centers based on the *outward* pointing velocities
-    cc_in = 0.5*(np.abs(uf) + uf + np.abs(np.roll(uf,-1)) - np.roll(uf,-1))*dt/dxc # [i] at i, Courant defined at cell centers based on the *inward* pointing velocities
-    betac_out = np.maximum(0., 1.-1./cc_out)
-    betac_in = np.maximum(0., 1.-1./cc_in)
-    betaf = np.maximum(np.maximum(betac_out, np.roll(betac_out,1)), np.maximum(betac_in, np.roll(betac_in, 1))) # [i] at i-1/2
+    #cc_out = 0.5*(np.abs(uf) - uf + np.abs(np.roll(uf,-1)) + np.roll(uf,-1))*dt/dxc # [i] at i, Courant defined at cell centers based on the *outward* pointing velocities
+    #cc_in = 0.5*(np.abs(uf) + uf + np.abs(np.roll(uf,-1)) - np.roll(uf,-1))*dt/dxc # [i] at i, Courant defined at cell centers based on the *inward* pointing velocities
+    #betac_out = np.maximum(0., 1.-1./cc_out)
+    #betac_in = np.maximum(0., 1.-1./cc_in)
+    #betaf = np.maximum(np.maximum(betac_out, np.roll(betac_out,1)), np.maximum(betac_in, np.roll(betac_in, 1))) # [i] at i-1/2
     #betaf = np.maximum(0., 1.-1./cf)
 
+    betaf = np.array([3.75000000e-01, 3.75000000e-01, 3.72101071e-01, 3.63314396e-01,
+                3.48366057e-01, 3.26785286e-01, 2.97883011e-01, 2.60722017e-01,
+                2.14080101e-01, 1.56410158e-01, 8.58067950e-02, 0.00000000e+00,
+                0.00000000e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00,
+                0.00000000e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00,
+                0.00000000e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00,
+                0.00000000e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00,
+                0.00000000e+00, 1.33226763e-15, 8.58067950e-02, 1.56410158e-01,
+                2.14080101e-01, 2.60722017e-01, 2.97883011e-01, 3.26785286e-01,
+                3.48366057e-01, 3.63314396e-01, 3.72101071e-01, 3.75000000e-01])
+    logging.info('')
+    #logging.info('betaf defined by out and in max combination of C')
+    logging.info(f'betaf: {betaf}')
+    logging.info('')
+
     M = np.zeros((len(init), len(init)))
-    for i in prange(len(init)):
+    for i in range(len(init)):
         M[i,i] = 1. + betaf[(i+1)%len(init)]*cf[(i+1)%len(init)]
         M[i,i-1] = -1.*betaf[i]*cf[i] # this is not upwind with just i-1 element !!!
         #M[i,i-1] = -1.*beta[(i+1)%nx]*cf[i] # Using this makes the AdImEx boundary artefact disappear but also makes it nonconservative
     
-    for it in prange(nt):
+    for it in range(nt):
         rhs = field[it] - (np.roll(cf*(1.-betaf),-1)*field[it] - cf*(1.-betaf)*np.roll(field[it],1))
         #rhs = field[it] - (1-betaf)*(cf*field[it] - np.roll(cf*field[it],1)) # Using this makes the AdImEx boundary artefact disappear but also makes it nonconservative
         field[it+1] = np.linalg.solve(M, rhs)
