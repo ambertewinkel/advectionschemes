@@ -1388,6 +1388,14 @@ def aiUpwind(init, nt, dt, uf, dxc, solver='NumPy', niter=0):
                 0.00000000e+00, 1.33226763e-15, 8.58067950e-02, 1.56410158e-01,
                 2.14080101e-01, 2.60722017e-01, 2.97883011e-01, 3.26785286e-01,
                 3.48366057e-01, 3.63314396e-01, 3.72101071e-01, 3.75000000e-01])
+    plt.plot(betaf, label='unsmoothed')
+    betaf_temp = 0.25*np.roll(betaf,-1) + 0.5*betaf + 0.25*np.roll(betaf,1)
+    betaf = np.maximum(betaf, betaf_temp)
+    plt.plot(betaf, label='smoothed up -> final')
+    plt.legend()
+    plt.title('beta setting')
+    plt.show()
+    #betaf = np.ones(len(init))
     logging.info('')
     #logging.info('betaf defined by out and in max combination of C')
     logging.info(f'betaf: {betaf}')
