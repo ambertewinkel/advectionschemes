@@ -1363,7 +1363,7 @@ def butcherImaiUpwind():
 
 
 #@njit(**jitflags)
-def aiUpwind(init, nt, dt, uf, dxc, solver='NumPy', niter=0):
+def aiUpwind(init, nt, dt, uf, dxc, solver='NumPy', niter=0, output_ufield=False):
     """This scheme test the accuracy of adaptively implicit upwind. (Needs to be first-order accurate to have a nice second/third-order correction to it.)
     Currently not upwind just FTBS - i.e. not accounting for the sign of u.
     Assuming constant dx."""
@@ -1411,8 +1411,38 @@ def aiUpwind(init, nt, dt, uf, dxc, solver='NumPy', niter=0):
         rhs = field[it] - (np.roll(cf*(1.-betaf),-1)*field[it] - cf*(1.-betaf)*np.roll(field[it],1))
         #rhs = field[it] - (1-betaf)*(cf*field[it] - np.roll(cf*field[it],1)) # Using this makes the AdImEx boundary artefact disappear but also makes it nonconservative
         field[it+1] = np.linalg.solve(M, rhs)
+        if output_ufield:
+            ufieldEx = uf*np.roll(field[it],1) # defined at i-1/2
+            ufieldIm = uf*np.roll(field[it+1],1) # defined at i-1/2
+            plt.axvline(11)
+            plt.axvline(29)
+            plt.plot(ufieldEx, label='u*field[it]', marker='x')
+            plt.plot(ufieldIm, label='u*field[it+1]', marker='+')
+            plt.plot(betaf*40, label='beta*40')
+            #plt.plot((ufieldIm-ufieldEx)*10, label='10*(u*field[it+1] - u*field[it])', marker='x')
+            plt.plot(betaf*(ufieldIm-ufieldEx)*40, label='40*beta*(u*field[it+1] - u*field[it])', marker='x')
+            plt.plot(ufieldEx + betaf*(ufieldIm-ufieldEx), label='u*field[it] + beta*(u*field[it+1] - u*field[it])', marker='+')
+            plt.legend()
+            plt.title(f'Fluxes for it+1={it+1} result')
+            plt.show()
+
+            plt.plot(field[it]-10., label='field[it]-10')
+            plt.plot(field[it+1]-10., label='field[it+1]-10')
+            plt.plot(np.roll(ufieldEx + betaf*(ufieldIm-ufieldEx),-1) - ufieldEx - betaf*(ufieldIm-ufieldEx), label='total flux at j')
+            #plt.plot(ufieldEx + betaf*(ufieldIm-ufieldEx) - np.roll(ufieldEx + betaf*(ufieldIm-ufieldEx),1), label='total flux at j')
+            plt.plot(np.roll(ufieldEx,-1) - ufieldEx, label='total flux at j, just monotonic (I think) Ex part')            
+            #plt.plot(ufieldEx - np.roll(ufieldEx,1), label='total flux at j, just monotonic (I think) Ex part')            
+            plt.title('flux sum and fields')
+            plt.legend(loc='center')
+            plt.axvline(10)
+            plt.axvline(11)
+            plt.axvline(28)
+            plt.axvline(29)
+            plt.show()
+
     
-    print(field[-1])
+    #print(field[-1])
+
     return field
 
 

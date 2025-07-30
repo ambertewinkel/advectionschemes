@@ -28,7 +28,7 @@ def sine(x, xmax, u=0., t=0., shifty=0.5, ampl=0.5, shiftx=0.):
     return psi
 
 
-def sine_yshift(x, xmax, u=0., t=0., shifty=10.0, ampl=0.5, shiftx=0.2):
+def sine_yshift(x, xmax, u=0., t=0., shifty=10.0, ampl=0.5, shiftx=0.):
     """This function returns an array from input array x advected by velocity u for a time t.
     The initial condition has values from the function y = shifty + ampl*sin(2pi(x-shiftx)/xmax).
     --- Input ---
