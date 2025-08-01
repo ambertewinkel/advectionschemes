@@ -71,7 +71,7 @@ def main():
     
     plot_args = [\
         #{'label':'WKS24', 'color':'magenta', 'marker':'+', 'linestyle':'-'},
-        {'label':'aiUpwind u and beta from uvs3 -> beta smoothed up', 'color':'red', 'marker':'x', 'linestyle':'-'},
+        {'label':'aiUpwind u and beta from uvs3 -> beta from findings 01-08 m=2*<beta>', 'color':'red', 'marker':'x', 'linestyle':'-'},
         #{'label':'AdImEx Strang', 'color':'darkgreen', 'marker':'x', 'linestyle':'-'},
         #{'label':'AdImEx Upwind', 'color':'cyan', 'marker':'', 'linestyle':':'},
         #{'label':'AdImEx Strang FCT', 'color':'darkorange', 'marker':'x', 'linestyle':'--'},
