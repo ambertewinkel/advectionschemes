@@ -35,7 +35,7 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     limitCto1 = False
@@ -48,7 +48,7 @@ def main():
     # Input cases
     cases = [\
         #{'scheme':'RK2QC'},
-        {'scheme': 'aiUpwind', 'output_ufield': True},
+        {'scheme': 'aiUpwind'},#, 'output_ufield': True},
         #{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm'},#, 'output_substages':True},
         #{'scheme': 'ImExRK', 'RK':'aiUpwind', 'SD':'BS', 'blend':'sm'},#, 'output_substages':True},
         #{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':1},#, 'output_substages':True},
@@ -71,7 +71,8 @@ def main():
     
     plot_args = [\
         #{'label':'WKS24', 'color':'magenta', 'marker':'+', 'linestyle':'-'},
-        {'label':'aiUpwind u and beta from uvs3 -> beta from findings 01-08 m=2*<beta>', 'color':'red', 'marker':'x', 'linestyle':'-'},
+        #######{'label':'aiUpwind u and beta from uvs3 -> beta from findings 01-08 m=2*<beta>', 'color':'red', 'marker':'x', 'linestyle':'-'},
+        {'label':'aiUpwind u and beta from uvs3 -> beta 05-08-2025', 'color':'red', 'marker':'x', 'linestyle':'-'},
         #{'label':'AdImEx Strang', 'color':'darkgreen', 'marker':'x', 'linestyle':'-'},
         #{'label':'AdImEx Upwind', 'color':'cyan', 'marker':'', 'linestyle':':'},
         #{'label':'AdImEx Strang FCT', 'color':'darkorange', 'marker':'x', 'linestyle':'--'},

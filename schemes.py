@@ -1374,10 +1374,53 @@ def aiUpwind(init, nt, dt, uf, dxc, solver='NumPy', niter=0, output_ufield=False
     cc_out = 0.5*(np.abs(uf) - uf + np.abs(np.roll(uf,-1)) + np.roll(uf,-1))*dt/dxc # [i] at i, Courant defined at cell centers based on the *outward* pointing velocities
     cc_in = 0.5*(np.abs(uf) + uf + np.abs(np.roll(uf,-1)) - np.roll(uf,-1))*dt/dxc # [i] at i, Courant defined at cell centers based on the *inward* pointing velocities
     betac_out = np.maximum(0., 1.-1./cc_out)
+    #plt.plot(betac_out, label='betac_out', marker='x')
+    #plt.show()
+    #exit()
     betac_in = np.maximum(0., 1.-1./cc_in)
     betaf = np.maximum(np.maximum(betac_out, np.roll(betac_out,1)), np.maximum(betac_in, np.roll(betac_in, 1))) # [i] at i-1/2
-    #betaf = np.maximum(0., 1.-1./cf)
+    ##plt.plot(betaf, label='betaf max', marker='x')
 
+    #psi_n_coeff = 1. - dt/dxc*((1.-betaf)*(0.5*(-uf + np.abs(uf))) + np.roll((1.-betaf)*(0.5*(uf + np.abs(uf))),-1))
+    #plt.plot(psi_n_coeff, label='psi_n_coeff', marker='x') # 05-08-2025: always positive. So this wasn't the problem
+    #plt.legend()
+    #plt.show()
+    #exit()
+
+    # 05-08-2025
+    betaf_another_temp = (dxc/dt - np.roll(betaf,-1)*(0. - np.roll(uf,-1)))/(uf - 0.) # assume uf is positive everywhere
+    ##plt.plot(betaf_another_temp, label='betaf_another_temp', marker='x')
+    ##plt.legend()
+    ##plt.show()
+    #exit()
+    #cc_total = 0.5*(cc_in + cc_out) # [i] at i, average Courant number at cell centers
+    #ratio = 0.5*cc_out/cc_total
+    #m = 2.*ratio
+    #betaf = np.maximum(0., 1.-1./(m*cc_total))
+    #plt.plot(betaf, label='betaf ratio w/ m', marker='x')
+
+    #plt.plot(cf, label='cf', marker='x')
+    #plt.plot(cc_out, label='cc_out')
+    #plt.plot(cc_in, label='cc_in')
+    #plt.plot(cc_total, label='cc_total')
+    #plt.legend()
+    #plt.xlabel('i')
+    #plt.ylabel('Courant number')
+    #plt.title('Courant numbers for aiUpwind')
+    #plt.show()
+    #betac_out = np.maximum(0., 1.-1./cc_out)
+    #betac_in = np.maximum(0., 1.-1./cc_in)
+    #betaf = np.maximum(np.maximum(betac_out, np.roll(betac_out,1)), np.maximum(betac_in, np.roll(betac_in, 1))) # [i] at i-1/2
+    ##betaf = np.maximum(0., 1.-1./cf)
+    #plt.plot(betaf, label='betaf max', marker='x')
+    #betaf = np.maximum(0., 1.-1./cc_total)
+    #plt.plot(betaf, label='betaf total', marker='x')
+    #plt.legend()
+    #plt.xlabel('i')
+    #plt.ylabel('betaf')
+    #plt.title('betaf for aiUpwind')
+    #plt.show()
+    #exit()
     #betaf = np.array([3.75000000e-01, 3.75000000e-01, 3.72101071e-01, 3.63314396e-01,
     #            3.48366057e-01, 3.26785286e-01, 2.97883011e-01, 2.60722017e-01,
     #            2.14080101e-01, 1.56410158e-01, 8.58067950e-02, 0.00000000e+00,
@@ -1388,24 +1431,24 @@ def aiUpwind(init, nt, dt, uf, dxc, solver='NumPy', niter=0, output_ufield=False
     #            0.00000000e+00, 1.33226763e-15, 8.58067950e-02, 1.56410158e-01,
     #            2.14080101e-01, 2.60722017e-01, 2.97883011e-01, 3.26785286e-01,
     #            3.48366057e-01, 3.63314396e-01, 3.72101071e-01, 3.75000000e-01])
-    plt.plot(betaf, label='unsmoothed')
+    #plt.plot(betaf, label='unsmoothed')
     #betaf_temp = 0.25*np.roll(betaf,-1) + 0.5*betaf + 0.25*np.roll(betaf,1)
     #betaf = np.maximum(betaf, betaf_temp)
     #plt.plot(betaf, label='smoothed up -> final')
 
     # No 1 (24-07) !!! This is a very hacky way of checking when to adjust theta here... not optimal in the end but a quick way to check whether it does anything at all
-    #for i in range(len(betaf)):
-    #    if abs(betaf[i]) < 1e-12 and abs(betaf[(i+1)%len(betaf)]) > 1e-12:
-    #        print('we have satisfied the condition for betaf[i] == 0. and betaf[(i+1)%len(betaf)] > 0. for i=', i)
-    #        betaf[i] = 1. - uf[(i+1)%len(betaf)]/uf[i]*(1.-betaf[(i+1)%len(betaf)])
-    #        print(uf[(i+1)%len(betaf)])
-    #        print(uf[i])
-    #        print(betaf[(i+1)%len(betaf)])
-    #        print('reset betaf[i] from 0 to', betaf[i])
-    #        #print('check -> ', (1.-betaf[(i+1)%len(betaf)])*(uf[(i+1)%len(betaf)] - (1. - betaf[i])*uf[i]))
-    #        print('random check -> ', (1.-betaf[(i+1)%len(betaf)])*uf[(i+1)%len(betaf)]/uf[i])# - (1. - betaf[i])*uf[i]))
-    #        logging.info('')
-    #        logging.info(f'reset betaf[i] for i={i} from 0 to {betaf[i]}')
+    ###for i in range(len(betaf)):
+    ###    if abs(betaf[i]) < 1e-12 and abs(betaf[(i+1)%len(betaf)]) > 1e-12:
+    ###        print('we have satisfied the condition for betaf[i] == 0. and betaf[(i+1)%len(betaf)] > 0. for i=', i)
+    ###        betaf[i] = 1. - uf[(i+1)%len(betaf)]/uf[i]*(1.-betaf[(i+1)%len(betaf)])
+    ###        print(uf[(i+1)%len(betaf)])
+    ###        print(uf[i])
+    ###        print(betaf[(i+1)%len(betaf)])
+    ###        print('reset betaf[i] from 0 to', betaf[i])
+    ###        #print('check -> ', (1.-betaf[(i+1)%len(betaf)])*(uf[(i+1)%len(betaf)] - (1. - betaf[i])*uf[i]))
+    ###        print('random check -> ', (1.-betaf[(i+1)%len(betaf)])*uf[(i+1)%len(betaf)]/uf[i])# - (1. - betaf[i])*uf[i]))
+    ###        logging.info('')
+    ###        logging.info(f'reset betaf[i] for i={i} from 0 to {betaf[i]}')
 
     # No 2 (31-07 1)
     #for i in range(len(betaf)):
@@ -1433,50 +1476,66 @@ def aiUpwind(init, nt, dt, uf, dxc, solver='NumPy', niter=0, output_ufield=False
     #        #logging.info(f'reset betaf[i] for i={i} from 0 to {betaf[i]}')
     
     # No 4 (31-07 3)
-    for i in range(len(betaf)):
-        if abs(betaf[i]) < 1e-12 and abs(betaf[(i+1)%len(betaf)]) > 1e-12:
-            print('We have satisfied the condition for betaf[i] == 0. and betaf[(i+1)%len(betaf)] > 0. for i=', i)
-            #betaf[i] = 1./uf[i]*dxc[i]/dt*betaf[(i+1)%len(betaf)]
-            #print(uf[(i+1)%len(betaf)])
-            #print(uf[i])
-            #print(betaf[i])
-            #print(betaf[(i+1)%len(betaf)])
-            #betaf[i] = betaf[(i+1)%len(betaf)]*uf[i]/uf[(i+1)%len(betaf)] # seems an alright solution but I haven't derived it.
-            #betaf[i] = 1. - betaf[(i+1)%len(betaf)]*uf[(i+1)%len(betaf)]/uf[i] # does a very wrong thing.
-            #betaf[i] = 0.4*betaf[(i+1)%len(betaf)] # random. Does work but not derived.
-            betaf[i] = (uf[(i+1)%len(betaf)] - uf[i])*betaf[(i+1)%len(betaf)]/uf[i] # maybe works? somehow a divergence/nondivergence argument?
-            print('reset betaf[i] from 0 to', betaf[i])
-            logging.info('')
-            logging.info(f'reset betaf[i] for i={i} from 0 to {betaf[i]}')
-
-    # No 5 (01-08 1) # try based on FCT_implicit.pdf. The less strongly implicit formulation (but still allowed according to the derivation for boundedness is No 6 below).
-    c_new = 0.5*dt/dxc*(np.roll(uf,-1) + uf) # [i] at i-1/2
-    cf_new = np.maximum(c_new, np.roll(c_new,1))
-    betaf = np.maximum(0., 1.-1./(2.*cf_new)) # [i] at i-1/2
-    plt.plot(betaf, label='betaf, m=2')
-
-    # No 6 (01-08 2)
+    #for i in range(len(betaf)):
+    #    if abs(betaf[i]) < 1e-12 and abs(betaf[(i+1)%len(betaf)]) > 1e-12:
+    #        print('We have satisfied the condition for betaf[i] == 0. and betaf[(i+1)%len(betaf)] > 0. for i=', i)
+    #        #betaf[i] = 1./uf[i]*dxc[i]/dt*betaf[(i+1)%len(betaf)]
+    #        #print(uf[(i+1)%len(betaf)])
+    #        #print(uf[i])
+    #        #print(betaf[i])
+    #        #print(betaf[(i+1)%len(betaf)])
+    #        #betaf[i] = betaf[(i+1)%len(betaf)]*uf[i]/uf[(i+1)%len(betaf)] # seems an alright solution but I haven't derived it.
+    #        #betaf[i] = 1. - betaf[(i+1)%len(betaf)]*uf[(i+1)%len(betaf)]/uf[i] # does a very wrong thing.
+    #        #betaf[i] = 0.4*betaf[(i+1)%len(betaf)] # random. Does work but not derived.
+    #        betaf[i] = (uf[(i+1)%len(betaf)] - uf[i])*betaf[(i+1)%len(betaf)]/uf[i] # maybe works? somehow a divergence/nondivergence argument?
+    #        print('reset betaf[i] from 0 to', betaf[i])
+    #        logging.info('')
+    #        logging.info(f'reset betaf[i] for i={i} from 0 to {betaf[i]}')
+#
+    ## No 5 (01-08 1) # try based on FCT_implicit.pdf. The less strongly implicit formulation (but still allowed according to the derivation for boundedness is No 6 below).
     #c_new = 0.5*dt/dxc*(np.roll(uf,-1) + uf) # [i] at i-1/2
     #cf_new = np.maximum(c_new, np.roll(c_new,1))
+    #betaf = np.maximum(0., 1.-1./(2.*cf_new)) # [i] at i-1/2
+    #plt.plot(betaf, label='betaf, m=2')
+#
+    ## No 6 (01-08 2)
+    ##c_new = 0.5*dt/dxc*(np.roll(uf,-1) + uf) # [i] at i-1/2
+    ##cf_new = np.maximum(c_new, np.roll(c_new,1))
+    #
+    #sum_phi_out = np.maximum(0., -uf) + np.maximum(0., np.roll(uf,-1)) # [i] at i
+    #sum_phi_in = np.maximum(0., uf) + np.maximum(0., -np.roll(uf,-1)) # [i] at i
+    #sum_phi = sum_phi_out + sum_phi_in # [i] at i
+    #betaf = sum_phi_out/sum_phi*np.maximum(0., 1.-1./(2.*cf_new)) # [i] at i-1/2
+    #plt.plot(betaf, label='betaf new, m=2*<beta>')
+
+
+    # No 7 (05-08 1)
+    ###betaf_temp1 = np.zeros(len(betaf))
+    ###for i in range(len(betaf)):
+    ###    betaf_temp1[i] = 1. - (dxc[0]/dt - (1. - betaf[(i+1)%len(betaf)])*0.5*(uf[(i+1)%len(betaf)] + np.abs(uf[(i+1)%len(betaf)])))/(0.5*(-uf[i] + np.abs(uf[i])) + 1e-12)
+    ###    betaf_temp1[i] = np.where(betaf_temp1[i] < 0., 0., betaf_temp1[i]) # avoid negative betaf_temp1
+    ###plt.plot(betaf_temp1, label='betaf temp1 based on 05-08 deriv', marker='x')
+    ###
+    ###for i in range(len(betaf)):
+    ###    if betaf_temp1[i] > betaf[i]:
+    ###        print('We reset betaf[i] from', betaf[i], 'to', betaf_temp1[i], 'for i=', i)
+    ###        betaf[i] = betaf_temp1[i]
+    ###plt.plot(betaf, label='betaf max, reset based on 05-08 deriv', marker='x')
+    ###plt.legend()
+    ###plt.show()
     
-    sum_phi_out = np.maximum(0., -uf) + np.maximum(0., np.roll(uf,-1)) # [i] at i
-    sum_phi_in = np.maximum(0., uf) + np.maximum(0., -np.roll(uf,-1)) # [i] at i
-    sum_phi = sum_phi_out + sum_phi_in # [i] at i
-    betaf = sum_phi_out/sum_phi*np.maximum(0., 1.-1./(2.*cf_new)) # [i] at i-1/2
-    plt.plot(betaf, label='betaf new, m=2*<beta>')
-
-
-
-    #plt.plot(betaf, label='beta smoothed up based on 31-07 deriv -> final')
-    plt.legend()
-    plt.title('beta setting')
-    plt.show()
-    #betaf = np.ones(len(init))
-    logging.info('')
-    #logging.info('betaf defined by out and in max combination of C')
-    logging.info(f'betaf: {betaf}')
-    logging.info('')
-
+    ####plt.plot(betaf, label='beta smoothed up based on 24-07 deriv')
+####
+    #####plt.plot(betaf, label='beta smoothed up based on 31-07 deriv -> final')
+    ####plt.legend()
+    ####plt.title('beta setting')
+    ####plt.show()
+    #####betaf = np.ones(len(init))
+    ####logging.info('')
+    #####logging.info('betaf defined by out and in max combination of C')
+    ####logging.info(f'betaf: {betaf}')
+    ####logging.info('')
+####
     M = np.zeros((len(init), len(init)))
     for i in range(len(init)):
         M[i,i] = 1. + betaf[(i+1)%len(init)]*cf[(i+1)%len(init)]
@@ -1534,6 +1593,12 @@ def aiUpwind(init, nt, dt, uf, dxc, solver='NumPy', niter=0, output_ufield=False
 
     #print(field[-1])
 
+    
+    # 05-08-2025: Checking the sign of sigma (see whiteboard derivation)
+    sigma = (-np.roll(cf,-1)*np.roll(field[1],1) + cf*np.roll(field[0],1))/(np.roll(cf,-1)*(field[0] - np.roll(field[0],1)) + 1e-12)
+    plt.plot(sigma, label='sigma', marker='x') # indeed negative around the right boundary
+    plt.legend()
+    plt.show()
     return field
 
 
