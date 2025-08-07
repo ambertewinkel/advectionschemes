@@ -1362,6 +1362,45 @@ def butcherImaiUpwind():
     return A, b
 
 
+def aiUpwind_simple(init, nt, dt, uf, dxc, solver='NumPy', niter=0, output_ufield=False):
+    """This scheme test the accuracy of adaptively implicit upwind. (Needs to be first-order accurate to have a nice second/third-order correction to it.)
+    Currently not upwind just FTBS - i.e. not accounting for the sign of u.
+    Assuming constant dx."""
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
+
+    cf = uf*dt/dxc # [i] at i-1/2
+    betaf = np.maximum(0., 1.-1./cf) # [i] at i-1/2
+    plt.plot(cf, label='cf', marker='x')
+    plt.axhline(1., color='k', linestyle='--')
+    plt.plot(betaf, label='betaf', marker='x')
+    #cc_out = 0.5*(np.abs(uf) - uf + np.abs(np.roll(uf,-1)) + np.roll(uf,-1))*dt/dxc # [i] at i, Courant defined at cell centers based on the *outward* pointing velocities
+    #cc_in = 0.5*(np.abs(uf) + uf + np.abs(np.roll(uf,-1)) - np.roll(uf,-1))*dt/dxc # [i] at i, Courant defined at cell centers based on the *inward* pointing velocities
+    #betac_out = np.maximum(0., 1.-1./cc_out)
+    #betac_in = np.maximum(0., 1.-1./cc_in)
+    #betaf = np.maximum(np.maximum(betac_out, np.roll(betac_out,1)), np.maximum(betac_in, np.roll(betac_in, 1))) # [i] at i-1/2
+    #cf_from_betaf = 1./(1. - betaf) # [i] at i-1/2
+
+    #betaf_another_temp = (dxc/dt - np.roll(betaf,-1)*(0. - np.roll(uf,-1)))/(uf - 0.) # assume uf is positive everywhere
+
+    M = np.zeros((len(init), len(init)))
+    for i in range(len(init)):
+        M[i,i] = 1. + betaf[(i+1)%len(init)]*cf[(i+1)%len(init)]
+        M[i,i-1] = -1.*betaf[i]*cf[i] # this is not upwind with just i-1 element !!!
+        #M[i,i-1] = -1.*beta[(i+1)%nx]*cf[i] # Using this makes the AdImEx boundary artefact disappear but also makes it nonconservative
+    
+    for it in range(nt):
+        rhs = field[it] - (np.roll(cf*(1.-betaf),-1)*field[it] - cf*(1.-betaf)*np.roll(field[it],1))
+        #rhs = field[it] - (1-betaf)*(cf*field[it] - np.roll(cf*field[it],1)) # Using this makes the AdImEx boundary artefact disappear but also makes it nonconservative
+        field[it+1] = np.linalg.solve(M, rhs)
+    plt.plot(field[-1] - 10., label='field[it+1]-10', marker='x')
+    plt.legend()
+    plt.xlabel('i')
+    plt.show()
+    return field
+
+
+
 #@njit(**jitflags)
 def aiUpwind(init, nt, dt, uf, dxc, solver='NumPy', niter=0, output_ufield=False):
     """This scheme test the accuracy of adaptively implicit upwind. (Needs to be first-order accurate to have a nice second/third-order correction to it.)
@@ -1379,6 +1418,18 @@ def aiUpwind(init, nt, dt, uf, dxc, solver='NumPy', niter=0, output_ufield=False
     #exit()
     betac_in = np.maximum(0., 1.-1./cc_in)
     betaf = np.maximum(np.maximum(betac_out, np.roll(betac_out,1)), np.maximum(betac_in, np.roll(betac_in, 1))) # [i] at i-1/2
+
+    # 07-08 Checking the difference between the 'physical' cf and nonphysical ('max' I/O) one and the betas connected to these
+    cf_from_betaf = 1./(1. - betaf) # [i] at i-1/2
+    betaf_from_cf = np.maximum(0., 1. - 1./cf) # [i] at i-1/2
+    plt.axhline(1., color='k', linestyle='--')
+    plt.plot(cf, label='cf used', marker='x')
+    plt.plot(cf_from_betaf, label='cf_from_betaf', marker='x')
+    plt.plot(betaf, label='betaf used', marker='x')
+    plt.plot(betaf_from_cf, label='betaf_from_cf', marker='x')
+    plt.legend()
+    plt.show()
+    #exit()
     ##plt.plot(betaf, label='betaf max', marker='x')
 
     #psi_n_coeff = 1. - dt/dxc*((1.-betaf)*(0.5*(-uf + np.abs(uf))) + np.roll((1.-betaf)*(0.5*(uf + np.abs(uf))),-1))
@@ -1595,10 +1646,47 @@ def aiUpwind(init, nt, dt, uf, dxc, solver='NumPy', niter=0, output_ufield=False
 
     
     # 05-08-2025: Checking the sign of sigma (see whiteboard derivation)
-    sigma = (-np.roll(cf,-1)*np.roll(field[1],1) + cf*np.roll(field[0],1))/(np.roll(cf,-1)*(field[0] - np.roll(field[0],1)) + 1e-12)
-    plt.plot(sigma, label='sigma', marker='x') # indeed negative around the right boundary
+    #sigma = (-np.roll(cf,-1)*np.roll(field[1],1) + cf*np.roll(field[0],1))/(np.roll(cf,-1)*(field[0] - np.roll(field[0],1)) + 1e-12)
+    #plt.plot(sigma, label='sigma', marker='x') # indeed negative around the right boundary
+    #plt.legend()
+    #plt.show()
+
+    # 06-08-2025: Check the sign of the coefficients
+    coeff_psi_n_j = 1. - dt/dxc*((1.-betaf)*(0.5*(-uf + np.abs(uf))) + np.roll((1.-betaf)*(0.5*(uf + np.abs(uf))),-1))
+    coeff_psi_d_j = - dt/dxc*(betaf*(0.5*(-uf + np.abs(uf))) + np.roll(betaf*(0.5*(uf + np.abs(uf))),-1))
+    coeff_psi_n_jm1 = dt/dxc*((1.-betaf)*(0.5*(uf + np.abs(uf))) + np.roll((1.-betaf)*(0.5*(-uf + np.abs(uf))),-1))
+    coeff_psi_d_jm1 = dt/dxc*(betaf*(0.5*(uf + np.abs(uf))) + np.roll(betaf*(0.5*(-uf + np.abs(uf))),-1))
+    #sum_coeff = coeff_psi_n_j + coeff_psi_d_j + coeff_psi_n_jm1 + coeff_psi_d_jm1 # not meaningful
+    sum_D = (coeff_psi_n_j + coeff_psi_n_jm1 + coeff_psi_d_jm1)/(1. - coeff_psi_d_j)
+    plt.axhline(0, color='black', linestyle='--')
+    plt.axhline(1, color='black', linestyle='--')    
+    plt.axvline(28, color='black', linestyle='--')
+    plt.axvline(29, color='black', linestyle='--')
+    plt.plot(coeff_psi_n_j, label='coeff_psi_n_j', marker='x')
+    plt.plot(coeff_psi_d_j, label='coeff_psi_d_j', marker='+')
+    plt.plot(coeff_psi_n_jm1, label='coeff_psi_n_jm1', marker='x')
+    plt.plot(coeff_psi_d_jm1, label='coeff_psi_d_jm1', marker='+')
+    #plt.plot(sum_coeff, label='sum_coeff', marker='o')
+    plt.plot(sum_D, label='sum_D', marker='o')
+    plt.plot(field[0]-10., label='field[it]-10', marker='x')
+    plt.plot(field[-1]-10., label='field[it+1]-10', marker='x')
+    plt.plot(betaf, label='betaf (i at i-1/2)', marker='x')
+    plt.plot(cf_from_betaf, label='cf from betaf (i at i-1/2)', marker='x')
     plt.legend()
+    plt.title('Coefficients for aiUpwind')
     plt.show()
+    print('coeff_psi_n_j', coeff_psi_n_j)
+    print('coeff_psi_d_j', coeff_psi_d_j)
+    print('coeff_psi_n_jm1', coeff_psi_n_jm1)
+    print('coeff_psi_d_jm1', coeff_psi_d_jm1)
+    print('sum_D', sum_D)
+    #print('sum_coeff', sum_coeff)
+    logging.info(f'coeff_psi_n_j {coeff_psi_n_j}')
+    logging.info(f'coeff_psi_d_j {coeff_psi_d_j}')
+    logging.info(f'coeff_psi_n_jm1 {coeff_psi_n_jm1}')
+    logging.info(f'coeff_psi_d_jm1 {coeff_psi_d_jm1}')
+    logging.info(f'sum_D {sum_D}') # this is the only one that is meaningful
+    #logging.info(f'sum_coeff {sum_coeff}')    
     return field
 
 
