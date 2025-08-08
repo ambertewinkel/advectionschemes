@@ -1419,6 +1419,10 @@ def aiUpwind(init, nt, dt, uf, dxc, solver='NumPy', niter=0, output_ufield=False
     betac_in = np.maximum(0., 1.-1./cc_in)
     betaf = np.maximum(np.maximum(betac_out, np.roll(betac_out,1)), np.maximum(betac_in, np.roll(betac_in, 1))) # [i] at i-1/2
 
+    # 08-08-2025: Derivation of potential max limit betaf (based on Gordin 2023)
+    max_limit_on_betaf = (1. + np.roll(cf,-1)*np.roll(betaf,-1))/cf
+    plt.plot(max_limit_on_betaf, label='max_limit_on_betaf', marker='x')
+
     # 07-08 Checking the difference between the 'physical' cf and nonphysical ('max' I/O) one and the betas connected to these
     cf_from_betaf = 1./(1. - betaf) # [i] at i-1/2
     betaf_from_cf = np.maximum(0., 1. - 1./cf) # [i] at i-1/2
