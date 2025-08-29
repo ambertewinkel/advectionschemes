@@ -72,7 +72,7 @@ def main():
     plot_args = [\
         #{'label':'WKS24', 'color':'magenta', 'marker':'+', 'linestyle':'-'},
         #######{'label':'aiUpwind u and beta from uvs3 -> beta from findings 01-08 m=2*<beta>', 'color':'red', 'marker':'x', 'linestyle':'-'},
-        {'label':'aiUpwind u and beta from uvs3, psi sine_xyshiftampl', 'color':'red', 'marker':'x', 'linestyle':'-'},
+        {'label':'aiUpwind u and beta from uvs3, psi sine_xyshiftampl2', 'color':'red', 'marker':'x', 'linestyle':'-'},
         {'label':'AdImEx Strang', 'color':'darkgreen', 'marker':'x', 'linestyle':'-'},
         #{'label':'AdImEx Upwind', 'color':'cyan', 'marker':'', 'linestyle':':'},
         #{'label':'AdImEx Strang FCT', 'color':'darkorange', 'marker':'x', 'linestyle':'--'},
@@ -97,11 +97,11 @@ def main():
     ymin, ymax = 0., 50.#-0.1, 1.1#1.1#8., 13.#0., 30.#2.#30.         # for plotting purposes (animation)
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    nt = 1#60#100#16#32#100#10#50                     # number of time steps # needs to be 1 when output_substages is True for ImExRK scheme
+    nt = 20#60#100#16#32#100#10#50                     # number of time steps # needs to be 1 when output_substages is True for ImExRK scheme
     dt = 0.01                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching' # note: stretching won't work with a varying velocity field
     schemenames = [case["scheme"] for case in cases]
-    analytic = an.sine_xyshiftampl#sine_yshift#analytic_constant # initial condition, options: sine, cosbell, tophat, or combi, halfwave, revhalfwave, and more for varying velocity field
+    analytic = an.sine_xyshiftampl2#sine_yshift#analytic_constant # initial condition, options: sine, cosbell, tophat, or combi, halfwave, revhalfwave, and more for varying velocity field
     u_setting = 'varying_space3' # 'constant' or various 'varying_space..' options
     time1rev = False            # This boolean is set by hand - determines whether, for a varying velocity field in space and time, the u ~ cos(wt) has gone through a full revolution in time (and space?). It determines whether the analytic solution is plotted for a certain number of time steps or not. # Note: This is currently (21-04-2025) only applied to the .pdf final field output, not to the animation .gif file.
     if u_setting == 'constant':

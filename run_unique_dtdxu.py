@@ -40,14 +40,14 @@ def main():
 
     # We need to set: dt, nx, nt, u_setting, analytic
     xmax = 1.0
-    ymax = 25.#200. # for plotting purposes
+    ymax = 50.#25.#200. # for plotting purposes
     dt_LRES_AdImEx = 0.01 # largest time step of the two dt's for the animation dt_LRES before
     nt_LRES_AdImEx = 10#30#1#50#100 # largest number of time steps of the two nt's for the animation
     nx_LRES = 40
     dx_LRES = xmax/nx_LRES
 
     dtfactor_HRESLRES = 10
-    dtfactor_ExAdImEx = 5
+    dtfactor_ExAdImEx = 10#5
 
     dt_HRES_AdImEx = dt_LRES_AdImEx/dtfactor_HRESLRES # used to be dt_HRES
     nt_HRES_AdImEx = nt_LRES_AdImEx*dtfactor_HRESLRES
@@ -60,8 +60,8 @@ def main():
     dt_HRES_Ex = dt_LRES_Ex/dtfactor_HRESLRES 
     nt_HRES_Ex = nt_LRES_Ex*dtfactor_HRESLRES
 
-    u_setting = 'varying_space5'
-    analytic = an.sine_yshift#analytic_constant
+    u_setting = 'varying_space3'
+    analytic = an.sine_xyshiftampl2#analytic_constant
     total_time = nt_LRES_AdImEx*dt_LRES_AdImEx
 
     #!!! check the courant numbers for the different options! i.e. plot in a single plot?? when plotting the final fields as well?
