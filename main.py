@@ -72,7 +72,7 @@ def main():
     plot_args = [\
         #{'label':'WKS24', 'color':'magenta', 'marker':'+', 'linestyle':'-'},
         #######{'label':'aiUpwind u and beta from uvs3 -> beta from findings 01-08 m=2*<beta>', 'color':'red', 'marker':'x', 'linestyle':'-'},
-        {'label':'aiUpwind u and beta from uvs3, psi sine_xyshiftampl2', 'color':'red', 'marker':'x', 'linestyle':'-'},
+        {'label':'aiUpwind u and beta from uvs7, psi sine_xyshiftampl3', 'color':'red', 'marker':'x', 'linestyle':'-'},
         {'label':'AdImEx Strang', 'color':'darkgreen', 'marker':'x', 'linestyle':'-'},
         #{'label':'AdImEx Upwind', 'color':'cyan', 'marker':'', 'linestyle':':'},
         #{'label':'AdImEx Strang FCT', 'color':'darkorange', 'marker':'x', 'linestyle':'--'},
@@ -94,15 +94,15 @@ def main():
         ]
 
     # Initial conditions
-    ymin, ymax = 0., 50.#-0.1, 1.1#1.1#8., 13.#0., 30.#2.#30.         # for plotting purposes (animation)
+    ymin, ymax = 0., 200.#-0.1, 1.1#1.1#8., 13.#0., 30.#2.#30.         # for plotting purposes (animation)
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    nt = 20#60#100#16#32#100#10#50                     # number of time steps # needs to be 1 when output_substages is True for ImExRK scheme
+    nt = 10#60#100#16#32#100#10#50                     # number of time steps # needs to be 1 when output_substages is True for ImExRK scheme
     dt = 0.01                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching' # note: stretching won't work with a varying velocity field
     schemenames = [case["scheme"] for case in cases]
-    analytic = an.sine_xyshiftampl2#sine_yshift#analytic_constant # initial condition, options: sine, cosbell, tophat, or combi, halfwave, revhalfwave, and more for varying velocity field
-    u_setting = 'varying_space3' # 'constant' or various 'varying_space..' options
+    analytic = an.sine_xyshiftampl3#sine_yshift#analytic_constant # initial condition, options: sine, cosbell, tophat, or combi, halfwave, revhalfwave, and more for varying velocity field
+    u_setting = 'varying_space7' # 'constant' or various 'varying_space..' options
     time1rev = False            # This boolean is set by hand - determines whether, for a varying velocity field in space and time, the u ~ cos(wt) has gone through a full revolution in time (and space?). It determines whether the analytic solution is plotted for a certain number of time steps or not. # Note: This is currently (21-04-2025) only applied to the .pdf final field output, not to the animation .gif file.
     if u_setting == 'constant':
         uconstant = 1.#3.125#1.        # constant velocity # should only apply when u_setting == 'constant' # is used in the analytic function and for the title in the final.pdf plot for the constant velocity field
@@ -255,6 +255,8 @@ def main():
             uf = an.velocity_varying_space5(xf)
         elif u_setting == 'varying_space6':
             uf = an.velocity_varying_space6(xf)
+        elif u_setting == 'varying_space7':
+            uf = an.velocity_varying_space7(xf)
         else:
             logging.info('Error: invalid velocity setting')
             print('Error: invalid velocity setting')
@@ -281,7 +283,7 @@ def main():
             cmin = np.min(cc)
             logging.info(f'Min Courant number: {cmin:.4f}')
             logging.info(f'Max Courant number: {cmax:.4f}')  
-        if u_setting == 'varying_space' or u_setting == 'varying_space_time' or u_setting == 'varying_space2' or u_setting == 'varying_space3' or u_setting == 'varying_space4' or u_setting == 'varying_space5' or u_setting == 'varying_space6':
+        if u_setting == 'varying_space' or u_setting == 'varying_space_time' or u_setting == 'varying_space2' or u_setting == 'varying_space3' or u_setting == 'varying_space4' or u_setting == 'varying_space5' or u_setting == 'varying_space6' or u_setting == 'varying_space7':
             # FYI - for the nonuniform velocity schemes I need to calculate the Courant number at cell faces
             logging.info('The Courant numbers values and plot wont be exactly correct for varying velocity, as the ones I would calculate here are defined at cell centers -> hence I have set them to be NaNs.')
             uc = np.full(nx, np.nan)
@@ -301,7 +303,7 @@ def main():
         for it in range(nt+1):
             locals()[f'psi_an_{l}'][it] = analytic(xc, xmax, uc, it*dt) # analytic solution uses uc. For the varying velocity fields, I can pass on uc but the analytic solution function doesn't actually need it as the velocity is basically already prescribed in the equation it calculates, that is, if an analytic solution exists.
         a = locals()[f'psi_an_{l}'][-1].copy()
-        if u_setting == 'varying_space' or u_setting == 'varying_space2' or u_setting == 'varying_space3' or u_setting == 'varying_space4' or u_setting == 'varying_space5' or u_setting == 'varying_space6':
+        if u_setting == 'varying_space' or u_setting == 'varying_space2' or u_setting == 'varying_space3' or u_setting == 'varying_space4' or u_setting == 'varying_space5' or u_setting == 'varying_space6' or u_setting == 'varying_space7':
             logging.info("NOTE: the analytic solution is only sensible for a variable velocity field in space for a couple of time steps into the simulation due to accummulation of the field.")
         elif u_setting == 'varying_space_time':
             logging.info("NOTE: the analytic solution is only sensible for a variable velocity field in space and time after a full revolution in time.")
@@ -339,7 +341,7 @@ def main():
     elif u_setting == 'varying_space_time':
         ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with $u$ varying in space and time', \
                      'x', '$\\Psi$', 0., xmax, True, ymin, ymax)
-    elif u_setting == 'varying_space2' or u_setting == 'varying_space3' or u_setting == 'varying_space4' or u_setting == 'varying_space5' or u_setting == 'varying_space6':
+    elif u_setting == 'varying_space2' or u_setting == 'varying_space3' or u_setting == 'varying_space4' or u_setting == 'varying_space5' or u_setting == 'varying_space6' or u_setting == 'varying_space7':
         ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with $u$ {u_setting}', \
                      'x', '$\\Psi$', 0., xmax, True, ymin, ymax)
 
