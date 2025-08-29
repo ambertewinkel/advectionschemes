@@ -3382,6 +3382,9 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
                     print('k =', ik)
                     print('field_k', field_k)
                     print()
+                    logging.info(f'k = {ik}')
+                    logging.info(f'field_k: {field_k}')
+                    logging.info('')
                 # Calculate the flux based on the field at stage k
                 flx_k[ik,:] = uf*fluxfn(field_k) # [i] at i-1/2
                 fEx[ik,:] = -ddx((1 - beta)*flx_k[ik,:], np.roll((1 - beta)*flx_k[ik,:],-1), dxc)
