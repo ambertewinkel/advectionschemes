@@ -1410,6 +1410,10 @@ def aiUpwind(init, nt, dt, uf, dxc, solver='NumPy', niter=0, output_ufield=False
     field[0] = init.copy()
 
     cf = uf*dt/dxc # [i] at i-1/2
+    plt.plot(cf)
+    plt.axhline(0.4)
+    plt.title('Courant number')
+    plt.show()
     cc_out = 0.5*(np.abs(uf) - uf + np.abs(np.roll(uf,-1)) + np.roll(uf,-1))*dt/dxc # [i] at i, Courant defined at cell centers based on the *outward* pointing velocities
     cc_in = 0.5*(np.abs(uf) + uf + np.abs(np.roll(uf,-1)) - np.roll(uf,-1))*dt/dxc # [i] at i, Courant defined at cell centers based on the *inward* pointing velocities
     betac_out = np.maximum(0., 1.-1./cc_out)

@@ -90,6 +90,26 @@ def sine_xyshiftampl3(x, xmax, u=0., t=0., shifty=51.0, ampl=50., shiftx=0.3):
 
     return psi
 
+def sine_xyshiftampl4(x, xmax, u=0., t=0., shifty=51.0, ampl=50., shiftx=0.28):
+    """This function returns an array from input array x advected by velocity u for a time t.
+    The initial condition has values from the function y = shifty + ampl*sin(2pi(x-shiftx)/xmax).
+    --- Input ---
+    x   : 1D array of floats, points to calculate the result of the function for
+    xmax: float, domain size
+    u   : float or 1D array of floats, velocity
+    t   : float, total time
+    shifty: float, y shift of the sine wave
+    ampl : float, amplitude of the sine wave
+    shiftx: float, x shift of the sine wave
+    --- Output ---
+    psi : 1D array of floats, result from function at the points defined in x
+    """
+    psi = np.zeros(len(x))
+    x0 = (x - u*t)%xmax
+    psi = shifty + ampl*np.sin(2*np.pi*(x0-shiftx)/xmax)
+
+    return psi
+
 
 def sine_xyshiftampl(x, xmax, u=0., t=0., shifty=10.0, ampl=5., shiftx=0.5):
     """This function returns an array from input array x advected by velocity u for a time t.
@@ -369,4 +389,14 @@ def velocity_varying_space7(x, l=2.*np.pi):
     #u = 5.25 + 4.25*(np.sin(2*np.pi*(x+0.25)))
     u = 5.5 + 4.5*(np.sin(2*np.pi*(x+0.25)))
 
+    return u
+
+def velocity_varying_space8(x, l=2.*np.pi):
+    """This function returns a velocity field that is varying in space. This gives a Courant number always lower than 1 for dt=0.01 and dx=0.025"""
+    #u = 0.1 + 7.9*(np.sin(np.pi*(x-0.5)))**8
+    #u = 0.25 + 9.75*(np.sin(np.pi*(x-0.5)))**8
+    #u = 5.25 + 4.25*(np.sin(2*np.pi*(x+0.25)))
+    ##u = 10.5 + 9.5*(np.sin(2*np.pi*(x+0.25)))
+    u = 6.75 + 5.75*np.sin(2*np.pi*(x+0.25))
+    
     return u
