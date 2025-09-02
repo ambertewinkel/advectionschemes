@@ -1362,339 +1362,29 @@ def butcherImaiUpwind():
     return A, b
 
 
-def aiUpwind_simple(init, nt, dt, uf, dxc, solver='NumPy', niter=0, output_ufield=False):
-    """This scheme test the accuracy of adaptively implicit upwind. (Needs to be first-order accurate to have a nice second/third-order correction to it.)
+def aiUpwind(init, nt, dt, uf, dxc):
+    """Adaptively implicit upwind - the same as AdImEx Upwind with the ImExRK function
     Currently not upwind just FTBS - i.e. not accounting for the sign of u.
     Assuming constant dx."""
     field = np.zeros((nt+1, len(init)))
     field[0] = init.copy()
 
     cf = uf*dt/dxc # [i] at i-1/2
-    betaf = np.maximum(0., 1.-1./cf) # [i] at i-1/2
-    plt.plot(cf, label='cf', marker='x')
-    plt.axhline(1., color='k', linestyle='--')
-    plt.plot(betaf, label='betaf', marker='x')
-    #cc_out = 0.5*(np.abs(uf) - uf + np.abs(np.roll(uf,-1)) + np.roll(uf,-1))*dt/dxc # [i] at i, Courant defined at cell centers based on the *outward* pointing velocities
-    #cc_in = 0.5*(np.abs(uf) + uf + np.abs(np.roll(uf,-1)) - np.roll(uf,-1))*dt/dxc # [i] at i, Courant defined at cell centers based on the *inward* pointing velocities
-    #betac_out = np.maximum(0., 1.-1./cc_out)
-    #betac_in = np.maximum(0., 1.-1./cc_in)
-    #betaf = np.maximum(np.maximum(betac_out, np.roll(betac_out,1)), np.maximum(betac_in, np.roll(betac_in, 1))) # [i] at i-1/2
-    #cf_from_betaf = 1./(1. - betaf) # [i] at i-1/2
-
-    #betaf_another_temp = (dxc/dt - np.roll(betaf,-1)*(0. - np.roll(uf,-1)))/(uf - 0.) # assume uf is positive everywhere
-
-    M = np.zeros((len(init), len(init)))
-    for i in range(len(init)):
-        M[i,i] = 1. + betaf[(i+1)%len(init)]*cf[(i+1)%len(init)]
-        M[i,i-1] = -1.*betaf[i]*cf[i] # this is not upwind with just i-1 element !!!
-        #M[i,i-1] = -1.*beta[(i+1)%nx]*cf[i] # Using this makes the AdImEx boundary artefact disappear but also makes it nonconservative
-    
-    for it in range(nt):
-        rhs = field[it] - (np.roll(cf*(1.-betaf),-1)*field[it] - cf*(1.-betaf)*np.roll(field[it],1))
-        #rhs = field[it] - (1-betaf)*(cf*field[it] - np.roll(cf*field[it],1)) # Using this makes the AdImEx boundary artefact disappear but also makes it nonconservative
-        field[it+1] = np.linalg.solve(M, rhs)
-    plt.plot(field[-1] - 10., label='field[it+1]-10', marker='x')
-    plt.legend()
-    plt.xlabel('i')
-    plt.show()
-    return field
-
-
-
-#@njit(**jitflags)
-def aiUpwind(init, nt, dt, uf, dxc, solver='NumPy', niter=0, output_ufield=False):
-    """This scheme test the accuracy of adaptively implicit upwind. (Needs to be first-order accurate to have a nice second/third-order correction to it.)
-    Currently not upwind just FTBS - i.e. not accounting for the sign of u.
-    Assuming constant dx."""
-    field = np.zeros((nt+1, len(init)))
-    field[0] = init.copy()
-
-    cf = uf*dt/dxc # [i] at i-1/2
-    plt.plot(cf)
-    plt.axhline(0.4)
-    plt.title('Courant number')
-    plt.show()
     cc_out = 0.5*(np.abs(uf) - uf + np.abs(np.roll(uf,-1)) + np.roll(uf,-1))*dt/dxc # [i] at i, Courant defined at cell centers based on the *outward* pointing velocities
     cc_in = 0.5*(np.abs(uf) + uf + np.abs(np.roll(uf,-1)) - np.roll(uf,-1))*dt/dxc # [i] at i, Courant defined at cell centers based on the *inward* pointing velocities
     betac_out = np.maximum(0., 1.-1./cc_out)
-    #plt.plot(betac_out, label='betac_out', marker='x')
-    #plt.show()
-    #exit()
     betac_in = np.maximum(0., 1.-1./cc_in)
     betaf = np.maximum(np.maximum(betac_out, np.roll(betac_out,1)), np.maximum(betac_in, np.roll(betac_in, 1))) # [i] at i-1/2
 
-    # 08-08-2025: Derivation of potential max limit betaf (based on Gordin 2023)
-    max_limit_on_betaf = (1. + np.roll(cf,-1)*np.roll(betaf,-1))/cf
-    #plt.plot(max_limit_on_betaf, label='max_limit_on_betaf', marker='x')
-
-    # 07-08 Checking the difference between the 'physical' cf and nonphysical ('max' I/O) one and the betas connected to these
-    cf_from_betaf = 1./(1. - betaf) # [i] at i-1/2
-    betaf_from_cf = np.maximum(0., 1. - 1./cf) # [i] at i-1/2
-    ##plt.axhline(1., color='k', linestyle='--')
-    ##plt.plot(cf, label='cf used', marker='x')
-    ##plt.plot(cf_from_betaf, label='cf_from_betaf', marker='x')
-    ##plt.plot(betaf, label='betaf used', marker='x')
-    ##plt.plot(betaf_from_cf, label='betaf_from_cf', marker='x')
-    ##plt.legend()
-    ##plt.show()
-    #exit()
-    ##plt.plot(betaf, label='betaf max', marker='x')
-
-    #psi_n_coeff = 1. - dt/dxc*((1.-betaf)*(0.5*(-uf + np.abs(uf))) + np.roll((1.-betaf)*(0.5*(uf + np.abs(uf))),-1))
-    #plt.plot(psi_n_coeff, label='psi_n_coeff', marker='x') # 05-08-2025: always positive. So this wasn't the problem
-    #plt.legend()
-    #plt.show()
-    #exit()
-
-    # 05-08-2025
-    betaf_another_temp = (dxc/dt - np.roll(betaf,-1)*(0. - np.roll(uf,-1)))/(uf - 0.) # assume uf is positive everywhere
-    ##plt.plot(betaf_another_temp, label='betaf_another_temp', marker='x')
-    ##plt.legend()
-    ##plt.show()
-    #exit()
-    #cc_total = 0.5*(cc_in + cc_out) # [i] at i, average Courant number at cell centers
-    #ratio = 0.5*cc_out/cc_total
-    #m = 2.*ratio
-    #betaf = np.maximum(0., 1.-1./(m*cc_total))
-    #plt.plot(betaf, label='betaf ratio w/ m', marker='x')
-
-    #plt.plot(cf, label='cf', marker='x')
-    #plt.plot(cc_out, label='cc_out')
-    #plt.plot(cc_in, label='cc_in')
-    #plt.plot(cc_total, label='cc_total')
-    #plt.legend()
-    #plt.xlabel('i')
-    #plt.ylabel('Courant number')
-    #plt.title('Courant numbers for aiUpwind')
-    #plt.show()
-    #betac_out = np.maximum(0., 1.-1./cc_out)
-    #betac_in = np.maximum(0., 1.-1./cc_in)
-    #betaf = np.maximum(np.maximum(betac_out, np.roll(betac_out,1)), np.maximum(betac_in, np.roll(betac_in, 1))) # [i] at i-1/2
-    ##betaf = np.maximum(0., 1.-1./cf)
-    #plt.plot(betaf, label='betaf max', marker='x')
-    #betaf = np.maximum(0., 1.-1./cc_total)
-    #plt.plot(betaf, label='betaf total', marker='x')
-    #plt.legend()
-    #plt.xlabel('i')
-    #plt.ylabel('betaf')
-    #plt.title('betaf for aiUpwind')
-    #plt.show()
-    #exit()
-    #betaf = np.array([3.75000000e-01, 3.75000000e-01, 3.72101071e-01, 3.63314396e-01,
-    #            3.48366057e-01, 3.26785286e-01, 2.97883011e-01, 2.60722017e-01,
-    #            2.14080101e-01, 1.56410158e-01, 8.58067950e-02, 0.00000000e+00,
-    #            0.00000000e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00,
-    #            0.00000000e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00,
-    #            0.00000000e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00,
-    #            0.00000000e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00,
-    #            0.00000000e+00, 1.33226763e-15, 8.58067950e-02, 1.56410158e-01,
-    #            2.14080101e-01, 2.60722017e-01, 2.97883011e-01, 3.26785286e-01,
-    #            3.48366057e-01, 3.63314396e-01, 3.72101071e-01, 3.75000000e-01])
-    #plt.plot(betaf, label='unsmoothed')
-    #betaf_temp = 0.25*np.roll(betaf,-1) + 0.5*betaf + 0.25*np.roll(betaf,1)
-    #betaf = np.maximum(betaf, betaf_temp)
-    #plt.plot(betaf, label='smoothed up -> final')
-
-    # No 1 (24-07) !!! This is a very hacky way of checking when to adjust theta here... not optimal in the end but a quick way to check whether it does anything at all
-    ###for i in range(len(betaf)):
-    ###    if abs(betaf[i]) < 1e-12 and abs(betaf[(i+1)%len(betaf)]) > 1e-12:
-    ###        print('we have satisfied the condition for betaf[i] == 0. and betaf[(i+1)%len(betaf)] > 0. for i=', i)
-    ###        betaf[i] = 1. - uf[(i+1)%len(betaf)]/uf[i]*(1.-betaf[(i+1)%len(betaf)])
-    ###        print(uf[(i+1)%len(betaf)])
-    ###        print(uf[i])
-    ###        print(betaf[(i+1)%len(betaf)])
-    ###        print('reset betaf[i] from 0 to', betaf[i])
-    ###        #print('check -> ', (1.-betaf[(i+1)%len(betaf)])*(uf[(i+1)%len(betaf)] - (1. - betaf[i])*uf[i]))
-    ###        print('random check -> ', (1.-betaf[(i+1)%len(betaf)])*uf[(i+1)%len(betaf)]/uf[i])# - (1. - betaf[i])*uf[i]))
-    ###        logging.info('')
-    ###        logging.info(f'reset betaf[i] for i={i} from 0 to {betaf[i]}')
-
-    # No 2 (31-07 1)
-    #for i in range(len(betaf)):
-    #    if abs(betaf[i]) < 1e-12 and abs(betaf[(i+1)%len(betaf)]) > 1e-12:
-    #        print('we have satisfied the condition for betaf[i] == 0. and betaf[(i+1)%len(betaf)] > 0. for i=', i)
-    #        betaf[i] = uf[(i+1)%len(betaf)]/uf[i]*betaf[(i+1)%len(betaf)]
-    #        print(uf[(i+1)%len(betaf)])
-    #        print(uf[i])
-    #        print(betaf[(i+1)%len(betaf)])
-    #        print('reset betaf[i] from 0 to', betaf[i])
-    #        logging.info('')
-    #        logging.info(f'reset betaf[i] for i={i} from 0 to {betaf[i]}')
-    
-    # No 3 (31-07 2)
-    #for i in range(len(betaf)):
-    #    if abs(betaf[i]) < 1e-12 and abs(betaf[(i+1)%len(betaf)]) > 1e-12:
-    #        print('We have satisfied the condition for betaf[i] == 0. and betaf[(i+1)%len(betaf)] > 0. for i=', i)
-    #        #betaf[i] = uf[(i+1)%len(betaf)]/uf[i]*betaf[(i+1)%len(betaf)]
-    #        print(uf[(i+1)%len(betaf)])
-    #        print(uf[i])
-    #        print(betaf[i])
-    #        print(betaf[(i+1)%len(betaf)])
-    #        #print('reset betaf[i] from 0 to', betaf[i])
-    #        #logging.info('')
-    #        #logging.info(f'reset betaf[i] for i={i} from 0 to {betaf[i]}')
-    
-    # No 4 (31-07 3)
-    #for i in range(len(betaf)):
-    #    if abs(betaf[i]) < 1e-12 and abs(betaf[(i+1)%len(betaf)]) > 1e-12:
-    #        print('We have satisfied the condition for betaf[i] == 0. and betaf[(i+1)%len(betaf)] > 0. for i=', i)
-    #        #betaf[i] = 1./uf[i]*dxc[i]/dt*betaf[(i+1)%len(betaf)]
-    #        #print(uf[(i+1)%len(betaf)])
-    #        #print(uf[i])
-    #        #print(betaf[i])
-    #        #print(betaf[(i+1)%len(betaf)])
-    #        #betaf[i] = betaf[(i+1)%len(betaf)]*uf[i]/uf[(i+1)%len(betaf)] # seems an alright solution but I haven't derived it.
-    #        #betaf[i] = 1. - betaf[(i+1)%len(betaf)]*uf[(i+1)%len(betaf)]/uf[i] # does a very wrong thing.
-    #        #betaf[i] = 0.4*betaf[(i+1)%len(betaf)] # random. Does work but not derived.
-    #        betaf[i] = (uf[(i+1)%len(betaf)] - uf[i])*betaf[(i+1)%len(betaf)]/uf[i] # maybe works? somehow a divergence/nondivergence argument?
-    #        print('reset betaf[i] from 0 to', betaf[i])
-    #        logging.info('')
-    #        logging.info(f'reset betaf[i] for i={i} from 0 to {betaf[i]}')
-#
-    ## No 5 (01-08 1) # try based on FCT_implicit.pdf. The less strongly implicit formulation (but still allowed according to the derivation for boundedness is No 6 below).
-    #c_new = 0.5*dt/dxc*(np.roll(uf,-1) + uf) # [i] at i-1/2
-    #cf_new = np.maximum(c_new, np.roll(c_new,1))
-    #betaf = np.maximum(0., 1.-1./(2.*cf_new)) # [i] at i-1/2
-    #plt.plot(betaf, label='betaf, m=2')
-#
-    ## No 6 (01-08 2)
-    ##c_new = 0.5*dt/dxc*(np.roll(uf,-1) + uf) # [i] at i-1/2
-    ##cf_new = np.maximum(c_new, np.roll(c_new,1))
-    #
-    #sum_phi_out = np.maximum(0., -uf) + np.maximum(0., np.roll(uf,-1)) # [i] at i
-    #sum_phi_in = np.maximum(0., uf) + np.maximum(0., -np.roll(uf,-1)) # [i] at i
-    #sum_phi = sum_phi_out + sum_phi_in # [i] at i
-    #betaf = sum_phi_out/sum_phi*np.maximum(0., 1.-1./(2.*cf_new)) # [i] at i-1/2
-    #plt.plot(betaf, label='betaf new, m=2*<beta>')
-
-
-    # No 7 (05-08 1)
-    ###betaf_temp1 = np.zeros(len(betaf))
-    ###for i in range(len(betaf)):
-    ###    betaf_temp1[i] = 1. - (dxc[0]/dt - (1. - betaf[(i+1)%len(betaf)])*0.5*(uf[(i+1)%len(betaf)] + np.abs(uf[(i+1)%len(betaf)])))/(0.5*(-uf[i] + np.abs(uf[i])) + 1e-12)
-    ###    betaf_temp1[i] = np.where(betaf_temp1[i] < 0., 0., betaf_temp1[i]) # avoid negative betaf_temp1
-    ###plt.plot(betaf_temp1, label='betaf temp1 based on 05-08 deriv', marker='x')
-    ###
-    ###for i in range(len(betaf)):
-    ###    if betaf_temp1[i] > betaf[i]:
-    ###        print('We reset betaf[i] from', betaf[i], 'to', betaf_temp1[i], 'for i=', i)
-    ###        betaf[i] = betaf_temp1[i]
-    ###plt.plot(betaf, label='betaf max, reset based on 05-08 deriv', marker='x')
-    ###plt.legend()
-    ###plt.show()
-    
-    ####plt.plot(betaf, label='beta smoothed up based on 24-07 deriv')
-####
-    #####plt.plot(betaf, label='beta smoothed up based on 31-07 deriv -> final')
-    ####plt.legend()
-    ####plt.title('beta setting')
-    ####plt.show()
-    #####betaf = np.ones(len(init))
-    ####logging.info('')
-    #####logging.info('betaf defined by out and in max combination of C')
-    ####logging.info(f'betaf: {betaf}')
-    ####logging.info('')
-####
     M = np.zeros((len(init), len(init)))
     for i in range(len(init)):
         M[i,i] = 1. + betaf[(i+1)%len(init)]*cf[(i+1)%len(init)]
         M[i,i-1] = -1.*betaf[i]*cf[i] # this is not upwind with just i-1 element !!!
-        #M[i,i-1] = -1.*beta[(i+1)%nx]*cf[i] # Using this makes the AdImEx boundary artefact disappear but also makes it nonconservative
     
     for it in range(nt):
         rhs = field[it] - (np.roll(cf*(1.-betaf),-1)*field[it] - cf*(1.-betaf)*np.roll(field[it],1))
-        #rhs = field[it] - (1-betaf)*(cf*field[it] - np.roll(cf*field[it],1)) # Using this makes the AdImEx boundary artefact disappear but also makes it nonconservative
         field[it+1] = np.linalg.solve(M, rhs)
-        if output_ufield:
-            ufieldEx = uf*np.roll(field[it],1) # defined at i-1/2
-            ufieldIm = uf*np.roll(field[it+1],1) # defined at i-1/2
-            plt.axvline(11)
-            plt.axvline(29)
-            plt.plot(ufieldEx, label='u*field[it]', marker='x')
-            plt.plot(ufieldIm, label='u*field[it+1]', marker='+')
-            plt.plot(betaf*40, label='beta*40')
-            #plt.plot((ufieldIm-ufieldEx)*10, label='10*(u*field[it+1] - u*field[it])', marker='x')
-            plt.plot(betaf*(ufieldIm-ufieldEx)*40, label='40*beta*(u*field[it+1] - u*field[it])', marker='x')
-            plt.plot(ufieldEx + betaf*(ufieldIm-ufieldEx), label='u*field[it] + beta*(u*field[it+1] - u*field[it])', marker='+')
-            plt.legend()
-            plt.title(f'Fluxes for it+1={it+1} result')
-            plt.show()
 
-            plt.plot(field[it]-10., label='field[it]-10')
-            plt.plot(field[it+1]-10., label='field[it+1]-10')
-            plt.plot(np.roll(ufieldEx + betaf*(ufieldIm-ufieldEx),-1) - ufieldEx - betaf*(ufieldIm-ufieldEx), label='total flux at j')
-            #plt.plot(ufieldEx + betaf*(ufieldIm-ufieldEx) - np.roll(ufieldEx + betaf*(ufieldIm-ufieldEx),1), label='total flux at j')
-            plt.plot(np.roll(ufieldEx,-1) - ufieldEx, label='total flux at j, just monotonic (I think) Ex part')            
-            #plt.plot(ufieldEx - np.roll(ufieldEx,1), label='total flux at j, just monotonic (I think) Ex part')            
-            plt.title('flux sum and fields')
-            plt.legend(loc='center')
-            plt.axvline(10)
-            plt.axvline(11)
-            plt.axvline(28)
-            plt.axvline(29)
-            plt.show()
-
-    #for i in range(len(betaf)):
-    #    if abs(betaf[i]) < 1e-12 and abs(betaf[(i+1)%len(betaf)]) > 1e-12:
-            # !!! wrong indexing for field!
-            #print('  (u*1mbeta)_i+1/2*field[it,i]', (uf*(1.-betaf)*field[0])[(i+1)%len(betaf)])
-            #print('  (u*beta)_i+1/2*field[it+1,i]', (uf*betaf*field[1])[(i+1)%len(betaf)])
-            #print('(u*1mbeta)_i-1/2*field[it,i-1]', (uf*(1.-betaf)*field[0])[i])
-            #print('(u*beta)_i-1/2*field[it+1,i-1]', (uf*betaf*field[1])[i])
-            #logging.info('')
-            #logging.info(f'i={i}, it=0')
-            #logging.info(f'  (u*1mbeta)_i+1/2*field[it,i] {(uf*(1.-betaf)*field[0])[(i+1)%len(betaf)]}')
-            #logging.info(f'  (u*beta)_i+1/2*field[it+1,i] {(uf*betaf*field[1])[(i+1)%len(betaf)]}')
-            #logging.info(f'(u*1mbeta)_i-1/2*field[it,i-1] {(uf*(1.-betaf)*field[0])[i]}')
-            #logging.info(f'(u*beta)_i-1/2*field[it+1,i-1] {(uf*betaf*field[1])[i]}')
-            #logging.info('')
-    #        print(field[0][i-1], field[1][i-1], field[0][i], field[1][i])
-
-    #print(field[-1])
-
-    
-    # 05-08-2025: Checking the sign of sigma (see whiteboard derivation)
-    #sigma = (-np.roll(cf,-1)*np.roll(field[1],1) + cf*np.roll(field[0],1))/(np.roll(cf,-1)*(field[0] - np.roll(field[0],1)) + 1e-12)
-    #plt.plot(sigma, label='sigma', marker='x') # indeed negative around the right boundary
-    #plt.legend()
-    #plt.show()
-
-    # 06-08-2025: Check the sign of the coefficients
-    coeff_psi_n_j = 1. - dt/dxc*((1.-betaf)*(0.5*(-uf + np.abs(uf))) + np.roll((1.-betaf)*(0.5*(uf + np.abs(uf))),-1))
-    coeff_psi_d_j = - dt/dxc*(betaf*(0.5*(-uf + np.abs(uf))) + np.roll(betaf*(0.5*(uf + np.abs(uf))),-1))
-    coeff_psi_n_jm1 = dt/dxc*((1.-betaf)*(0.5*(uf + np.abs(uf))) + np.roll((1.-betaf)*(0.5*(-uf + np.abs(uf))),-1))
-    coeff_psi_d_jm1 = dt/dxc*(betaf*(0.5*(uf + np.abs(uf))) + np.roll(betaf*(0.5*(-uf + np.abs(uf))),-1))
-    #sum_coeff = coeff_psi_n_j + coeff_psi_d_j + coeff_psi_n_jm1 + coeff_psi_d_jm1 # not meaningful
-    sum_D = (coeff_psi_n_j + coeff_psi_n_jm1 + coeff_psi_d_jm1)/(1. - coeff_psi_d_j)
-    #plt.axhline(0, color='black', linestyle='--')
-    #plt.axhline(1, color='black', linestyle='--')    
-    #plt.axvline(28, color='black', linestyle='--')
-    #plt.axvline(29, color='black', linestyle='--')
-    #plt.plot(coeff_psi_n_j, label='coeff_psi_n_j', marker='x')
-    #plt.plot(coeff_psi_d_j, label='coeff_psi_d_j', marker='+')
-    #plt.plot(coeff_psi_n_jm1, label='coeff_psi_n_jm1', marker='x')
-    #plt.plot(coeff_psi_d_jm1, label='coeff_psi_d_jm1', marker='+')
-    ##plt.plot(sum_coeff, label='sum_coeff', marker='o')
-    #plt.plot(sum_D, label='sum_D', marker='o')
-    #plt.plot(field[0]-10., label='field[it]-10', marker='x')
-    #plt.plot(field[-1]-10., label='field[it+1]-10', marker='x')
-    #plt.plot(betaf, label='betaf (i at i-1/2)', marker='x')
-    #plt.plot(cf_from_betaf, label='cf from betaf (i at i-1/2)', marker='x')
-    #plt.legend()
-    #plt.title('Coefficients for aiUpwind')
-    #plt.show()
-    #print('coeff_psi_n_j', coeff_psi_n_j)
-    #print('coeff_psi_d_j', coeff_psi_d_j)
-    #print('coeff_psi_n_jm1', coeff_psi_n_jm1)
-    #print('coeff_psi_d_jm1', coeff_psi_d_jm1)
-    #print('sum_D', sum_D)
-    #print('sum_coeff', sum_coeff)
-    logging.info(f'coeff_psi_n_j {coeff_psi_n_j}')
-    logging.info(f'coeff_psi_d_j {coeff_psi_d_j}')
-    logging.info(f'coeff_psi_n_jm1 {coeff_psi_n_jm1}')
-    logging.info(f'coeff_psi_d_jm1 {coeff_psi_d_jm1}')
-    logging.info(f'sum_D {sum_D}') # this is the only one that is meaningful
-    #logging.info(f'sum_coeff {sum_coeff}')    
     return field
 
 
@@ -3318,11 +3008,11 @@ def ImExARS3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22', butcher
 
 
 def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22', RK='UJ31e32', blend='off', clim=1.6, HRES=None, AdImEx=None, output_substages=False, iterFCT=False, FCT=False, FCT_HW=False): # !!! add option for non uconstant in TIME to be recalculated every time step
-    """This scheme implements the timestepping from the double butcher tableau defined with RK, combined with various (default: the fourth order centred) spatial discretisations. Assumes u>0 constant.
+    """This scheme implements the timestepping from the double butcher tableau defined with RK, combined with various (default: the fourth order centred) spatial discretisations. Assumes u>0 constant. SD: spatial discretisation, default is centered fourth order, i.e. fourth22
     
     21-04-2025: uf is probably just the first value of the velocity field if it changes in time. If the velocity changes in time, we need to recalculate the u, c and beta every time step. If the velocity is constant in space and time or only varies in space, we can use uf throughout the time stepping, without need to reculculate it every time step and for intermediate stages within a RK time step.
     - haven't tested but probably only want to use the output_substages option with nt=1
-    SD: spatial discretisation, default is centered fourth order, i.e. fourth22"""
+    """
 
     nx = len(init)
     field = np.zeros((nt+1, nx))

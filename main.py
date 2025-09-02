@@ -47,65 +47,29 @@ def main():
 
     # Input cases
     cases = [\
-        #{'scheme':'RK2QC'},
-        {'scheme': 'aiUpwind'},#_simple'},#, 'output_ufield': True},
-        ##{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'output_substages':True},
-        #{'scheme': 'ImExRK', 'RK':'aiUpwind', 'SD':'BS', 'blend':'sm'},#, 'output_substages':True},
-        #{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':1},#, 'output_substages':True},
-        #{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':2},#, 'output_substages':True},
-        #{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':3},#, 'output_substages':True},
-        #{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':4},#, 'output_substages':True},
-        #!{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':5},#, 'output_substages':True},
-        #{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':6},#, 'output_substages':True},
-        ####{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':7},#, 'output_substages':True},
-        ####{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':8},#, 'output_substages':True},
-        ####{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':9},#, 'output_substages':True},
-        ####{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':10},#, 'output_substages':True},
-        ####{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'FCT':True},#, 'output_substages':True},
-        #{'scheme':'PPM'},
-        #{'scheme':'PPM', 'iterFCT':True, 'nIter':1},
-        ##{'scheme':'PPM', 'iterFCT':True, 'nIter':2},
-        ##{'scheme':'PPM', 'iterFCT':True, 'nIter':3},
-        #{'scheme':'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'FCT_HW':True},#, 'output_substages':True},
+        {'scheme': 'aiUpwind'},
+        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'output_substages':True},
         ]
     
     plot_args = [\
-        #{'label':'WKS24', 'color':'magenta', 'marker':'+', 'linestyle':'-'},
-        #######{'label':'aiUpwind u and beta from uvs3 -> beta from findings 01-08 m=2*<beta>', 'color':'red', 'marker':'x', 'linestyle':'-'},
-        {'label':'aiUpwind u and beta from uvs8, psi sine_xyshiftampl4', 'color':'red', 'marker':'x', 'linestyle':'-'},
-        ##{'label':'AdImEx Strang', 'color':'darkgreen', 'marker':'x', 'linestyle':'-'},
-        #{'label':'AdImEx Upwind', 'color':'cyan', 'marker':'', 'linestyle':':'},
-        #{'label':'AdImEx Strang FCT', 'color':'darkorange', 'marker':'x', 'linestyle':'--'},
-        #{'label':'AdImEx Strang FCT2', 'color':'magenta', 'marker':'x', 'linestyle':'-'},
-        #{'label':'AdImEx Strang FCT3', 'color':'navy', 'marker':'x', 'linestyle':'-'},
-        #{'label':'AdImEx Strang FCT4', 'color':'purple', 'marker':'x', 'linestyle':'-'},
-        #!{'label':'AdImEx Strang FCT5', 'color':'brown', 'marker':'x', 'linestyle':'-'},
-        #{'label':'AdImEx Strang FCT6', 'color':'crimson', 'marker':'x', 'linestyle':'-'},
-        ####{'label':'AdImEx Strang FCT7', 'color':'darkgreen', 'marker':'x', 'linestyle':'-'},
-        ####{'label':'AdImEx Strang FCT8', 'color':'darkviolet', 'marker':'x', 'linestyle':'-'},
-        ####{'label':'AdImEx Strang FCT9', 'color':'gold', 'marker':'x', 'linestyle':'-'},
-        ####{'label':'AdImEx Strang FCT10', 'color':'darkred', 'marker':'x', 'linestyle':'-'},
-        ####{'label':'AdImEx Strang FCT', 'color':'blue', 'marker':'x', 'linestyle':':'},
-        #{'label':'PPM', 'color':'blue', 'marker':'o', 'linestyle':'-'},
-        #{'label':'PPM FCT1', 'color':'red', 'marker':'o', 'linestyle':'-'},
-        ##{'label':'PPM FCT2', 'color':'green', 'marker':'o', 'linestyle':'-'},
-        ##{'label':'PPM FCT3', 'color':'purple', 'marker':'o', 'linestyle':'-'},
-        #{'label':'AdImEx Strang FCT_HW1', 'color':'darkblue', 'marker':'x', 'linestyle':'-'},
+        {'label':'aiUpwind', 'color':'red', 'marker':'x', 'linestyle':'-'},
+        {'label':'AdImEx Strang', 'color':'darkgreen', 'marker':'x', 'linestyle':'-'},
+
         ]
 
     # Initial conditions
-    ymin, ymax = 8.5, 10.#0., 20.#200.#-0.1, 1.1#1.1#8., 13.#0., 30.#2.#30.         # for plotting purposes (animation)
+    ymin, ymax = 8.5, 10.       # for plotting purposes (animation)
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    nt = 10#60#100#16#32#100#10#50                     # number of time steps # needs to be 1 when output_substages is True for ImExRK scheme
-    dt = 0.001                   # time step
+    nt = 1                      # number of time steps # needs to be 1 when output_substages is True for ImExRK scheme
+    dt = 0.01                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching' # note: stretching won't work with a varying velocity field
     schemenames = [case["scheme"] for case in cases]
-    analytic = an.sine_yshift#xyshiftampl3#sine_yshift#analytic_constant # initial condition, options: sine, cosbell, tophat, or combi, halfwave, revhalfwave, and more for varying velocity field
-    u_setting = 'varying_space3'#7' # 'constant' or various 'varying_space..' options
+    analytic = an.sine_yshift   # initial condition, options: sine, cosbell, tophat, or combi, halfwave, revhalfwave, and more for varying velocity field
+    u_setting = 'varying_space3'# 'constant' or various 'varying_space..' options
     time1rev = False            # This boolean is set by hand - determines whether, for a varying velocity field in space and time, the u ~ cos(wt) has gone through a full revolution in time (and space?). It determines whether the analytic solution is plotted for a certain number of time steps or not. # Note: This is currently (21-04-2025) only applied to the .pdf final field output, not to the animation .gif file.
     if u_setting == 'constant':
-        uconstant = 1.#3.125#1.        # constant velocity # should only apply when u_setting == 'constant' # is used in the analytic function and for the title in the final.pdf plot for the constant velocity field
+        uconstant = 1.        # constant velocity # should only apply when u_setting == 'constant' # is used in the analytic function and for the title in the final.pdf plot for the constant velocity field
         schemenames_settings = str(analytic.__name__) + f'_t{nt*dt:.4f}_u{uconstant}_' + "-".join(schemenames)
     else:
         schemenames_settings = str(analytic.__name__) + f'_t{nt*dt:.4f}_u{u_setting}_' + "-".join(schemenames)

@@ -376,27 +376,14 @@ def velocity_varying_space6(x, l=2.*np.pi):
     return u
 
 
-#def velocity_varying_space7(x, l=2.*np.pi):
-#    """This function returns a velocity field that is varying in space. This gives a Courant number always lower than 1 for dt=0.01 and dx=0.025"""
-#    #u = 0.1 + 7.9*(np.sin(np.pi*(x-0.5)))**8
-#    u = 0.25 + 19.75*(np.sin(np.pi*(x-0.5)))**8
-#    return u
-
 def velocity_varying_space7(x, l=2.*np.pi):
     """This function returns a velocity field that is varying in space. This gives a Courant number always lower than 1 for dt=0.01 and dx=0.025"""
-    #u = 0.1 + 7.9*(np.sin(np.pi*(x-0.5)))**8
-    #u = 0.25 + 9.75*(np.sin(np.pi*(x-0.5)))**8
-    #u = 5.25 + 4.25*(np.sin(2*np.pi*(x+0.25)))
     u = 5.5 + 4.5*(np.sin(2*np.pi*(x+0.25)))
 
     return u
 
 def velocity_varying_space8(x, l=2.*np.pi):
     """This function returns a velocity field that is varying in space. This gives a Courant number always lower than 1 for dt=0.01 and dx=0.025"""
-    #u = 0.1 + 7.9*(np.sin(np.pi*(x-0.5)))**8
-    #u = 0.25 + 9.75*(np.sin(np.pi*(x-0.5)))**8
-    #u = 5.25 + 4.25*(np.sin(2*np.pi*(x+0.25)))
-    ##u = 10.5 + 9.5*(np.sin(2*np.pi*(x+0.25)))
     u = 6.75 + 5.75*np.sin(2*np.pi*(x+0.25))
     
     return u
