@@ -134,7 +134,7 @@ def create_single_animation_from_data(filebasename, field, analytic, nt, dt, xc,
     os.rmdir(plotdir)
 
 
-def create_animation_from_data(fields, nfields, analytic, field_in, nt, dt, xc, outputdir, plot_args, xmax, ymax=None):
+def create_animation_from_data(fields, nfields, analytic, field_in, nt, dt, xc, outputdir, plot_args, xmax, ymin=-0.1, ymax=None):
     """This function creates an animation from a given data file of a single scheme. The input is a 2D field of a single scheme (shape = 1d time x 1d space), analytic solution (shape = 1d time x 1d space), nt, dx in the centers (dxc; shape 1d space) and ....
     This is a function that is to be called from other files, not from produce_standalone_animation()."""
 
@@ -155,7 +155,7 @@ def create_animation_from_data(fields, nfields, analytic, field_in, nt, dt, xc, 
             field = fields[si]        
             plt.plot(xc, field[it], **plot_args[si])
         ut.design_figure(f'{plotdir}timestep_{it}.png', f'$\\Psi$ at t={it*dt:.2f}', \
-                        'x', '$\\Psi$', 0., xmax, True, -0.1, ymax)
+                        'x', '$\\Psi$', 0., xmax, True, ymin, ymax)
         filenames.append(f'{plotdir}timestep_{it}.png')
 
     # Create animation from plots in the plots subdirectory

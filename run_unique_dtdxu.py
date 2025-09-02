@@ -35,19 +35,19 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
     plot_all_timesteps = True
 
     # We need to set: dt, nx, nt, u_setting, analytic
     xmax = 1.0
-    ymax = 50.#25.#200. # for plotting purposes
+    ymax = 10.#200.#25.#200. # for plotting purposes
     dt_LRES_AdImEx = 0.01 # largest time step of the two dt's for the animation dt_LRES before
-    nt_LRES_AdImEx = 10#30#1#50#100 # largest number of time steps of the two nt's for the animation
+    nt_LRES_AdImEx = 5#10#30#1#50#100 # largest number of time steps of the two nt's for the animation
     nx_LRES = 40
     dx_LRES = xmax/nx_LRES
 
     dtfactor_HRESLRES = 10
-    dtfactor_ExAdImEx = 10#5
+    dtfactor_ExAdImEx = 20#5
 
     dt_HRES_AdImEx = dt_LRES_AdImEx/dtfactor_HRESLRES # used to be dt_HRES
     nt_HRES_AdImEx = nt_LRES_AdImEx*dtfactor_HRESLRES
@@ -61,7 +61,7 @@ def main():
     nt_HRES_Ex = nt_LRES_Ex*dtfactor_HRESLRES
 
     u_setting = 'varying_space3'
-    analytic = an.sine_xyshiftampl2#analytic_constant
+    analytic = an.sine_yshift#xyshiftampl4#analytic_constant
     total_time = nt_LRES_AdImEx*dt_LRES_AdImEx
 
     #!!! check the courant numbers for the different options! i.e. plot in a single plot?? when plotting the final fields as well?
@@ -175,6 +175,10 @@ def main():
     plt.savefig(outputdir + f'{u_setting}.png')
     plt.close()
 
+    fig, ax1 = plt.subplots(figsize=(4,5))
+    ax2 = ax1.twinx()
+    ax1.axhline(1, color='k', linestyle=':', linewidth=0.5)
+
     for c in range(len(cases)):
         #if cases[c]['HRES'] == True:
         #    if cases[c]['AdImEx'] == True:
@@ -186,29 +190,38 @@ def main():
         #        cplot = dtplot*uf_HRES/dx_HRES # courant number for HRES
         #        plt.plot(xf_HRES, cplot, label='Ex', color='darkturquoise', linestyle='-')
         if cases[c]['HRES'] == False:
-            if cases[c]['AdImEx'] == True:
-                dtplot = dt_LRES_AdImEx
-                cplot = dtplot*uf_LRES/dx_LRES # courant number for LRES
-                logging.info(f'Velocity for {plot_args[c]["label"]} with dt={dtplot:.4f}, dx={dx_LRES:.4f}: {uf_LRES}')
-                logging.info(f'Courant number for {plot_args[c]["label"]} with dt={dtplot:.4f}, dx={dx_LRES:.4f}: {cplot}')
-                plt.plot(xf_LRES, cplot, label='AdImEx', color='purple', linestyle='-')            
-            else:
+            if cases[c]['AdImEx'] == False:
                 dtplot = dt_LRES_Ex
                 cplot = dtplot*uf_LRES/dx_LRES # courant number for LRES
                 logging.info(f'Velocity for {plot_args[c]["label"]} with dt={dtplot:.4f}, dx={dx_LRES:.4f}: {uf_LRES}')
                 logging.info(f'Courant number for {plot_args[c]["label"]} with dt={dtplot:.4f}, dx={dx_LRES:.4f}: {cplot}')
-                plt.plot(xf_LRES, cplot, label='Ex', color='darkturquoise', linestyle='-')
-    plt.title('Courant number')
-    plt.xlabel('x')
-    plt.ylabel('$C$')
-    plt.legend()
-    plt.axhline(1, color='k', linestyle=':')
-    plt.savefig(outputdir + 'courant.png')
+                beta = np.maximum(0., 1. - 1./cplot) # beta for LRES # Not necessarily true!
+                logging.info(f'Off-centring for {plot_args[c]["label"]} with dt={dtplot:.4f}, dx={dx_LRES:.4f}: {beta}')                
+                line_cEx = ax1.plot(xf_LRES, cplot, label='Ex $C_f$', color='k', linestyle='-')
+                line_thetaEx = ax2.plot(xf_LRES, beta, label='Ex $\\theta_f$', color='k', linestyle='--')
+            else:                
+                dtplot = dt_LRES_AdImEx
+                cplot = dtplot*uf_LRES/dx_LRES # courant number for LRES
+                logging.info(f'Velocity for {plot_args[c]["label"]} with dt={dtplot:.4f}, dx={dx_LRES:.4f}: {uf_LRES}')
+                logging.info(f'Courant number for {plot_args[c]["label"]} with dt={dtplot:.4f}, dx={dx_LRES:.4f}: {cplot}')
+                beta = np.maximum(0., 1. - 1./cplot) # beta for LRES # Not necessarily true!
+                logging.info(f'Off-centring for {plot_args[c]["label"]} with dt={dtplot:.4f}, dx={dx_LRES:.4f}: {beta}')
+                line_cAdImEx = ax1.plot(xf_LRES, cplot, label='AdImEx $C_f$', color='g', linestyle='-')            
+                line_thetaAdImEx = ax2.plot(xf_LRES, beta, label='AdImEx $\\theta_f$', color='g', linestyle='--')   
+    ax1.set_xlabel('x')
+    ax1.set_ylabel('$C_f$')
+    ax2.set_ylabel('$\\theta_f$')
+    # Create a single legend for both axes
+    lns = line_cEx + line_cAdImEx + line_thetaEx + line_thetaAdImEx
+    labs = [l.get_label() for l in lns]
+    ax1.legend(lns, labs, loc='best')
+
+    fig.tight_layout()
+    plt.savefig(outputdir + 'courant_implicitness.png')
     plt.close()
 
-
-
-
+    
+    
     for c in range(len(cases)):
         #if cases[c]['HRES'] == True:
         #    if cases[c]['AdImEx'] == True:
@@ -227,23 +240,23 @@ def main():
                 cplot = dtplot*uf_LRES/dx_LRES # courant number for LRES
                 beta = np.maximum(0., 1. - 1./cplot) # beta for LRES
                 logging.info(f'Off-centring for {plot_args[c]["label"]} with dt={dtplot:.4f}, dx={dx_LRES:.4f}: {beta}')
-                plt.plot(xf_LRES, beta, label='AdImEx', color='purple', linestyle='-')            
+                #plt.plot(xf_LRES, beta, label='AdImEx', color='purple', linestyle='-')            
             else:
                 dtplot = dt_LRES_Ex
                 cplot = dtplot*uf_LRES/dx_LRES # courant number for LRES
                 beta = np.maximum(0., 1. - 1./cplot) # beta for LRES
                 logging.info(f'Off-centring for {plot_args[c]["label"]} with dt={dtplot:.4f}, dx={dx_LRES:.4f}: {beta}')
-                plt.plot(xf_LRES, beta, label='Ex', color='darkturquoise', linestyle='-')
-    plt.title('Off-centering in time')
-    plt.xlabel('x')
-    plt.ylabel('$\\theta$')
-    plt.ylim(-0.1, 1.1)
-    plt.legend()
-    #plt.axhline(1, color='k', linestyle=':')
-    plt.savefig(outputdir + 'offcentering.png')
-    plt.close()
+                #plt.plot(xf_LRES, beta, label='Ex', color='darkturquoise', linestyle='-')
+    #plt.title('Off-centering in time')
+    #plt.xlabel('x')
+    #plt.ylabel('$\\theta$')
+    #plt.ylim(-0.1, 1.1)
+    #plt.legend()
+    ##plt.axhline(1, color='k', linestyle=':')
+    #plt.savefig(outputdir + 'offcentering.png')
+    #plt.close()
 
-    plt.figure(figsize=(7,4))
+    plt.figure(figsize=(10,5))
     plt.plot(xc_HRES, psi_in_HRES, linestyle='--', color='grey', label='Initial') # plot initial condition
 
     # Run schemes and plot the final time step for each scheme in the same plot and do experiments
@@ -295,10 +308,13 @@ def main():
                 if AdImExbool[c]:
                     AdImExcolors = ['#543005', '#8c510a', '#bf812d', '#dfc27d', '#f6e8c3', '#c7eae5', '#80cdc1', '#35978f', '#01665e', '#003c30']
                     for it in range(nt_LRES_AdImEx):
-                        plt.plot(xc_LRES, locals()[f'psi_{s}_reg'][it+1], marker='', linestyle='-', color=AdImExcolors[it], label=f'nt = {it+1}')
+                        plt.plot(xc_LRES, locals()[f'psi_{s}_reg'][it+1], marker='', linestyle='-', color=AdImExcolors[it], label=f'$n_t = {it+1}$')
                 else:
                     for it in range(nt_LRES_AdImEx):
-                        plt.plot(xc_LRES, locals()[f'psi_{s}_reg'][(it+1)*dtfactor_ExAdImEx], marker='+', linestyle='', color='gray')
+                        if it == 0:
+                            plt.plot(xc_LRES, locals()[f'psi_{s}_reg'][(it+1)*dtfactor_ExAdImEx], marker='+', linestyle='-', linewidth=0.5, color='silver')
+                        else:
+                            plt.plot(xc_LRES, locals()[f'psi_{s}_reg'][(it+1)*dtfactor_ExAdImEx], marker='+', linestyle='-', linewidth=0.5, color='silver', label='Ex')   
             else: # Just plot final time step
                 plt.plot(xc_LRES, locals()[f'psi_{s}_reg'][-1], **plot_args[c]) # !!! same -> -1 correct?
         

@@ -49,7 +49,7 @@ def main():
     cases = [\
         #{'scheme':'RK2QC'},
         {'scheme': 'aiUpwind'},#_simple'},#, 'output_ufield': True},
-        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'output_substages':True},
+        ##{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'output_substages':True},
         #{'scheme': 'ImExRK', 'RK':'aiUpwind', 'SD':'BS', 'blend':'sm'},#, 'output_substages':True},
         #{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':1},#, 'output_substages':True},
         #{'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'iterFCT':True, 'nIter':2},#, 'output_substages':True},
@@ -73,7 +73,7 @@ def main():
         #{'label':'WKS24', 'color':'magenta', 'marker':'+', 'linestyle':'-'},
         #######{'label':'aiUpwind u and beta from uvs3 -> beta from findings 01-08 m=2*<beta>', 'color':'red', 'marker':'x', 'linestyle':'-'},
         {'label':'aiUpwind u and beta from uvs8, psi sine_xyshiftampl4', 'color':'red', 'marker':'x', 'linestyle':'-'},
-        {'label':'AdImEx Strang', 'color':'darkgreen', 'marker':'x', 'linestyle':'-'},
+        ##{'label':'AdImEx Strang', 'color':'darkgreen', 'marker':'x', 'linestyle':'-'},
         #{'label':'AdImEx Upwind', 'color':'cyan', 'marker':'', 'linestyle':':'},
         #{'label':'AdImEx Strang FCT', 'color':'darkorange', 'marker':'x', 'linestyle':'--'},
         #{'label':'AdImEx Strang FCT2', 'color':'magenta', 'marker':'x', 'linestyle':'-'},
@@ -94,15 +94,15 @@ def main():
         ]
 
     # Initial conditions
-    ymin, ymax = 0., 200.#-0.1, 1.1#1.1#8., 13.#0., 30.#2.#30.         # for plotting purposes (animation)
+    ymin, ymax = 8.5, 10.#0., 20.#200.#-0.1, 1.1#1.1#8., 13.#0., 30.#2.#30.         # for plotting purposes (animation)
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
     nt = 10#60#100#16#32#100#10#50                     # number of time steps # needs to be 1 when output_substages is True for ImExRK scheme
-    dt = 0.01                   # time step
+    dt = 0.001                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching' # note: stretching won't work with a varying velocity field
     schemenames = [case["scheme"] for case in cases]
-    analytic = an.sine_xyshiftampl4#sine_yshift#analytic_constant # initial condition, options: sine, cosbell, tophat, or combi, halfwave, revhalfwave, and more for varying velocity field
-    u_setting = 'varying_space8' # 'constant' or various 'varying_space..' options
+    analytic = an.sine_yshift#xyshiftampl3#sine_yshift#analytic_constant # initial condition, options: sine, cosbell, tophat, or combi, halfwave, revhalfwave, and more for varying velocity field
+    u_setting = 'varying_space3'#7' # 'constant' or various 'varying_space..' options
     time1rev = False            # This boolean is set by hand - determines whether, for a varying velocity field in space and time, the u ~ cos(wt) has gone through a full revolution in time (and space?). It determines whether the analytic solution is plotted for a certain number of time steps or not. # Note: This is currently (21-04-2025) only applied to the .pdf final field output, not to the animation .gif file.
     if u_setting == 'constant':
         uconstant = 1.#3.125#1.        # constant velocity # should only apply when u_setting == 'constant' # is used in the analytic function and for the title in the final.pdf plot for the constant velocity field
@@ -485,7 +485,7 @@ def main():
         for c in range(len(cases)):        
             s = plot_args[c]['label']
             fields.append(locals()[f'psi_{s}_reg'])
-        anim.create_animation_from_data(fields, len(schemenames), locals()['psi_an_reg'], psi_in, nt, dt, xc, outputdir, plot_args, xmax, ymax=ymax)
+        anim.create_animation_from_data(fields, len(schemenames), locals()['psi_an_reg'], psi_in, nt, dt, xc, outputdir, plot_args, xmax, ymin=ymin, ymax=ymax)
 
     print('Done')
     logging.info('')
