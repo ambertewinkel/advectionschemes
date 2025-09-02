@@ -25,9 +25,6 @@ def main():
     """
     This function computes and plots the results of various numerical schemes 
     with 1D periodic space and time. Results are compared to the analytic soln. 
-    Two initial conditions are considered: a Gaussian distribution and a step 
-    function, both defined on a subdomain. 
-    Schemes included: FTBS, FTFS, FTCS, CTBS, CTFS, CTCS, Upwind, BTBS, BTFS, BTCS, CNBS, MPDATA, three hybrid schemes and Jacobi and Gauss-Seidel iterations (and more, see schemes.py).
     """
 
     #############################
@@ -38,7 +35,6 @@ def main():
     save_as = 'test'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
-    limitCto1 = False
     create_animation = True
     check_orderofconvergence = False # Be careful with this setting with the varying velocity field in space (and time). Has not been adjusted to work with this yet, if that is necessary (probably not necessary for the varying in space and time as you only compare after a ful revolution in time; probably necessary for the varying in space as we can compare the behaviour after 1/2/4 time steps as it is independent of time).
     accuracy_in = 'space with C const' # 'space with dt const' or 'time with dx const' or 'space with C const'; (relevant only if check_orderofconvergence == True)
@@ -47,18 +43,18 @@ def main():
 
     # Input cases
     cases = [\
-        {'scheme': 'aiUpwind'},
+        #{'scheme': 'aiUpwind'},
         {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'output_substages':True},
         ]
     
     plot_args = [\
-        {'label':'aiUpwind', 'color':'red', 'marker':'x', 'linestyle':'-'},
+        #{'label':'aiUpwind', 'color':'red', 'marker':'x', 'linestyle':'-'},
         {'label':'AdImEx Strang', 'color':'darkgreen', 'marker':'x', 'linestyle':'-'},
 
         ]
 
     # Initial conditions
-    ymin, ymax = 8.5, 10.       # for plotting purposes (animation)
+    ymin, ymax = 8., 13.       # for plotting purposes (animation)
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
     nt = 1                      # number of time steps # needs to be 1 when output_substages is True for ImExRK scheme
@@ -66,7 +62,7 @@ def main():
     coords = 'uniform'          # 'uniform' or 'stretching' # note: stretching won't work with a varying velocity field
     schemenames = [case["scheme"] for case in cases]
     analytic = an.sine_yshift   # initial condition, options: sine, cosbell, tophat, or combi, halfwave, revhalfwave, and more for varying velocity field
-    u_setting = 'varying_space3'# 'constant' or various 'varying_space..' options
+    u_setting = 'varying_time_space'# 'constant' or various 'varying_space..' options
     time1rev = False            # This boolean is set by hand - determines whether, for a varying velocity field in space and time, the u ~ cos(wt) has gone through a full revolution in time (and space?). It determines whether the analytic solution is plotted for a certain number of time steps or not. # Note: This is currently (21-04-2025) only applied to the .pdf final field output, not to the animation .gif file.
     if u_setting == 'constant':
         uconstant = 1.        # constant velocity # should only apply when u_setting == 'constant' # is used in the analytic function and for the title in the final.pdf plot for the constant velocity field
@@ -192,8 +188,8 @@ def main():
         nt = nt_arr[xi]
             
         # Setup grid for each of the grid spacings
-        if coords == 'stretching': # Potentially adjusted later if limitCto1 == True
-            if u_setting == 'varying_space' or u_setting == 'varying_space_time':
+        if coords == 'stretching':
+            if u_setting.startswith('varying_space') or u_setting.startswith('varying_time_space'):
                 print('Error: stretching coordinates not implemented for varying velocity field')
                 logging.info('Error: stretching coordinates not implemented for varying velocity field')
                 raise ValueError('Error: stretching coordinates not implemented for varying velocity field')
@@ -205,79 +201,54 @@ def main():
         else: 
             logging.info('Error: invalid coordinates')
 
+        # Produce the velocity values
         if u_setting == 'constant':
-            uf = np.full(nx, uconstant)
-        elif u_setting == 'varying_space':
-            uf = an.velocity_varying_space(xf)
-        elif u_setting == 'varying_space2':
-            uf = an.velocity_varying_space2(xf)
-        elif u_setting == 'varying_space3':
-            uf = an.velocity_varying_space3(xf)     
-        elif u_setting == 'varying_space4':
-            uf = an.velocity_varying_space4(xf) 
-        elif u_setting == 'varying_space5':
-            uf = an.velocity_varying_space5(xf)
-        elif u_setting == 'varying_space6':
-            uf = an.velocity_varying_space6(xf)
-        elif u_setting == 'varying_space7':
-            uf = an.velocity_varying_space7(xf)
-        elif u_setting == 'varying_space8':
-            uf = an.velocity_varying_space8(xf)
+            uf = np.full((nt,nx), uconstant)
+        elif u_setting.startswith('varying_space'):
+            uf_fn = getattr(an, f'velocity_{u_setting}')
+            uf_space = uf_fn(xf)
+            uf = np.tile(uf_space, (nt,1))
+        elif u_setting.startswith('varying_time_space'):
+            uf_fn = getattr(an, f'velocity_{u_setting}')
+            uf = uf_fn(nt, dt, xf)
         else:
             logging.info('Error: invalid velocity setting')
             print('Error: invalid velocity setting')
 
         l = gridlabels[xi]
 
-        # Check whether to limit the Courant number by limiting the grid spacing
-        if limitCto1 == True: 
-            cmax = 1.
-            dxcmin = np.min(0.5*dt*(np.roll(uf,-1) + uf)/cmax)
-        else:
-            dxcmin = 0.
-
-        # Reset with potentially the new dxcmin (i.e. connected to limitCby1)
-        if coords == 'stretching':
-            xf, dxc, xc, dxf = gr.coords_stretching(xmax, nx, nx/2, dxcmin=dxcmin) # points in space, length of spatial step
-
-        # Calculate velocity and Courant number at cell centers  # v!!! check if this is correct! 21-04-2025: somehow figured out a way around it. I think it is correct now but double check whether I want to improve the code though as it might be a bit hacky.
-        # v!!! means that I have found a (temporary) solution on 21-04-2025 - but could use a think of a better solution in the future.
-        if u_setting == 'constant': # !!! dt will not always be the same for all grids
+        # Calculate velocity and Courant number at cell centers + print and plot grid and Courant number (solely for the regular grid spacing)
+        if u_setting.startswith('varying_time') == False:
             uc = gr.linear(xc, xf, uf)       # velocity at cell centers
-            cc = 0.5*dt*(np.roll(abs(uf),-1) + abs(uf))/dxc # Courant number at cell centers # This C is not actually used directly in the scheme nor analytic solution - it is recalculated in those functions (and sometimes also at cell faces instead)! It is only used to calculate the cmax/cmin below. 
+            cc = 0.5*dt*(np.roll(abs(uf),-1) + abs(uf))/dxc # Courant number at cell centers
             cmax = np.max(cc)
             cmin = np.min(cc)
-            logging.info(f'Min Courant number: {cmin:.4f}')
-            logging.info(f'Max Courant number: {cmax:.4f}')  
-        if u_setting == 'varying_space' or u_setting == 'varying_space_time' or u_setting == 'varying_space2' or u_setting == 'varying_space3' or u_setting == 'varying_space4' or u_setting == 'varying_space5' or u_setting == 'varying_space6' or u_setting == 'varying_space7' or u_setting == 'varying_space8':
-            # FYI - for the nonuniform velocity schemes I need to calculate the Courant number at cell faces
-            logging.info('The Courant numbers values and plot wont be exactly correct for varying velocity, as the ones I would calculate here are defined at cell centers -> hence I have set them to be NaNs.')
+            logging.info(f'Min cell-centred Courant number: {cmin:.4f}')
+            logging.info(f'Max cell-centred Courant number: {cmax:.4f}')   
+            if gridlabels[xi] == 'reg':
+                logging.info('The (cell center) points and Courant numbers are:')
+                for i in range(nx):
+                    logging.info(f'{i}: {xc[i]:.4f} -- {cc[i]:.4f}')
+                logging.info('')
+                ut.plot_Courant(xf, cc, outputdir)
+                ut.plot_grid(xc, dxc, outputdir)
+        else: 
             uc = np.full(nx, np.nan)
-            cc = np.full(nx, np.nan)
-
-        # Print and plot grid and Courant number (solely for the regular grid spacing) # v!!! remove feature or move it to cell faces (varying velocity)? -> 21-04-2025: I have simply set cc to be NaN for the varying velocity field in space and time, so that it doesn't plot anything I think. I wouldn't want to remove the actual plotting action as it wouldn't update the plot in testing mode otherwise.
-        if gridlabels[xi] == 'reg':
-            logging.info('The (cell center) points and Courant numbers are:')
-            for i in range(nx):
-                logging.info(f'{i}: {xc[i]:.4f} -- {cc[i]:.4f}')
-            logging.info('')
-            ut.plot_Courant(xc, cc, outputdir)
-            ut.plot_grid(xc, dxc, outputdir)
 
         # Calculate analytic solutions for each time step
         locals()[f'psi_an_{l}'] = np.zeros((nt+1, nx))
         for it in range(nt+1):
             locals()[f'psi_an_{l}'][it] = analytic(xc, xmax, uc, it*dt) # analytic solution uses uc. For the varying velocity fields, I can pass on uc but the analytic solution function doesn't actually need it as the velocity is basically already prescribed in the equation it calculates, that is, if an analytic solution exists.
         a = locals()[f'psi_an_{l}'][-1].copy()
-        if u_setting == 'varying_space' or u_setting == 'varying_space2' or u_setting == 'varying_space3' or u_setting == 'varying_space4' or u_setting == 'varying_space5' or u_setting == 'varying_space6' or u_setting == 'varying_space7' or u_setting == 'varying_space8':
+        if u_setting.startswith('varying_space'):
             logging.info("NOTE: the analytic solution is only sensible for a variable velocity field in space for a couple of time steps into the simulation due to accummulation of the field.")
-        elif u_setting == 'varying_space_time':
+        elif u_setting == 'varying_time_space':
             logging.info("NOTE: the analytic solution is only sensible for a variable velocity field in space and time after a full revolution in time.")
         logging.info(f"Analytic solution for nx={nx}, nt={nt}, dt={dt}: {a}")
         logging.info('')
 
         # Calculate initial condition
-        psi_in = analytic(xc, xmax, 0., 0.)#locals()[f'psi_an_{l}'][0] # this adjustment allows the initial condition to be nonzero for the velocity varying space settings. 
+        psi_in = analytic(xc, xmax, 0., 0.)
         
         # Calculate numerical solutions for each scheme through time
         # Output is 2D field ([1d time, 1d space])
@@ -291,7 +262,7 @@ def main():
     
     plt.figure(figsize=(7,4))
     # Plotting the final time step for each scheme in the same plot
-    if u_setting != 'varying_space_time' or ( u_setting == 'varying_space_time' and time1rev == True ): # if it is varying_space_time, the analytic solution is only valid for a full revolution in time
+    if u_setting != 'varying_time_space' or ( u_setting == 'varying_time_space' and time1rev == True ): # if it is varying_time_space, the analytic solution is only valid for a full revolution in time
         plt.plot(xc, locals()['psi_an_reg'][nt], label='Analytic', linestyle='-', color='k')
 
     for c in range(len(cases)):        
@@ -301,13 +272,10 @@ def main():
         cconstant = uconstant*dt/(xmax/nx)  # Courant number # only used for title in final.pdf
         ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with C={cconstant}', \
                      'x', '$\\Psi$', 0., xmax, True, ymin, ymax)
-    elif u_setting == 'varying_space':
-        ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with $u$ varying in space', \
-                     'x', '$\\Psi$', 0., xmax, True, ymin, ymax)
-    elif u_setting == 'varying_space_time':
+    elif u_setting.startswith('varying_time_space'):
         ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with $u$ varying in space and time', \
                      'x', '$\\Psi$', 0., xmax, True, ymin, ymax)
-    elif u_setting == 'varying_space2' or u_setting == 'varying_space3' or u_setting == 'varying_space4' or u_setting == 'varying_space5' or u_setting == 'varying_space6' or u_setting == 'varying_space7' or u_setting == 'varying_space8':
+    elif u_setting.startswith('varying_space'):
         ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with $u$ {u_setting}', \
                      'x', '$\\Psi$', 0., xmax, True, ymin, ymax)
 
@@ -473,12 +441,6 @@ def callscheme(case, nt, dt, uf, dxc, psi_in, u_setting, verbose=True):
     #startscheme = timeit.default_timer()
     #print(f'--> Starting runtime for {sc}, nt, nx: {timeit.default_timer() - startscheme:.4f} s, {nt}, {len(psi_in)}')
     psi = fn(psi_in.copy(), nt, dt, uf, dxc, u_setting, **params) # check whether the scheme is called correctly!!! with the u_setting parameters etc
-    ##print(case)
-    ##print(psi[-1])
-    ##print()
-    #plt.plot(psi[-1])
-    #plt.title('After exiting the scheme function')
-    #plt.show()
     if verbose == True:
         logging.info(f'Final psi for {sc} with parameters {params} and nx={len(psi_in)}: {psi[-1]}')
         logging.info('')

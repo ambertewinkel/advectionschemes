@@ -387,3 +387,12 @@ def velocity_varying_space8(x, l=2.*np.pi):
     u = 6.75 + 5.75*np.sin(2*np.pi*(x+0.25))
     
     return u
+
+
+def velocity_varying_time_space(nt, dt, x):
+    """Velocity varying in time and space function. Returns velocity halfway in the time step."""
+    u = np.zeros((nt,len(x)))
+    for it in range(nt):
+        u[it] = (1. + np.sin(2.*np.pi*dt*(it+0.5)))*(1.5 + 0.5*np.sin(2*np.pi*(x + 0.25)))
+    
+    return u
