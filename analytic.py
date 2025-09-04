@@ -398,13 +398,15 @@ def velocity_varying_time_space(nt, dt, x):
     
     return u
 
+
 def velocity_varying_time_space2(nt, dt, x):
     """Velocity varying in time and space. Returns velocity halfway in the time step."""
     u = np.zeros((nt,len(x)))
     for it in range(nt):
-        u[it] = (1.5 + 0.5*np.sin(2*np.pi*(x + 0.25 + dt*(it+0.5)))) # time period for this is 1
+        u[it] = (2.5 + 0.5*np.sin(2*np.pi*(x + 0.25 + dt*(it+0.5)))) # time period for this is 1
     
     return u
+
 
 def velocity_varying_time(nt, dt, x):
     """Velocity varying in just time. Returns velocity halfway in the time step."""
