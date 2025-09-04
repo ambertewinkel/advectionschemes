@@ -62,8 +62,8 @@ def main():
     coords = 'uniform'          # 'uniform' or 'stretching' # note: stretching won't work with a varying velocity field
     schemenames = [case["scheme"] for case in cases]
     analytic = an.sine_yshift   # initial condition, options: sine, cosbell, tophat, or combi, halfwave, revhalfwave, and more for varying velocity field
-    u_setting = 'varying_time'# 'constant' or various 'varying_space..' options
-    time1rev = False            # This boolean is set by hand - determines whether, for a varying velocity field in space and time, the u ~ cos(wt) has gone through a full revolution in time (and space?). It determines whether the analytic solution is plotted for a certain number of time steps or not. # Note: This is currently (21-04-2025) only applied to the .pdf final field output, not to the animation .gif file.
+    u_setting = 'varying_time_space2'# 'constant' or various 'varying_space..' options
+    #time1rev = False            # This boolean is set by hand - determines whether, for a varying velocity field in space and time, the u ~ cos(wt) has gone through a full revolution in time (and space?). It determines whether the analytic solution is plotted for a certain number of time steps or not. # Note: This is currently (21-04-2025) only applied to the .pdf final field output, not to the animation .gif file.
     if u_setting == 'constant':
         uconstant = 1.        # constant velocity # should only apply when u_setting == 'constant' # is used in the analytic function and for the title in the final.pdf plot for the constant velocity field
         schemenames_settings = str(analytic.__name__) + f'_t{nt*dt:.4f}_u{uconstant}_' + "-".join(schemenames)
@@ -228,31 +228,32 @@ def main():
             if u_setting.startswith('varying_space') and gridlabels[xi] == 'reg':
                 logging.info('The (cell center) points and Courant numbers are:')
                 for i in range(nx):
-                    logging.info(f'{i}: {xc[i]:.4f} -- {cc[i]:.4f}')
+                    logging.info(f'{i}: {xc[i]:.4f} -- {cc[0,i]:.4f}')
                 logging.info('')
-                ut.plot_Courant(xf, cc, outputdir)
+                ut.plot_Courant(xf, cc[0], outputdir)
                 ut.plot_grid(xc, dxc, outputdir)
         #elif u_setting.startswith('varying_time_space'):
         #    uc = np.full(nx, np.nan)
         #else: # u_setting.startswith('varying_time') without _time_space
         #    pass
-            animate_velocity = False # used in create_animation_from_data function call
+            animate_Courant = False # used in create_animation_from_data function call
         else:
             uc = np.full(nx, np.nan)
-            animate_velocity = True
+            animate_Courant = True
 
 
         # Calculate analytic solutions for each time step
-        locals()[f'psi_an_{l}'] = np.zeros((nt+1, nx))
-        for it in range(nt+1):
-            locals()[f'psi_an_{l}'][it] = analytic(xc, xmax, uc, it*dt) # analytic solution uses uc. For the varying velocity fields, I can pass on uc but the analytic solution function doesn't actually need it as the velocity is basically already prescribed in the equation it calculates, that is, if an analytic solution exists.
-        a = locals()[f'psi_an_{l}'][-1].copy()
-        if u_setting.startswith('varying_space'):
-            logging.info("NOTE: the analytic solution is only sensible for a variable velocity field in space for a couple of time steps into the simulation due to accummulation of the field.")
-        elif u_setting.startswith('varying_time_space'):
-            logging.info("NOTE: the analytic solution is only sensible for a variable velocity field in space and time after a full revolution in time.")
-        logging.info(f"Analytic solution for nx={nx}, nt={nt}, dt={dt}: {a}")
-        logging.info('')
+        if u_setting.startswith('varying_'):
+            logging.info("NOTE: the analytic solution is only sensible for a variable velocity field in space and/or time after a full revolution in time.")
+            logging.info('')
+            locals()[f'psi_an_{l}'] = np.full((nt+1, nx), np.nan)
+        else:
+            locals()[f'psi_an_{l}'] = np.zeros((nt+1, nx))
+            for it in range(nt+1):
+                locals()[f'psi_an_{l}'][it] = analytic(xc, xmax, uc[0], it*dt) # analytic solution uses uc[0] (assumes uc constant in time). For the varying velocity fields, I can pass on uc but the analytic solution function doesn't actually need it as the velocity is basically already prescribed in the equation it calculates, that is, if an analytic solution exists.
+            a = locals()[f'psi_an_{l}'][-1].copy()
+            logging.info(f"Analytic solution for nx={nx}, nt={nt}, dt={dt}: {a}")
+            logging.info('')
 
         # Calculate initial condition
         psi_in = analytic(xc, xmax, 0., 0.)
@@ -272,7 +273,7 @@ def main():
     
     plt.figure(figsize=(7,4))
     # Plotting the final time step for each scheme in the same plot
-    if u_setting != 'varying_time_space' or ( u_setting == 'varying_time_space' and time1rev == True ): # if it is varying_time_space, the analytic solution is only valid for a full revolution in time
+    if u_setting == 'constant': #u_setting != 'varying_time_space' or ( u_setting == 'varying_time_space' and time1rev == True ): # if it is varying_time_space, the analytic solution is only valid for a full revolution in time
         plt.plot(xc, locals()['psi_an_reg'][nt], label='Analytic', linestyle='-', color='k')
 
     for c in range(len(cases)):        
@@ -424,7 +425,7 @@ def main():
         for c in range(len(cases)):        
             s = plot_args[c]['label']
             fields.append(locals()[f'psi_{s}_reg'])
-        anim.create_animation_from_data(fields, len(schemenames), locals()['psi_an_reg'], psi_in, nt, dt, xc, xf, uf, outputdir, plot_args, xmax, ymin=ymin, ymax=ymax, plot_velocity=animate_velocity)
+        anim.create_animation_from_data(fields, len(schemenames), locals()['psi_an_reg'], psi_in, nt, dt, dxc, xc, xf, uf, u_setting, outputdir, plot_args, xmax, ymin=ymin, ymax=ymax, plot_Courant=animate_Courant)
 
     print('Done')
     logging.info('')

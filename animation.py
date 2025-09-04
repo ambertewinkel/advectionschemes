@@ -134,7 +134,7 @@ def create_single_animation_from_data(filebasename, field, analytic, nt, dt, xc,
     os.rmdir(plotdir)
 
 
-def create_animation_from_data(fields, nfields, analytic, field_in, nt, dt, xc, xf, uf, outputdir, plot_args, xmax, ymin=-0.1, ymax=None, plot_velocity=False):
+def create_animation_from_data(fields, nfields, analytic, field_in, nt, dt, dxc, xc, xf, uf, u_setting, outputdir, plot_args, xmax, ymin=-0.1, ymax=None, plot_Courant=False):
     """This function creates an animation from a given data file of a single scheme. The input is a 2D field of a single scheme (shape = 1d time x 1d space), analytic solution (shape = 1d time x 1d space), nt, dx in the centers (dxc; shape 1d space) and ....
     This is a function that is to be called from other files, not from produce_standalone_animation()."""
 
@@ -143,7 +143,7 @@ def create_animation_from_data(fields, nfields, analytic, field_in, nt, dt, xc, 
     os.mkdir(plotdir)
     if ymax is None:
         ymax = 1.1
-    if plot_velocity: uf_plot = np.concatenate((np.full((1,len(xf)), np.nan), uf), axis=0)
+    if plot_Courant: uf_plot = np.concatenate((np.full((1,len(xf)), np.nan), uf), axis=0)
 
     # Timestepping loop to create plots and save filenames
     filenames, images = [], []
@@ -151,17 +151,18 @@ def create_animation_from_data(fields, nfields, analytic, field_in, nt, dt, xc, 
         fig, ax1 = plt.subplots(figsize=(7,4))
         # Plot each timestep in a figure and save in the plots subdirectory
         #lns = []
-        if plot_velocity:
+        if plot_Courant:
             #uf = np.concatenate((uf, np.full(len(xf), np.nan)), axis=0)
             ax2 = ax1.twinx()
             ax2.set_ylim(0., 2.)
-            ax2.set_ylabel(f'$u$ at faces at $n_t$ = {np.where(it-0.5>0, it-0.5, None)}', color='purple')
+            ax2.set_ylabel(f'$C$ at faces at $n_t$ = {np.where(it-0.5>0, it-0.5, None)}', color='purple')
         #    #lns.append(ax2.plot(xf, uf[it], linestyle='--', color='purple'))
-            ax2.plot(xf, uf_plot[it], linestyle='--', color='purple')
+            ax2.plot(xf, uf_plot[it]*dt/dxc, linestyle='--', color='purple')
+            ax2.axhline(1., linestyle=':', color='grey')
         #lns.append(ax1.plot(xc, field_in, label='Initial', linestyle='-', color='grey'))
         ax1.plot(xc, field_in, label='Initial', linestyle='-', color='grey')
         #lns.append(ax1.plot(xc, analytic[it], label='Analytic', linestyle='-', color='k'))
-        ax1.plot(xc, analytic[it], label='Analytic', linestyle='-', color='k')
+        if u_setting == 'constant': ax1.plot(xc, analytic[it], label='Analytic', linestyle='-', color='k')
         for si in range(nfields):   
             field = fields[si]        
             #lns.append(ax1.plot(xc, field[it], **plot_args[si]) )
