@@ -32,7 +32,7 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     create_animation = True
@@ -44,7 +44,7 @@ def main():
     # Input cases
     cases = [\
         #{'scheme': 'aiUpwind'},
-        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm', 'output_substages':True},
+        {'scheme': 'ImExRK', 'RK':'UJ31e32', 'SD':'fifth302', 'blend':'sm'},#, 'output_substages':True},
         ]
     
     plot_args = [\
@@ -54,15 +54,15 @@ def main():
         ]
 
     # Initial conditions
-    ymin, ymax = 8., 13.       # for plotting purposes (animation)
+    ymin, ymax = 8., 13.        # field min and max for plotting purposes (animation)
     nx = 40                     # number of points in space
     xmax = 1.                   # physical domain parameters
-    nt = 1                      # number of time steps # needs to be 1 when output_substages is True for ImExRK scheme
+    nt = 100                      # number of time steps # needs to be 1 when output_substages is True for ImExRK scheme
     dt = 0.01                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching' # note: stretching won't work with a varying velocity field
     schemenames = [case["scheme"] for case in cases]
     analytic = an.sine_yshift   # initial condition, options: sine, cosbell, tophat, or combi, halfwave, revhalfwave, and more for varying velocity field
-    u_setting = 'varying_time_space'# 'constant' or various 'varying_space..' options
+    u_setting = 'varying_time'# 'constant' or various 'varying_space..' options
     time1rev = False            # This boolean is set by hand - determines whether, for a varying velocity field in space and time, the u ~ cos(wt) has gone through a full revolution in time (and space?). It determines whether the analytic solution is plotted for a certain number of time steps or not. # Note: This is currently (21-04-2025) only applied to the .pdf final field output, not to the animation .gif file.
     if u_setting == 'constant':
         uconstant = 1.        # constant velocity # should only apply when u_setting == 'constant' # is used in the analytic function and for the title in the final.pdf plot for the constant velocity field
@@ -189,7 +189,7 @@ def main():
             
         # Setup grid for each of the grid spacings
         if coords == 'stretching':
-            if u_setting.startswith('varying_space') or u_setting.startswith('varying_time_space'):
+            if u_setting.startswith('varying_'):
                 print('Error: stretching coordinates not implemented for varying velocity field')
                 logging.info('Error: stretching coordinates not implemented for varying velocity field')
                 raise ValueError('Error: stretching coordinates not implemented for varying velocity field')
@@ -208,7 +208,7 @@ def main():
             uf_fn = getattr(an, f'velocity_{u_setting}')
             uf_space = uf_fn(xf)
             uf = np.tile(uf_space, (nt,1))
-        elif u_setting.startswith('varying_time_space'):
+        elif u_setting.startswith('varying_time'):
             uf_fn = getattr(an, f'velocity_{u_setting}')
             uf = uf_fn(nt, dt, xf)
         else:
@@ -225,15 +225,22 @@ def main():
             cmin = np.min(cc)
             logging.info(f'Min cell-centred Courant number: {cmin:.4f}')
             logging.info(f'Max cell-centred Courant number: {cmax:.4f}')   
-            if gridlabels[xi] == 'reg':
+            if u_setting.startswith('varying_space') and gridlabels[xi] == 'reg':
                 logging.info('The (cell center) points and Courant numbers are:')
                 for i in range(nx):
                     logging.info(f'{i}: {xc[i]:.4f} -- {cc[i]:.4f}')
                 logging.info('')
                 ut.plot_Courant(xf, cc, outputdir)
                 ut.plot_grid(xc, dxc, outputdir)
-        else: 
+        #elif u_setting.startswith('varying_time_space'):
+        #    uc = np.full(nx, np.nan)
+        #else: # u_setting.startswith('varying_time') without _time_space
+        #    pass
+            animate_velocity = False # used in create_animation_from_data function call
+        else:
             uc = np.full(nx, np.nan)
+            animate_velocity = True
+
 
         # Calculate analytic solutions for each time step
         locals()[f'psi_an_{l}'] = np.zeros((nt+1, nx))
@@ -242,13 +249,16 @@ def main():
         a = locals()[f'psi_an_{l}'][-1].copy()
         if u_setting.startswith('varying_space'):
             logging.info("NOTE: the analytic solution is only sensible for a variable velocity field in space for a couple of time steps into the simulation due to accummulation of the field.")
-        elif u_setting == 'varying_time_space':
+        elif u_setting.startswith('varying_time_space'):
             logging.info("NOTE: the analytic solution is only sensible for a variable velocity field in space and time after a full revolution in time.")
         logging.info(f"Analytic solution for nx={nx}, nt={nt}, dt={dt}: {a}")
         logging.info('')
 
         # Calculate initial condition
         psi_in = analytic(xc, xmax, 0., 0.)
+
+        logging.info(f'Field initial condition: {psi_in}')
+        logging.info('')
         
         # Calculate numerical solutions for each scheme through time
         # Output is 2D field ([1d time, 1d space])
@@ -272,10 +282,7 @@ def main():
         cconstant = uconstant*dt/(xmax/nx)  # Courant number # only used for title in final.pdf
         ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with C={cconstant}', \
                      'x', '$\\Psi$', 0., xmax, True, ymin, ymax)
-    elif u_setting.startswith('varying_time_space'):
-        ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with $u$ varying in space and time', \
-                     'x', '$\\Psi$', 0., xmax, True, ymin, ymax)
-    elif u_setting.startswith('varying_space'):
+    elif u_setting.startswith('varying_space') or u_setting.startswith('varying_time'):
         ut.design_figure(plotname, f'$\\Psi$ at t={nt*dt} with $u$ {u_setting}', \
                      'x', '$\\Psi$', 0., xmax, True, ymin, ymax)
 
@@ -417,7 +424,7 @@ def main():
         for c in range(len(cases)):        
             s = plot_args[c]['label']
             fields.append(locals()[f'psi_{s}_reg'])
-        anim.create_animation_from_data(fields, len(schemenames), locals()['psi_an_reg'], psi_in, nt, dt, xc, outputdir, plot_args, xmax, ymin=ymin, ymax=ymax)
+        anim.create_animation_from_data(fields, len(schemenames), locals()['psi_an_reg'], psi_in, nt, dt, xc, xf, uf, outputdir, plot_args, xmax, ymin=ymin, ymax=ymax, plot_velocity=animate_velocity)
 
     print('Done')
     logging.info('')

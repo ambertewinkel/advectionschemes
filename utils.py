@@ -7,13 +7,26 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def design_figure(filename, title, xlabel, ylabel, xlim1, xlim2, bool_ylim = False, ylim1=0.0, ylim2=0.0):
-    if bool_ylim == True: plt.ylim(ylim1, ylim2)
-    plt.xlim(xlim1, xlim2)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.title(title)
-    plt.legend()
+def design_figure(filename, title, xlabel, ylabel, xlim1, xlim2, bool_ylim = False, ylim1=0.0, ylim2=0.0, ax=plt):#, legend_lines=[]):
+    
+    # Create a single legend for both axes
+    #lns = line_cEx + line_cAdImEx + line_thetaEx + line_thetaAdImEx
+    if ax == plt:
+        if bool_ylim == True: ax.ylim(ylim1, ylim2)
+        ax.xlim(xlim1, xlim2)
+        ax.xlabel(xlabel)
+        ax.ylabel(ylabel)
+        ax.title(title)
+        ax.legend()
+    else:
+        if bool_ylim == True: ax.set_ylim(ylim1, ylim2)
+        ax.set_xlim(xlim1, xlim2)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_title(title)
+        ax.legend()
+        #labs = [l.get_label() for l in legend_lines]
+        #ax.legend(legend_lines, labs, loc='best')
     plt.tight_layout()
     plt.savefig(filename)
     plt.clf()

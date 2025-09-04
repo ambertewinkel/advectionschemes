@@ -115,15 +115,15 @@ def cubLag(x_int, x, f):
 
 def linear(x_int, x, f):
     """
-    Calculate the linear interpolation to a point.
+    Calculate the linear interpolation in space to a point.
     Input:
-    x_int  : value of x to interpolate f to
-    x   : array of two points x values
-    f   : array of two points f values
+    x_int  : 1D array of x values to interpolate f to
+    x   : 1D array of x values
+    f   : 2D array of field values on x, shape (nt,nx)
     Output:
-    f_int   : interpolated value
-    """
-    dfdx = (f[1] - f[0])/(x[1] - x[0])
-    f_int = dfdx*(x_int - x[0]) + f[0]
+    f_int   : 2D array of interpolated values (nt, nx)
+    """    
+    dfdx = (np.roll(f,-1, axis=1) - f)/(np.roll(x,-1) - x)
+    f_int = dfdx*(x_int - x) + f
 
     return f_int

@@ -5,6 +5,7 @@
 
 
 import numpy as np
+import logging
 
 
 def sine(x, xmax, u=0., t=0., shifty=0.5, ampl=0.5, shiftx=0.):
@@ -390,9 +391,19 @@ def velocity_varying_space8(x, l=2.*np.pi):
 
 
 def velocity_varying_time_space(nt, dt, x):
-    """Velocity varying in time and space function. Returns velocity halfway in the time step."""
+    """Velocity varying in time and space. Returns velocity halfway in the time step."""
     u = np.zeros((nt,len(x)))
     for it in range(nt):
-        u[it] = (1. + np.sin(2.*np.pi*dt*(it+0.5)))*(1.5 + 0.5*np.sin(2*np.pi*(x + 0.25)))
+        u[it] = (1. + np.sin(2.*np.pi*dt*(it+0.5)))*(1.5 + 0.5*np.sin(2*np.pi*(x + 0.25))) # time period for this is 1
     
+    return u
+
+def velocity_varying_time(nt, dt, x):
+    """Velocity varying in just time. Returns velocity halfway in the time step."""
+    u = np.zeros((nt,len(x)))
+    for it in range(nt):
+        u[it] = 1. + np.sin(2.*np.pi*dt*(it+0.5)) # time period for this is 1
+        #u[it] = 10. + 10.*np.sin(2.*np.pi*dt*(it+0.5))
+        logging.info(f'u at time step {it+0.5} = {u[it,0]}')
+
     return u
