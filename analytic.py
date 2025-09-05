@@ -417,3 +417,33 @@ def velocity_varying_time(nt, dt, x):
         logging.info(f'u at time step {it+0.5} = {u[it,0]}')
 
     return u
+
+
+def velocity_varying_time_space_swift(nt, dt, x):
+    """Velocity setting used in the Bendall and Kent (2025) SWIFT paper. 
+    u0   : set for AdImEx time stepping
+    """
+    u_x = np.zeros((nt, len(x)))
+    xmax = 1000.#1. # adjusted from paper (L_x in paper)
+    ymax = xmax # adjusted from paper (L_y in paper)
+    u0 = 10. #ms-1 #1.#0.1 #1.#0. # set for AdImEx time stepping? NO !!! # to be adjusted from paper?
+    T = 100. # s# period # adjusted from paper # assume dt=0.01 with this? need to check time step in paper
+    for it in range(nt):
+        t = (it+0.5)*dt # +0.5 for velocity at the half level in time for second-order accuracy
+        x_prime = x + 0.5*xmax - u0*t
+        y_prime = 0.75*ymax - u0*t
+        u_x[it] = u0*np.sin(np.pi*x_prime/xmax)*np.sin(np.pi*x_prime/xmax)*np.sin(2.*np.pi*y_prime/ymax)*np.cos(np.pi*t/T) + u0
+
+    return u_x
+
+
+def sine_swift(x, xmax, u_dummy=0., t_dummy=0.):
+    """Initial condition for the sine wave field (m in paper) in Bendall and Kent (2025) SWIFT paper (see Appendix B, sine wave initial condition).
+    x    : points in domain to calculate m for
+    xmax : domain size (L_x in paper)
+    """
+    m_ref = 0.5 # kg/kg
+    m_mag = 0.5 # kg/kg
+    y_sine = 1. # 1D version setting. Check whether correct.!!!
+    m = m_ref + m_mag*np.sin(2.*np.pi*x/xmax)*y_sine
+    return m

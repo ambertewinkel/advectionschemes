@@ -154,7 +154,7 @@ def create_animation_from_data(fields, nfields, analytic, field_in, nt, dt, dxc,
         if plot_Courant:
             #uf = np.concatenate((uf, np.full(len(xf), np.nan)), axis=0)
             ax2 = ax1.twinx()
-            ax2.set_ylim(0., 2.)
+            ax2.set_ylim(0., 6.)#2.)
             ax2.set_ylabel(f'$C$ at faces at $n_t$ = {np.where(it-0.5>0, it-0.5, None)}', color='purple')
         #    #lns.append(ax2.plot(xf, uf[it], linestyle='--', color='purple'))
             ax2.plot(xf, uf_plot[it]*dt/dxc, linestyle='--', color='purple')
