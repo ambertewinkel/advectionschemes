@@ -483,3 +483,15 @@ def sine_swift(x, xmax, u_dummy=0., t_dummy=0.):
     y_sine = 1. # 1D version setting. Check whether correct.!!!
     m = m_ref + m_mag*np.sin(2.*np.pi*x/xmax)*y_sine
     return m
+
+
+def double_square(x, xmax, u_dummy, t_dummy):
+    """Initial condition based on the double slotted cylinders from Bendall and Kent (2025). Numbers are adjusted to give a nice spacing between the two square waves."""
+    m_c = 1. #kgkg-1
+    m = np.zeros(len(x))
+    center1 = 0.3*xmax
+    center2 = 0.7*xmax
+    radius = 0.08*xmax
+    min_distance_to_a_center = np.minimum(np.abs(x-center1), np.abs(x-center2))
+    m = np.where(min_distance_to_a_center < radius, m_c, 0.)
+    return m
