@@ -3151,3 +3151,39 @@ def set_offcentring(nx, blend, u_setting, c, clim):
             raise ValueError('Blend in off-centering not recognised.')
         
     return beta
+
+
+def FTspectral(init, nt, dt, uf, dxc, u_setting):
+    """Forward in time spectral method for advection.
+    (NCAS CMSS)"""
+    
+def FTspectral(init, nt, dt, uf, dxc, u_setting):
+    """
+    This function computes the forward in time spectral method 
+    for an initial field, number of time steps nt
+    with length dt, and a given Courant number. A periodic spatial domain 
+    is assumed.
+    --- Input ---
+    init    : array of floats, initial field to advect
+    nt      : integer, total number of time steps to take
+    dt      : float, timestep
+    uf      : array of floats, velocity defined at faces
+    dxc     : array of floats, spacing between cell faces
+    u_setting : string that states whether the velocity constant or varying
+    --- Output --- 
+    field   : 2D array of floats. Outputs each timestep of the field while advecting 
+            the initial condition. Dimensions: nt+1 x length of init
+    """
+
+    # Setup and initial condition
+    field = np.zeros((nt+1, len(init)))
+    field[0] = init.copy()
+
+    # Time stepping
+    for it in range(nt):
+        
+        dfielddx = # [i] at i
+
+        field[it+1] = field[it] - uf*dt*dfielddx
+ 
+    return field
