@@ -208,27 +208,39 @@ def MULES(field, flx_HO, c, flx_b=upwindFlux, nIter=1, minField=None, maxField=N
     return flx_b + l*corr
 
 
-def iterFCT(flx_HO, dxc, dt, uf, C, beta, field_previous, previous=None, niter=1, ymin=None, ymax=None):
+def iterFCT(flx_HO, dxc, dt, uf, C, theta, field_previous, previous=None, niter=1, ymin=None, ymax=None):
     """This function implements iterative FCT, as described in MULES_HW.pdf (/strang_carryover_1d paper as MULES_HW.pdf has some notational problems)
     ymax and ymin are overall global min/max values if set.
     previous: previous time step field - True: element uses field_previous for extrema, not if False. Defined at i-1/2
     02-07-2025: dxc assumed constant. uf and C assumed potentially nonconstant and negative
-    beta off-centering for AdImEx Upwind is assumed to be max(0,1-1/C at neighboring cells) to ensure monotonicity.
+    theta off-centering for AdImEx Upwind is assumed to be max(0,1-1/C at neighboring cells) to ensure monotonicity.
     flx_HO needs to be u*field at i-1/2
     """
     nx = len(flx_HO)
     flx_bounded, field_bounded = np.zeros(nx), np.zeros(nx)
 
-    #beta = np.maximum(0., 1.-1./C)
-    # Calculate bounded field and bounded flux - 1 time step of AdImEx Upwind low-order bounded solution (this will subsequently be updated in FCT iteration loop)
+    ufp = 0.5*(uf + abs(uf)) # [i] at i-1/2
+    ufm = 0.5*(uf - abs(uf)) # [i] at i-1/2
+
+    C_out = (-ufm + np.roll(ufp,-1))*dt/dxc # [i] at i
+    C_in = (ufp - np.roll(ufm,-1))*dt/dxc # [i] at i
+    theta = np.maximum(0., 1. - 1./(C_in + C_out)) # [i] at i # paper version needs this in a separate function
+    thetaf = np.maximum(np.roll(theta,1), theta) # [i] at i-1/2
+
+    # !!! include the previous field into extrema when C<=1 as well?
+
+    # Calculate bounded field and bounded flux - 1 time step of AdImEx Upwind low-order bounded (.. with 1-1/c_total for theta) solution (this will subsequently be updated in FCT iteration loop)
+    ufp_thetaf, ufm_thetaf = thetaf*ufp, thetaf*ufm # [i] at i-1/2
     M = np.zeros((nx, nx))
-    for i in range(nx):
-        M[i,i] = 1. + beta[(i+1)%nx]*C[(i+1)%nx]
-        M[i,(i-1)%nx] = -1.*beta[i]*C[i] # this is not upwind with just i-1? !!!
-    c1mbfield = np.roll(C*(1-beta),-1)*field_previous # [i] at i-1/2
-    rhs = field_previous - (c1mbfield - np.roll(c1mbfield,1))
+    for i in range(nx): 
+        M[i,i] = 1. + dt*(ufp_thetaf[(i+1)%nx] - ufm_thetaf[i])/dxc[i]
+        M[i,(i-1)%nx] = -dt*ufp_thetaf[i]/dxc[i]
+        M[i,(i+1)%nx] = dt*ufm_thetaf[(i+1)%nx]/dxc[i]
+
+    ufp_1mthetaf, ufm_1mthetaf = (1.-thetaf)*ufp, (1.-thetaf)*ufm # [i] at i-1/2
+    rhs = field_previous - (np.roll(ufp_1mthetaf,-1)*field_previous - ufp_1mthetaf*np.roll(field_previous,1) + np.roll(ufm_1mthetaf*field_previous,-1) - ufm_1mthetaf*field_previous)*dt/dxc # [i] at i
     field_bounded = np.linalg.solve(M, rhs) # [i] at i
-    flx_bounded = 0.5*(uf + np.abs(uf))*((1. - beta)*np.roll(field_previous,1) + beta*np.roll(field_bounded,1)) + 0.5*(uf - np.abs(uf))*((1. - beta)*field_previous + beta*field_bounded) # [i] is at i-1/2
+    flx_bounded = ufp_1mthetaf*np.roll(field_previous,1) + ufp_thetaf*np.roll(field_bounded,1) + ufm_1mthetaf*field_previous + ufm_thetaf*field_bounded # [i] at i-1/2
 
     # Set allowable min and max values (not iterated over!)
     fieldmin, fieldmax = set_extrema(nx, uf, field_bounded, field_previous, previous, ymin, ymax) 
@@ -260,7 +272,7 @@ def iterFCT(flx_HO, dxc, dt, uf, C, beta, field_previous, previous=None, niter=1
         
         # Update the bounded flux and field
         flx_bounded += face_limiter*corr
-        field_bounded = field_previous - dt/dxc*(np.roll(flx_bounded, -1) - flx_bounded)
+        field_bounded = field_previous - dt/dxc*(np.roll(flx_bounded,-1) - flx_bounded)
 
     # Output limited field[it+1] = field_bounded after niter iterations
     return field_bounded
