@@ -3007,13 +3007,14 @@ def ImExARS3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22', butcher
     return field
 
 
-def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22', RK='UJ31e32', blend='off', clim=1.6, HRES=None, AdImEx=None, output_substages=False, iterFCT=False, FCT=False, FCT_HW=False): # !!! add option for non uconstant in TIME to be recalculated every time step
+def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22', RK='UJ31e32', blend='off', clim=1.6, HRES=None, AdImEx=None, output_substages=False, iterFCT=False, FCT=False, FCT_HW=False, ymin=None, ymax=None, posdefFCT=False): # !!! add option for non uconstant in TIME to be recalculated every time step
     """This scheme implements the timestepping from the double butcher tableau defined with RK, combined with various (default: the fourth order centred) spatial discretisations. Assumes u>0 constant. SD: spatial discretisation, default is centered fourth order, i.e. fourth22
     
     21-04-2025: uf is probably just the first value of the velocity field if it changes in time. If the velocity changes in time, we need to recalculate the u, c and beta every time step. If the velocity is constant in space and time or only varies in space, we can use uf throughout the time stepping, without need to reculculate it every time step and for intermediate stages within a RK time step.
     - haven't tested but probably only want to use the output_substages option with nt=1
     """
-
+    print('posdefFCT is set to', posdefFCT)
+    print('ymin, ymax are set to', ymin, ymax)
     nx = len(init)
     field = np.zeros((nt+1, nx))
     matrix = getattr(sd, 'M' + SD)
@@ -3101,7 +3102,13 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
             flx_HO += flx_contribution_from_stage_k[ik,:]  
         if iterFCT:
             previous = np.full(nx, False) #[True if cf[i] <= 1. else False for i in range(nx)] # [i] at i-1/2 # determines whether FCT also uses field[it] for bounds (True/False) # could use further consideration
-            field[it+1] = lim.iterFCT(flx_HO, dxc, dt, uf[it], cf[it], beta[it], field[it], previous=previous, niter=nIter) # also option for ymin and ymax         
+            field[it+1] = lim.iterFCT(flx_HO, dxc, dt, uf[it], cf[it], beta[it], field[it], previous=previous, niter=nIter, ymin=ymin, ymax=ymax) # also option for ymin and ymax         
+        elif posdefFCT:
+            #plt.plot(flx_HO, label='flx_HO before posdefFCT')
+            #plt.legend()
+            #plt.show()
+            #print(dt)
+            field[it+1] = lim.posdefFCT(flx_HO, dxc, dt, uf[it], cf[it], beta[it], field[it], previous=field[it], niter=nIter, ymin=ymin, ymax=ymax) # also option for ymin and ymax
         else:     
             field[it+1] = field_k.copy()
         if output_substages: 
