@@ -3007,14 +3007,20 @@ def ImExARS3(init, nt, dt, uf, dxc, MULES=False, nIter=1, SD='fourth22', butcher
     return field
 
 
+def implicitness_AdHImEx(C):
+    """This function returns the AdHImEx implicitness parameter theta for a given Courant number C."""
+    #return np.maximum(0., 1.-1./C) # needs changing, but first checking with this definition
+    return 1. - 1./(1. + 0.7*np.maximum(0., C - 1.4))
+
+
 def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22', RK='UJ31e32', blend='off', clim=1.6, HRES=None, AdImEx=None, output_substages=False, iterFCT=False, FCT=False, FCT_HW=False, ymin=None, ymax=None, posdefFCT=False): # !!! add option for non uconstant in TIME to be recalculated every time step
     """This scheme implements the timestepping from the double butcher tableau defined with RK, combined with various (default: the fourth order centred) spatial discretisations. Assumes u>0 constant. SD: spatial discretisation, default is centered fourth order, i.e. fourth22
     
     21-04-2025: uf is probably just the first value of the velocity field if it changes in time. If the velocity changes in time, we need to recalculate the u, c and beta every time step. If the velocity is constant in space and time or only varies in space, we can use uf throughout the time stepping, without need to reculculate it every time step and for intermediate stages within a RK time step.
     - haven't tested but probably only want to use the output_substages option with nt=1
     """
-    print('posdefFCT is set to', posdefFCT)
-    print('ymin, ymax are set to', ymin, ymax)
+    #print('posdefFCT is set to', posdefFCT)
+    #print('ymin, ymax are set to', ymin, ymax)
     nx = len(init)
     field = np.zeros((nt+1, nx))
     matrix = getattr(sd, 'M' + SD)
@@ -3039,8 +3045,11 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
 
     beta, cf = np.zeros((nt,nx)), np.zeros((nt,nx))
     #if u_setting.startswith('varying_time'): 
-    for it in range(nt): # recalculate each unique beta for each time step (inefficient coding for uf=constant in space or time)
-        cf[it] = uf[it]*dt/dxc # [i] at i-1/2
+    if SD == 'fifth302' and RK == 'UJ31e32': # AdHImEx scheme
+        for it in range(nt): # recalculate each unique beta for each time step (inefficient coding for uf=constant in space or time)
+            cf[it] = uf[it]*dt/dxc # [i] at i-1/2
+            beta[it] = implicitness_AdHImEx(cf[it])
+    else:
         cc_out = 0.5*(np.abs(uf[it]) - uf[it] + np.abs(np.roll(uf[it],-1)) + np.roll(uf[it],-1))*dt/dxc # [i] at i, Courant defined at cell centers based on the *outward* pointing velocities
         cc_in = 0.5*(np.abs(uf[it]) + uf[it] + np.abs(np.roll(uf[it],-1)) - np.roll(uf[it],-1))*dt/dxc # [i] at i, Courant defined at cell centers based on the *inward* pointing velocities
         betac_out = np.maximum(0., 1.-1./cc_out)

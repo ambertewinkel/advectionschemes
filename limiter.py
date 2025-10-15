@@ -421,7 +421,7 @@ def posdefFCT(flx_HO, dxc, dt, uf, C, theta, field_previous, previous=None, nite
 #    field_bounded, flx_posdef = np.zeros(nx), np.zeros(nx)
     # Set allowable min and max values (not iterated over!)
     fieldmin, fieldmax = set_extrema(nx, uf, field_bounded, field_previous, previous, only_global=True, ymin=ymin, ymax=ymax) 
-    print(fieldmin, fieldmax)
+    #print(fieldmin, fieldmax)
     
     # FCT iteration loop
     for iiter in range(niter):
