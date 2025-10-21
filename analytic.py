@@ -324,6 +324,27 @@ def cotan(x):
     return -np.tan(x + np.pi/2)
 
 
+def cosine_bell_x(x, xmax, u=0., t=0., xmin=0.): # Same as in 2d code when put just in x direction.
+    """
+    Create a 1D cosine bell profile centered at (0.5*xmax) with given radius.
+    Parameters:
+    - x: 1D array of coordinates
+    - xmin, xmax: domain limits in x
+
+    Returns:
+    - 1D array of cosine bell values
+    """
+    radius = 0.15*(xmax - xmin)
+    # Compute distance from the center
+    r = abs(x - 0.5*xmax)
+    print(radius)
+
+    # Apply cosine bell formula
+    psi = np.where(r < radius, 0.5 * (1 + np.cos(np.pi * r / radius)), 0)
+    
+    return psi
+
+
 def rho_varuspace(x, xmax, u='1psinlx', t=0., l=1.):
     """This is the analytic solution to the advection equation with a variable velocity field in space, i.e., u=1+sin(lx), where l is real. Here we have assumed l=1."""
     psi = np.zeros(len(x))
