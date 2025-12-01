@@ -32,7 +32,7 @@ def main():
     #############################
 
     # Test or save output in name-specified folder
-    save_as = 'store'             # 'test' or 'store'; determines how the output is saved
+    save_as = 'test'             # 'test' or 'store'; determines how the output is saved
     
     # Input booleans
     create_animation = False#True
@@ -63,18 +63,18 @@ def main():
         ]
 
     # Initial conditions
-    ymin, ymax = 0., 1.5#200.#2. #8., 13.        # field min and max for plotting purposes (animation)
+    ymin, ymax = -0.2, 1.5#200.#2. #8., 13.        # field min and max for plotting purposes (animation)
     nx = 40#400#128#40                     # number of points in space
     xmax = 1.#1000. #m #1.                   # physical domain parameters
-    nt = 100 #32#16#2#32#100#10000#500#100 #50#100                      # number of time steps # needs to be 1 when output_substages is True for ImExRK scheme
+    nt = 1 #00 #32#16#2#32#100#10000#500#100 #50#100                      # number of time steps # needs to be 1 when output_substages is True for ImExRK scheme
     dt = 0.01#0.001#2.#0.2 #s #0.2#0.01                   # time step
     coords = 'uniform'          # 'uniform' or 'stretching' # note: stretching won't work with a varying velocity field
     schemenames = [case["scheme"] for case in cases]
-    analytic = an.cosine_bell_x#an.combi#sine_xyshiftampl4#an.combi#double_square   # initial condition, options: sine, cosbell, tophat, or combi, halfwave, revhalfwave, and more for varying velocity field
+    analytic = an.combi #cosine_bell_x#an.combi#sine_xyshiftampl4#an.combi#double_square   # initial condition, options: sine, cosbell, tophat, or combi, halfwave, revhalfwave, and more for varying velocity field
     u_setting = 'constant'#'varying_space7'#'constant'#'varying_time_space_swift_2Dnondiv'#_sin6'# 'constant' or various 'varying_space..' options
     #time1rev = False            # This boolean is set by hand - determines whether, for a varying velocity field in space and time, the u ~ cos(wt) has gone through a full revolution in time (and space?). It determines whether the analytic solution is plotted for a certain number of time steps or not. # Note: This is currently (21-04-2025) only applied to the .pdf final field output, not to the animation .gif file.
     if u_setting == 'constant':
-        uconstant = 1.#3.125#6.25#3.125#250.#50.#1.        # constant velocity # should only apply when u_setting == 'constant' # is used in the analytic function and for the title in the final.pdf plot for the constant velocity field
+        uconstant = 6.25# 3.125 #1.#3.125#6.25#3.125#250.#50.#1.        # constant velocity # should only apply when u_setting == 'constant' # is used in the analytic function and for the title in the final.pdf plot for the constant velocity field
         schemenames_settings = str(analytic.__name__) + f'_t{nt*dt:.4f}_u{uconstant}_' + "-".join(schemenames)
     else:
         schemenames_settings = str(analytic.__name__) + f'_t{nt*dt:.4f}_u{u_setting}_' + "-".join(schemenames)

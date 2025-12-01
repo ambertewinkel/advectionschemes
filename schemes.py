@@ -3013,6 +3013,10 @@ def implicitness_AdHImEx(C):
     return 1. - 1./(1. + 0.7*np.maximum(0., C - 1.4))
 
 
+def check_symmetric(a, rtol=1e-05, atol=1e-08):
+    return np.allclose(a, a.T, rtol=rtol, atol=atol)
+
+
 def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22', RK='UJ31e32', blend='off', clim=1.6, HRES=None, AdImEx=None, output_substages=False, iterFCT=False, FCT=False, FCT_HW=False, ymin=None, ymax=None, posdefFCT=False): # !!! add option for non uconstant in TIME to be recalculated every time step
     """This scheme implements the timestepping from the double butcher tableau defined with RK, combined with various (default: the fourth order centred) spatial discretisations. Assumes u>0 constant. SD: spatial discretisation, default is centered fourth order, i.e. fourth22
     
@@ -3094,7 +3098,17 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
             # Calculate the field at stage k
             M = matrix(nx, dt, dxc, beta[it]*uf[it], AIm[ik,ik]) # [i] at i
             rhs_k = field[it] + dt*np.dot(AEx[ik,:ik], fEx[:ik,:]) + dt*np.dot(AIm[ik,:ik], fIm[:ik,:]) # [i] at i
+            #if ik == 4: # I don't think the non-proper-convergence problem is in the positive-definiteness. Rather in some coding problem with perhaps overwriting field[it] and field_k inside the GCRK code accidentally... 
+            #    Msym = (M + M.T)/2.
+            #    print('Msym is symmetric:', check_symmetric(Msym))
+            #    print('M is real:', np.isrealobj(M))
+            #    print('Msym is real:', np.isrealobj(Msym))
+            #    print('The eigenvalues of Msym at time step', it, 'stage', ik, 'are:', np.linalg.eigvals(Msym))
+            #    print()
             field_k = np.linalg.solve(M, rhs_k) # [i] at i
+            #print(ik , 'field', *field_k)   
+            #print(field_k)
+            #exit()
             if output_substages: 
                 plt.plot(xf, field_k, label='stage ' + str(ik))
                 print('k =', ik)
@@ -3107,6 +3121,12 @@ def ImExRK(init, nt, dt, uf, dxc, u_setting, MULES=False, nIter=1, SD='fourth22'
             flx_k[ik,:] = uf[it]*fluxfn(field_k) # [i] at i-1/2
             fEx[ik,:] = -ddx((1 - beta[it])*flx_k[ik,:], np.roll((1 - beta[it])*flx_k[ik,:],-1), dxc)
             fIm[ik,:] = -ddx(beta[it]*flx_k[ik,:], np.roll(beta[it]*flx_k[ik,:],-1), dxc)   
+            #print('stage', ik, 'rhs_k', rhs_k)
+            #print('stage', ik, 'field_k', field_k)
+            #print('stage', ik, 'fEx', fEx[ik,:])
+            #print('stage', ik, 'fIm', fIm[ik,:])
+            #print()
+            
             flx_contribution_from_stage_k[ik,:] = AEx[-1,ik]*(1 - beta[it])*flx_k[ik,:] + AIm[-1,ik]*beta[it]*flx_k[ik,:]
             flx_HO += flx_contribution_from_stage_k[ik,:]  
         if iterFCT:
